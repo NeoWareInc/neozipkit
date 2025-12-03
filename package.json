@@ -1,0 +1,201 @@
+{
+  "name": "@neozip/neozipkit",
+  "version": "0.3.1",
+  "description": "NeoZipKit - Advanced ZIP file creation and verification with blockchain timestamping",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "browser": {
+        "types": "./dist/browser.d.ts",
+        "default": "./dist/browser.js"
+      },
+      "node": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "default": "./dist/browser.js"
+    },
+    "./browser/*": {
+      "types": "./dist/browser/*.d.ts",
+      "default": "./dist/browser/*.js"
+    },
+    "./browser-esm": {
+      "types": "./dist/browser-esm/index.d.ts",
+      "import": "./dist/browser-esm/index.js"
+    },
+    "./browser-umd": {
+      "types": "./dist/browser-umd/index.d.ts",
+      "import": "./dist/browser-umd/index.js",
+      "require": "./dist/browser-umd/index.js"
+    },
+    "./node": {
+      "types": "./dist/node/index.d.ts",
+      "import": "./dist/node/index.js",
+      "require": "./dist/node/index.js",
+      "default": "./dist/node/index.js"
+    },
+    "./node/*": {
+      "types": "./dist/node/*.d.ts",
+      "default": "./dist/node/*.js"
+    },
+    "./node/blockchain/*": {
+      "types": "./dist/node/blockchain/*.d.ts",
+      "default": "./dist/node/blockchain/*.js"
+    },
+    "./node/platform/*": {
+      "types": "./dist/node/platform/*.d.ts",
+      "default": "./dist/node/platform/*.js"
+    },
+    "./shared": {
+      "types": "./dist/shared/index.d.ts",
+      "default": "./dist/shared/index.js"
+    },
+    "./shared/*": {
+      "types": "./dist/shared/*.d.ts",
+      "default": "./dist/shared/*.js"
+    },
+    "./shared/components/*": {
+      "types": "./dist/shared/components/*.d.ts",
+      "default": "./dist/shared/components/*.js"
+    },
+    "./shared/constants/*": {
+      "types": "./dist/shared/constants/*.d.ts",
+      "default": "./dist/shared/constants/*.js"
+    },
+    "./blockchain": {
+      "types": "./dist/blockchain/index.d.ts",
+      "default": "./dist/blockchain/index.js"
+    },
+    "./blockchain/*": {
+      "types": "./dist/blockchain/*.d.ts",
+      "default": "./dist/blockchain/*.js"
+    },
+    "./src": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./src/*": {
+      "types": "./src/*.ts",
+      "default": "./src/*.ts"
+    },
+    "./src/node": {
+      "types": "./src/node/index.ts",
+      "default": "./src/node/index.ts"
+    },
+    "./src/node/*": {
+      "types": "./src/node/*.ts",
+      "default": "./src/node/*.ts"
+    },
+    "./src/blockchain": {
+      "types": "./src/blockchain/index.ts",
+      "default": "./src/blockchain/index.ts"
+    },
+    "./src/blockchain/*": {
+      "types": "./src/blockchain/*.ts",
+      "default": "./src/blockchain/*.ts"
+    },
+    "./src/components/*": {
+      "types": "./src/components/*.ts",
+      "default": "./src/components/*.ts"
+    }
+  },
+  "files": [
+    "dist/",
+    "src/",
+    "contracts/",
+    "examples/",
+    "README.md",
+    "PACKAGE_STRUCTURE.md",
+    "BLOCKCHAIN_INTEGRATION.md",
+    "TYPESCRIPT_WORKFLOW.md"
+  ],
+  "scripts": {
+    "clean": "node scripts/clean.js",
+    "compile": "tsc",
+    "create-browser-entry": "node scripts/create-browser-entry.js",
+    "build": "npm run clean && npm run compile && npm run create-browser-entry && npm run build:browser",
+    "build:browser": "npm run build:browser:esm && npm run build:browser:umd",
+    "build:browser:esm": "node scripts/build-browser-bundle.js --esm",
+    "build:browser:umd": "node scripts/build-browser-bundle.js --umd",
+    "watch": "tsc --watch",
+    "dev:clean": "node scripts/dev-clean.js",
+    "dev:compile": "tsc --project tsconfig.dev.json",
+    "dev:create-browser-entry": "node scripts/dev-create-browser-entry.js",
+    "dev:build": "npm run dev:clean && npm run dev:compile && npm run dev:create-browser-entry",
+    "dev:watch": "tsc --project tsconfig.dev.json --watch",
+    "build:auto": "node scripts/auto-build.js",
+    "build:ci": "node scripts/check-branch.js && npm run clean && npm run compile && npm run create-browser-entry",
+    "test": "jest",
+    "test:unit": "jest tests/unit",
+    "test:examples": "npx ts-node scripts/test-examples.ts",
+    "test:all": "npm run test:unit && npm run test:examples",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "example:create-zip": "npx ts-node examples/create-zip.ts",
+    "example:extract-zip": "npx ts-node examples/extract-zip.ts",
+    "example:list-zip": "npx ts-node examples/list-zip.ts",
+    "example:blockchain-tokenize": "npx ts-node examples/blockchain-tokenize.ts",
+    "example:verify-tokenized-zip": "npx ts-node examples/verify-tokenized-zip.ts",
+    "check:nft": "npx ts-node scripts/check-nft.ts",
+    "deploy:base": "node contracts/deploy-bytecode.mjs",
+    "deploy:base:sepolia": "NETWORK=base-sepolia node contracts/deploy-bytecode.mjs",
+    "version": "node scripts/update-version.js",
+    "version:set": "node scripts/update-version.js",
+    "version:patch": "node scripts/update-version.js patch",
+    "version:minor": "node scripts/update-version.js minor",
+    "version:major": "node scripts/update-version.js major"
+  },
+  "keywords": [
+    "zip",
+    "archive",
+    "blockchain",
+    "timestamp",
+    "verification",
+    "nft",
+    "crypto",
+    "compression"
+  ],
+  "author": "NeoWare, Inc.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NeoWareInc/neozipkit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/NeoWareInc/neozipkit/issues"
+  },
+  "homepage": "https://github.com/NeoWareInc/neozipkit#readme",
+  "license": "MIT",
+  "devDependencies": {
+    "@openzeppelin/contracts": "^5.4.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.3.1",
+    "@types/pako": "^2.0.3",
+    "@types/uuid": "^9.0.0",
+    "esbuild": "^0.19.12",
+    "hardhat": "^3.0.15",
+    "jest": "^30.2.0",
+    "minimatch": "^10.1.1",
+    "ts-jest": "^29.4.6",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@oneidentity/zstd-js": "^1.0.3",
+    "buffer": "^6.0.3",
+    "ethers": "^6.0.0",
+    "opentimestamps": "^0.4.9",
+    "pako": "^2.1.0",
+    "uuid": "^9.0.0",
+    "web3": "^4.0.0"
+  },
+  "peerDependencies": {
+    "ethers": "^6.0.0",
+    "web3": "^4.0.0"
+  },
+  "packageManager": "yarn@4.9.2+sha512.1fc009bc09d13cfd0e19efa44cbfc2b9cf6ca61482725eb35bbc5e257e093ebf4130db6dfe15d604ff4b79efd8e1e8e99b25fa7d0a6197c9f9826358d4d65c3c"
+}

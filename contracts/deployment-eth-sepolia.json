@@ -1,0 +1,12 @@
+{
+  "network": "Ethereum Sepolia",
+  "networkKey": "ETH Sepolia",
+  "chainId": 11155111,
+  "contractAddress": "0x2716c4609fD97DaEdF429BC4B4Ec2faa81e2cC60",
+  "version": "2.10.0",
+  "deployer": "0xab90062062A68576D9F2Be2fa3051e101f06AD93",
+  "transactionHash": "0x5c52fb8a16ccecfc68378bb5b0a4bb1b03a493b7e67bd96388bc8705582d528c",
+  "blockNumber": 9623207,
+  "timestamp": "2025-11-13T18:51:16.202Z",
+  "explorerUrl": "https://sepolia.etherscan.io/address/0x2716c4609fD97DaEdF429BC4B4Ec2faa81e2cC60"
+}

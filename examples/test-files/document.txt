@@ -1,0 +1,2 @@
+This is a sample document.
+It will be tokenized on the blockchain.

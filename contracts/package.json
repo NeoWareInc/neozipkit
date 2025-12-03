@@ -1,0 +1,20 @@
+{
+  "name": "neozip-contracts",
+  "version": "1.0.0",
+  "description": "NeoZip NFT Smart Contracts - Isolated compilation and verification setup",
+  "license": "MIT",
+  "scripts": {
+    "compile": "hardhat compile",
+    "compile:extract": "node scripts/compile-and-extract.js",
+    "verify": "node scripts/verify-contract.js"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-verify": "^2.0.0",
+    "@openzeppelin/contracts": "^5.4.0",
+    "hardhat": "^2.22.0"
+  },
+  "dependencies": {
+    "ethers": "^6.0.0"
+  }
+}
+

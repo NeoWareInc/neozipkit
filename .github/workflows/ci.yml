@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, master]
+  push:
+    branches: [main, master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+      
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+      
+      - name: Build (main branch) or Dev Build (PR branch)
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/main" ] || [ "${{ github.ref }}" == "refs/heads/master" ]; then
+            echo "Main branch - building to /dist"
+            yarn build:ci
+          else
+            echo "PR branch - building to /dev-dist"
+            yarn dev:build
+          fi
+      
+      - name: Check build artifacts
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/main" ] || [ "${{ github.ref }}" == "refs/heads/master" ]; then
+            test -d dist && echo "✅ Production build created" || (echo "❌ Production build failed" && exit 1)
+          else
+            test -d dev-dist && echo "✅ Dev build created" || (echo "❌ Dev build failed" && exit 1)
+          fi

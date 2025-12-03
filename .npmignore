@@ -1,0 +1,34 @@
+# Wallet and private keys (NEVER include in NPM package!)
+wallet/
+*.key
+*.pem
+secrets/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Generated example outputs
+examples/output/
+examples/extracted/
+
+# Development files
+dev-dist/
+dev-build/
+*.log
+
+# Test files
+coverage/
+*.test.js
+*.spec.js
+
+# Source maps (optional - uncomment if you want to exclude)
+# *.map
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+.DS_Store
+

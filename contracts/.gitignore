@@ -1,0 +1,6 @@
+
+# Compiled files (generated, not deployed)
+ABI-compiled.txt
+Bytecode-compiled.txt
+artifacts/
+cache/
