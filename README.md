@@ -2,6 +2,14 @@
 
 Advanced ZIP file creation and verification library with blockchain timestamping and NFT tokenization capabilities.
 
+> **⚠️ Alpha Version Warning**: NeoZipKit v0.3.0 is currently in **alpha** status. This means:
+> - The API may change in future releases
+> - Some features may be incomplete or experimental
+> - Breaking changes may occur before the stable release
+> - Use in production with caution and thorough testing
+>
+> We welcome feedback and contributions! Please report issues on [GitHub](https://github.com/NeoWareInc/neozipkit/issues).
+
 ## 🌟 Features
 
 - **Advanced ZIP compression** with support for multiple compression methods (Deflate, ZStandard, Stored)
@@ -18,6 +26,14 @@ Advanced ZIP file creation and verification library with blockchain timestamping
 ```bash
 yarn add neozipkit
 ```
+
+Or with npm:
+
+```bash
+npm install neozipkit
+```
+
+> **⚠️ Note**: NeoZipKit v0.3.0 is in **alpha** status. See the warning above for important information about using alpha versions.
 
 ## 🚀 Quick Start
 
@@ -560,7 +576,7 @@ MIT
 
 Ready to start using NeoZipKit? Here are some next steps:
 
-1. **Install the package**: `yarn add neozipkit`
+1. **Install the package**: `yarn add neozipkit@0.3.0-alpha` (or `yarn add neozipkit@alpha` for latest alpha)
 2. **Run the examples**: Start with `ts-node examples/create-zip.ts` to see basic usage
 3. **Explore the examples**: Check [`examples/README.md`](examples/README.md) for all available examples
 4. **Read the API docs**: See the API Reference section below for detailed method documentation
