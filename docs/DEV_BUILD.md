@@ -4,14 +4,14 @@ This project includes a separate development build system that doesn't interfere
 
 ## 🎯 **Purpose**
 
-- **Main Build (`dist/`)**: Production-ready builds tracked in git - **Recommended for main branch**
+- **Main Build (`dist/`)**: Production-ready builds NOT tracked in git - Built during CI before publishing
 - **Dev Build (`dev-dist/`)**: Development builds NOT tracked in git - **Recommended for all branches**
 
 ## 📁 **Directory Structure**
 
 ```
 neozipkit/
-├── dist/           # Production builds (tracked in git)
+├── dist/           # Production builds (NOT tracked in git, built during CI)
 ├── dev-dist/       # Development builds (ignored by git)
 ├── src/            # Source code
 └── tsconfig.dev.json # Dev build configuration
@@ -54,7 +54,7 @@ yarn build:auto
 ### Main Build (`tsconfig.json`)
 - Output: `./dist/`
 - Used for: Production releases, npm publishing
-- Tracked in: Git
+- Tracked in: Git (ignored - built during CI before publishing)
 
 ### Dev Build (`tsconfig.dev.json`)
 - Output: `./dev-dist/`
@@ -67,7 +67,7 @@ yarn build:auto
 |---------|------------------|-----------|
 | Output Directory | `dist/` | `dev-dist/` |
 | Recommended For | **main branch** | **All branches** |
-| Git Tracking | ✅ Tracked | ❌ Ignored |
+| Git Tracking | ❌ Ignored | ❌ Ignored |
 | Source Maps | ✅ Enabled | ✅ Enabled |
 | Incremental | ❌ No | ✅ Yes |
 | Build Info | ❌ No | ✅ Yes |
@@ -95,6 +95,7 @@ yarn build
 ## 🚫 **What's Ignored**
 
 The following are automatically ignored by git:
+- `dist/` - Production build artifacts (built during CI before publishing)
 - `dev-dist/` - All development build artifacts
 - `dev-build/` - Additional dev build outputs
 - `.tsbuildinfo` - TypeScript incremental build info
@@ -103,9 +104,10 @@ The following are automatically ignored by git:
 
 1. **Use `yarn dev:watch`** for active development
 2. **Use `yarn build`** only when ready for production
-3. **Never commit `dev-dist/`** - it's automatically ignored
+3. **Never commit `dist/` or `dev-dist/`** - they're automatically ignored
 4. **Test against `dev-dist/`** during development
 5. **Test against `dist/`** before publishing
+6. **CI builds `dist/`** automatically before publishing to npm
 
 ## 🔄 **Workflow**
 
