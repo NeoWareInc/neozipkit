@@ -116,6 +116,38 @@ export class ZipDecompressNode {
     await this.extractToFileInternal(fileHandle, entry, outputPath, options);
   }
 
+  /**
+   * Test entry integrity without extracting to disk
+   * Validates CRC-32 or SHA-256 hash without writing decompressed data
+   * 
+   * This method processes chunks as they are decompressed and validates them,
+   * but discards the decompressed data instead of writing to disk. This is useful
+   * for verifying ZIP file integrity without extracting files.
+   * 
+   * @param entry ZIP entry to test
+   * @param options Optional test options including progress callback
+   * @returns Promise that resolves when validation is complete
+   * @throws Error if validation fails (INVALID_CRC or INVALID_SHA256) or if not a File-based ZIP
+   */
+  async testEntry(
+    entry: ZipEntry,
+    options?: {
+      skipHashCheck?: boolean;
+      onProgress?: (bytes: number) => void;
+    }
+  ): Promise<void> {
+    // Lazy ZSTD initialization
+    if (entry.cmpMethod === CMP_METHOD.ZSTD && !this.zstdCodec) {
+      this.zstdCodec = await initZstd();
+    }
+    
+    // Get fileHandle from zipkitNode
+    const fileHandle = (this.zipkitNode as any).getFileHandle();
+    
+    // Call internal test method with fileHandle
+    await this.testEntryInternal(fileHandle, entry, options);
+  }
+
   // ============================================================================
   // Internal File-Based Methods
   // ============================================================================
@@ -231,6 +263,60 @@ export class ZipDecompressNode {
   }
 
   /**
+   * Test entry integrity without writing to disk
+   * Internal method that takes fileHandle as parameter
+   */
+  private async testEntryInternal(
+    fileHandle: any,
+    entry: ZipEntry,
+    options?: {
+      skipHashCheck?: boolean;
+      onProgress?: (bytes: number) => void;
+    }
+  ): Promise<void> {
+    this.log(`testEntryInternal called for entry: ${entry.filename}`);
+    this.log(`Entry isEncrypted: ${(entry as any).isEncrypted}, has password: ${!!(this.zipkitNode as any)?.password}`);
+    
+    try {
+      // Build compressed data stream - yields one block at a time
+      let dataStream = this.readCompressedDataStream(fileHandle, entry);
+
+      // Decrypt if needed using password on zipkitNode instance
+      const isEncrypted = (entry as any).isEncrypted && (this.zipkitNode as any)?.password;
+    
+      if (isEncrypted) {
+        this.log(`Starting decryption for entry: ${entry.filename}`);
+        
+        // Prepare entry for decryption by parsing local header
+        await DecryptionStream.prepareEntryForDecryption(fileHandle, entry);
+        
+        const encryptionMethod = (entry as any).encryptionMethod || EncryptionMethod.ZIP_CRYPTO;
+        
+        this.log(`Creating DecryptionStream with method: ${encryptionMethod}`);
+        
+        const decryptor = new DecryptionStream({
+          password: (this.zipkitNode as any).password,
+          method: encryptionMethod,
+          entry: entry
+        });
+        
+        this.log(`DecryptionStream created, calling decrypt()...`);
+        dataStream = decryptor.decrypt(dataStream);
+        this.log(`decrypt() returned, dataStream is now a generator that yields one decrypted block at a time`);
+      }
+
+      // Pipeline: readCompressedDataStream() → DecryptionStream.decrypt() → decompressStream() → hash validation
+      // Data is discarded after validation, no file writing
+      await this.unCompressToTest(dataStream, entry, {
+        skipHashCheck: options?.skipHashCheck,
+        onProgress: options?.onProgress
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
    * Decompress data stream and write to file
    * 
    * MEMORY EFFICIENCY: Processes decompressed chunks one at a time.
@@ -319,6 +405,71 @@ export class ZipDecompressNode {
   // ============================================================================
   // Decompression Methods
   // ============================================================================
+
+  /**
+   * Decompress data stream and validate hash without writing to disk
+   * 
+   * MEMORY EFFICIENCY: Processes decompressed chunks one at a time.
+   * Pipeline: compressedStream → decompressStream() → hashCalc → validation
+   * - Each decompressed chunk is validated immediately without accumulation
+   * - Hash calculation is incremental (HashCalculator)
+   * - Progress callbacks are invoked per chunk
+   * - No file writing - data is discarded after validation
+   * 
+   * Handles decompression, hash calculation, and verification.
+   * Internal method only
+   */
+  private async unCompressToTest(
+    compressedStream: AsyncGenerator<Buffer>,
+    entry: ZipEntry,
+    options?: {
+      skipHashCheck?: boolean;
+      onProgress?: (bytes: number) => void;
+    }
+  ): Promise<void> {
+    this.log(`unCompressToTest() called for entry: ${entry.filename}, method: ${entry.cmpMethod}`);
+    
+    // Decompress stream - processes one block at a time
+    const decompressedStream = this.decompressStream(compressedStream, entry.cmpMethod);
+    
+    // Process and validate chunks - one block at a time
+    const hashCalc = new HashCalculator({ useSHA256: !!entry.sha256 });
+    let totalBytes = 0;
+    
+    try {
+      for await (const chunk of decompressedStream) {
+        this.log(`unCompressToTest: Processing decompressed chunk: ${chunk.length} bytes`);
+        hashCalc.update(chunk);
+        // Discard chunk - don't write to disk
+        totalBytes += chunk.length;
+        
+        if (options?.onProgress) {
+          options.onProgress(totalBytes);
+        }
+      }
+      
+      // Verify hash
+      if (!options?.skipHashCheck) {
+        if (entry.sha256) {
+          const calculatedHash = hashCalc.finalizeSHA256();
+          this.log(`SHA-256 comparison: calculated=${calculatedHash}, stored=${entry.sha256}`);
+          if (calculatedHash !== entry.sha256) {
+            throw new Error(Errors.INVALID_SHA256);
+          }
+          this.log(`SHA-256 comparison: calculated=${calculatedHash}, stored=${entry.sha256}`);
+        } else {
+          const calculatedCRC = hashCalc.finalizeCRC32();
+          this.log(`CRC-32 comparison: calculated=${calculatedCRC}, stored=${entry.crc}`);
+          if (calculatedCRC !== entry.crc) {
+            throw new Error(Errors.INVALID_CRC);
+          }
+          this.log(`CRC-32 comparison: calculated=${calculatedCRC}, stored=${entry.crc}`);
+        }
+      }
+    } catch (error) {
+      throw error;
+    }
+  }
 
   /**
    * Decompress data stream chunk by chunk

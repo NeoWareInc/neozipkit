@@ -235,6 +235,31 @@ export default class ZipkitNode extends Zipkit {
     return this.extractToFile(entry, outputPath, options);
   }
 
+  /**
+   * Test entry integrity without extracting to disk
+   * Validates CRC-32 or SHA-256 hash without writing decompressed data
+   * 
+   * This method processes chunks as they are decompressed and validates them,
+   * but discards the decompressed data instead of writing to disk. This is useful
+   * for verifying ZIP file integrity without extracting files.
+   * 
+   * @param entry - ZIP entry to test
+   * @param options - Optional test options:
+   *   - skipHashCheck: Skip hash verification (default: false)
+   *   - onProgress: Callback function receiving bytes processed as parameter
+   * @returns Promise that resolves when validation is complete
+   * @throws Error if validation fails (INVALID_CRC or INVALID_SHA256) or if not a File-based ZIP
+   */
+  async testEntry(
+    entry: ZipEntry,
+    options?: {
+      skipHashCheck?: boolean;
+      onProgress?: (bytes: number) => void;
+    }
+  ): Promise<void> {
+    return this.getZipDecompressNode().testEntry(entry, options);
+  }
+
   // ============================================================================
   // File-Based Compression Methods (ZipCompressNode wrappers)
   // ============================================================================
@@ -1453,7 +1478,7 @@ export default class ZipkitNode extends Zipkit {
    * Simple API that uses the modular subfunctions
    * 
    * @param archivePath - Path to the ZIP file
-   * @param destination - Directory where files should be extracted
+   * @param destination - Directory where files should be extracted (ignored if testOnly is true)
    * @param options - Optional extraction options
    * @returns Promise resolving to extraction statistics
    */
@@ -1471,6 +1496,7 @@ export default class ZipkitNode extends Zipkit {
       symlinks?: boolean; // Handle symbolic links
       hardLinks?: boolean; // Handle hard links
       skipHashCheck?: boolean; // Skip hash verification
+      testOnly?: boolean; // Test integrity without extracting files
       onProgress?: (entry: ZipEntry, bytes: number) => void; // Progress callback
       onOverwritePrompt?: (filename: string) => Promise<'y' | 'n' | 'a' | 'q'>; // Overwrite prompt callback
     }
@@ -1505,6 +1531,26 @@ export default class ZipkitNode extends Zipkit {
     let bytesExtracted = 0;
     let alwaysOverwrite = false; // Track "always" response from user
     
+    // If testOnly mode, validate entries without extracting
+    if (options?.testOnly) {
+      for (const entry of filteredEntries) {
+        try {
+          await this.testEntry(entry, {
+            skipHashCheck: options?.skipHashCheck,
+            onProgress: options?.onProgress ? (bytes: number) => options.onProgress!(entry, bytes) : undefined
+          });
+          // If we get here, validation passed
+          filesExtracted++;
+          bytesExtracted += (entry.uncompressedSize || 0);
+        } catch (error) {
+          // Validation failed - rethrow the error
+          throw error;
+        }
+      }
+      return { filesExtracted, bytesExtracted };
+    }
+    
+    // Normal extraction mode
     for (const entry of filteredEntries) {
       // Prepare output path
       const outputPath = this.prepareExtractionPath(entry, destination, {
