@@ -254,6 +254,7 @@ export class ZipkitVerifier {
     success: boolean; 
     isValid?: boolean; 
     onChainMerkleRoot?: string; 
+    onChainEncryptedHash?: string;  // v3.0+ encrypted hash
     onChainTokenizationTime?: number;
     onChainCreator?: string;
     onChainBlockNumber?: number;
@@ -312,10 +313,22 @@ export class ZipkitVerifier {
         ]);
         
         // Extract all on-chain data
+        // Handle both v2.0 (without encryptedHash) and v3.0 (with encryptedHash) structs
         onChainMerkleRoot = zipFileInfo.merkleRootHash;
         onChainTokenizationTime = Number(zipFileInfo.tokenizationTime);
         onChainCreator = zipFileInfo.creator;
         onChainBlockNumber = Number(zipFileInfo.blockNumber);
+        
+        // v3.0+ also includes encryptedHash (if present)
+        // encryptedHash may be undefined for v2.0 contracts or unencrypted ZIPs
+        const onChainEncryptedHash = zipFileInfo.encryptedHash || undefined;
+        if (this.debug) {
+          if (onChainEncryptedHash) {
+            console.log(`[DEBUG] On-chain encrypted hash: ${onChainEncryptedHash}`);
+          } else {
+            console.log(`[DEBUG] No encrypted hash found (v2.0 contract or unencrypted ZIP)`);
+          }
+        }
         
         if (this.debug) {
           console.log(`[DEBUG] Token ${tokenId} exists`);
@@ -392,6 +405,7 @@ export class ZipkitVerifier {
         success: true, 
         isValid, 
         onChainMerkleRoot,
+        onChainEncryptedHash: onChainEncryptedHash,
         onChainTokenizationTime,
         onChainCreator,
         onChainBlockNumber
@@ -415,6 +429,146 @@ export class ZipkitVerifier {
 
       return { 
         success: false, 
+        error: errorMessage,
+        rpcUrl: rpcUrl
+      };
+    }
+  }
+
+  /**
+   * Verify encrypted hash for a token (v3.0+)
+   * @param tokenId Token ID to verify
+   * @param contractAddress Contract address
+   * @param networkConfig Network configuration
+   * @param providedEncryptedHash Encrypted hash to verify
+   * @param rpcUrlIndex Optional index of RPC URL to use (default: 0)
+   * @returns Verification result
+   */
+  async verifyEncryptedHash(
+    tokenId: string,
+    contractAddress: string,
+    networkConfig: ContractConfig,
+    providedEncryptedHash: string,
+    rpcUrlIndex: number = 0
+  ): Promise<{
+    success: boolean;
+    isValid?: boolean;
+    onChainEncryptedHash?: string;
+    error?: string;
+    rpcUrl?: string;
+  }> {
+    const rpcUrls = networkConfig.rpcUrls.length > 0 ? networkConfig.rpcUrls : [];
+    if (rpcUrls.length === 0) {
+      return {
+        success: false,
+        error: 'No RPC URLs configured for this network'
+      };
+    }
+
+    if (rpcUrlIndex >= rpcUrls.length) {
+      return {
+        success: false,
+        error: `RPC URL index ${rpcUrlIndex} is out of range (${rpcUrls.length} RPCs available)`
+      };
+    }
+
+    const rpcUrl = rpcUrls[rpcUrlIndex];
+    let provider: ethers.JsonRpcProvider | null = null;
+
+    try {
+      if (this.debug) {
+        console.log(`[DEBUG] Starting encrypted hash verification`);
+        console.log(`[DEBUG] Token ID: ${tokenId}, Contract: ${contractAddress}`);
+        console.log(`[DEBUG] Network: ${networkConfig.network}, Chain ID: ${networkConfig.chainId}`);
+        console.log(`[DEBUG] Using RPC: ${rpcUrl}`);
+        console.log(`[DEBUG] Provided encrypted hash: ${providedEncryptedHash.substring(0, 20)}...`);
+      }
+
+      provider = new ethers.JsonRpcProvider(rpcUrl);
+      const contract = new ethers.Contract(contractAddress, NZIP_CONTRACT_ABI, provider);
+
+      // Call verifyEncryptedZipFile (v3.0+)
+      let isValid: boolean;
+      let onChainEncryptedHash: string | undefined;
+
+      try {
+        // First get the on-chain encrypted hash
+        const zipFileInfo = await Promise.race([
+          contract.getZipFileInfo(tokenId),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('getZipFileInfo timeout after 10 seconds')), 10000)
+          )
+        ]);
+
+        // Extract encrypted hash (may be undefined for v2.0 contracts)
+        onChainEncryptedHash = zipFileInfo.encryptedHash || undefined;
+
+        if (!onChainEncryptedHash) {
+          return {
+            success: false,
+            error: 'Token does not have an encrypted hash (v2.0 contract or unencrypted ZIP)'
+          };
+        }
+
+        if (this.debug) {
+          console.log(`[DEBUG] On-chain encrypted hash: ${onChainEncryptedHash}`);
+        }
+
+        // Verify the encrypted hash
+        isValid = await Promise.race([
+          contract.verifyEncryptedZipFile(tokenId, providedEncryptedHash),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('verifyEncryptedZipFile timeout after 10 seconds')), 10000)
+          )
+        ]);
+
+        if (this.debug) {
+          console.log(`[DEBUG] Encrypted hash verification result: ${isValid}`);
+        }
+
+      } catch (verifyError: any) {
+        const errorMsg = verifyError.message || String(verifyError);
+        if (this.debug) {
+          console.log(`[DEBUG] Encrypted hash verification failed: ${errorMsg}`);
+        }
+
+        // Check if function doesn't exist (v2.0 contract)
+        if (errorMsg.includes('verifyEncryptedZipFile') || errorMsg.includes('nonexistent token')) {
+          return {
+            success: false,
+            error: `Token ${tokenId} does not support encrypted hash verification (v2.0 contract or token does not exist)`
+          };
+        }
+
+        return {
+          success: false,
+          error: `Encrypted hash verification failed: ${errorMsg}`
+        };
+      }
+
+      return {
+        success: true,
+        isValid,
+        onChainEncryptedHash
+      };
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Network error';
+
+      if (this.debug) {
+        console.log(`[DEBUG] Encrypted hash verification failed: ${errorMessage}`);
+      }
+
+      try {
+        if (provider) {
+          provider.destroy();
+        }
+      } catch (cleanupError) {
+        // Ignore cleanup errors
+      }
+
+      return {
+        success: false,
         error: errorMessage,
         rpcUrl: rpcUrl
       };

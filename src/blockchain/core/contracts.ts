@@ -103,26 +103,40 @@ export const CONTRACT_CONFIGS: Record<number, ContractConfig> = {
 }
 
 // Contract ABI (ethers.js human-readable format)
+// Supports both v2.0 (without encryptedHash) and v3.0 (with encryptedHash)
 export const NZIP_CONTRACT_ABI = [
+  // v3.0 function signature (with encryptedHash)
+  "function publicMintZipFile(string memory fileName, string memory merkleRootHash, string memory encryptedHash, uint256 creationTimestamp, string memory ipfsHash, string memory metadataURI) public returns (uint256)",
+  // v2.0 function signature (backward compatibility - will fail on v3.0 contracts)
   "function publicMintZipFile(string memory merkleRootHash, uint256 creationTimestamp, string memory ipfsHash, string memory metadataURI) public returns (uint256)",
   "function totalSupply() external view returns (uint256)",
   "function getTokensByMerkleRoot(string memory merkleRoot) external view returns (uint256[])",
   "function getTokensByOwner(address owner) external view returns (uint256[])",
+  // v3.0 getZipFileInfo (with encryptedHash)
+  "function getZipFileInfo(uint256 tokenId) external view returns (tuple(string fileName, string merkleRootHash, string encryptedHash, string ipfsHash, address creator, uint256 creationTimestamp, uint256 tokenizationTime, uint256 blockNumber))",
+  // v2.0 getZipFileInfo (backward compatibility)
   "function getZipFileInfo(uint256 tokenId) external view returns (tuple(string merkleRootHash, string ipfsHash, address creator, uint256 creationTimestamp, uint256 tokenizationTime, uint256 blockNumber))",
   "function ownerOf(uint256 tokenId) external view returns (address)",
   "function balanceOf(address owner) external view returns (uint256)",
   "function isZipFileTokenized(string memory merkleRootHash, uint256 creationTimestamp) external view returns (bool exists, uint256 tokenId)",
   "function verifyZipFile(uint256 tokenId, string memory providedMerkleRoot) external view returns (bool isValid)",
+  "function verifyEncryptedZipFile(uint256 tokenId, string memory providedEncryptedHash) external view returns (bool isValid)",
   "function getVersion() external pure returns (string memory)",
   "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
+  // v3.0 event (with encryptedHash)
+  "event ZipFileTokenized(uint256 indexed tokenId, address indexed creator, string fileName, string merkleRootHash, string encryptedHash, uint256 creationTimestamp, string ipfsHash, uint256 tokenizationTime, uint256 blockNumber)",
+  // v2.0 event (backward compatibility)
   "event ZipFileTokenized(uint256 indexed tokenId, address indexed creator, string merkleRootHash, uint256 creationTimestamp, string ipfsHash, uint256 tokenizationTime, uint256 blockNumber)"
 ]
 
 // Contract ABI (Web3.js JSON format)
+// Supports both v2.0 (without encryptedHash) and v3.0 (with encryptedHash)
 export const NZIP_CONTRACT_ABI_WEB3 = [
   {
     inputs: [
+      { name: "fileName", type: "string" },
       { name: "merkleRootHash", type: "string" },
+      { name: "encryptedHash", type: "string" },
       { name: "creationTimestamp", type: "uint256" },
       { name: "ipfsHash", type: "string" },
       { name: "metadataURI", type: "string" }
@@ -152,7 +166,9 @@ export const NZIP_CONTRACT_ABI_WEB3 = [
     outputs: [
       {
         components: [
+          { name: "fileName", type: "string" },
           { name: "merkleRootHash", type: "string" },
+          { name: "encryptedHash", type: "string" },
           { name: "ipfsHash", type: "string" },
           { name: "creator", type: "address" },
           { name: "creationTimestamp", type: "uint256" },
@@ -204,6 +220,16 @@ export const NZIP_CONTRACT_ABI_WEB3 = [
     type: "function"
   },
   {
+    inputs: [
+      { name: "tokenId", type: "uint256" },
+      { name: "providedEncryptedHash", type: "string" }
+    ],
+    name: "verifyEncryptedZipFile",
+    outputs: [{ name: "isValid", type: "bool" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
     inputs: [],
     name: "getVersion",
     outputs: [{ name: "", type: "string" }],
@@ -225,7 +251,9 @@ export const NZIP_CONTRACT_ABI_WEB3 = [
     inputs: [
       { indexed: true, name: "tokenId", type: "uint256" },
       { indexed: true, name: "creator", type: "address" },
+      { indexed: false, name: "fileName", type: "string" },
       { indexed: false, name: "merkleRootHash", type: "string" },
+      { indexed: false, name: "encryptedHash", type: "string" },
       { indexed: false, name: "creationTimestamp", type: "uint256" },
       { indexed: false, name: "ipfsHash", type: "string" },
       { indexed: false, name: "tokenizationTime", type: "uint256" },

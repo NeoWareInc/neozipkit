@@ -64,6 +64,9 @@ export interface TokenMetadata {
   // Optional content link
   ipfsHash?: string;
 
+  // Encrypted ZIP support (v3.0+)
+  encryptedHash?: string;  // Hash of encrypted ZIP file (SHA-256 of encrypted bytes)
+
   // Versioning
   version?: string;
 }
