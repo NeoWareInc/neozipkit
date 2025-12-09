@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
- * @title NZIP NFT Contract v2.11
+ * @title NZIP NFT Contract v2.10
  * @dev Main NFT contract for tokenizing ZIP files with blockchain metadata
  * Features:
  * - Blockchain metadata (block number, timestamps) 
@@ -14,10 +14,10 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * - Enhanced events with blockchain context
  * - Structured data organization for better maintainability
  * - Improved input validation and error handling
- * - Encrypted ZIP file hash verification support
+ * - Removed unreliable block hash storage
  * 
- * Version: 2.11 (Production Contract)
- * Previous Contract: v2.10 (Base Sepolia: 0xdAe9D83d7AC62197fAE7704abc66b13DA28D3143)
+ * Version: 2.10 (Production Contract)
+ * Previous Contract: 0xb78CB3bcC788fca38c731b1E9D70CF60b04CA015 (No longer supported)
  * Network: Base Sepolia (for testing) / Base Mainnet (for production)
  */
 contract ZipFileNFTPublic is ERC721, ERC721URIStorage, Ownable {
@@ -29,7 +29,6 @@ contract ZipFileNFTPublic is ERC721, ERC721URIStorage, Ownable {
     struct ZipFileInfo {
         // File identification (filename removed for privacy - stored in ZIP metadata only)
         string merkleRootHash;     // Merkle root hash of the ZIP contents
-        string encryptedHash;      // Hash of encrypted ZIP file (SHA-256 of encrypted bytes)
         string ipfsHash;           // IPFS hash where the ZIP file is stored
         address creator;           // Address that created/minted this token
         
@@ -53,21 +52,20 @@ contract ZipFileNFTPublic is ERC721, ERC721URIStorage, Ownable {
         uint256 indexed tokenId,
         address indexed creator,
         string merkleRootHash,
-        string encryptedHash,  // NEW: Encrypted hash field
         uint256 creationTimestamp,
         string ipfsHash,
         uint256 tokenizationTime,
         uint256 blockNumber
     );
     
-    constructor() ERC721("NeoZip File NFT v2.11", "NZIP") Ownable(msg.sender) {}
+    constructor() ERC721("NeoZip File NFT v2.10", "NZIP") Ownable(msg.sender) {}
     
     /**
      * @dev Get the contract version
      * @return version The version string of this contract
      */
     function getVersion() public pure returns (string memory) {
-        return "2.11.0";
+        return "2.10.0";
     }
     
     /**
@@ -86,7 +84,6 @@ contract ZipFileNFTPublic is ERC721, ERC721URIStorage, Ownable {
     /**
      * @dev Public minting function for ZIP files
      * @param merkleRootHash Merkle root hash of the ZIP contents
-     * @param encryptedHash Optional hash of encrypted ZIP file (empty string if unencrypted)
      * @param creationTimestamp Timestamp when the ZIP was created
      * @param ipfsHash IPFS hash where the ZIP is stored
      * @param metadataURI URI for the token metadata
@@ -95,7 +92,6 @@ contract ZipFileNFTPublic is ERC721, ERC721URIStorage, Ownable {
      */
     function publicMintZipFile(
         string memory merkleRootHash,
-        string memory encryptedHash,
         uint256 creationTimestamp,
         string memory ipfsHash,
         string memory metadataURI
@@ -125,7 +121,6 @@ contract ZipFileNFTPublic is ERC721, ERC721URIStorage, Ownable {
         // Store the ZIP file information with blockchain metadata
         zipFileInfo[tokenId] = ZipFileInfo({
             merkleRootHash: merkleRootHash,
-            encryptedHash: encryptedHash,
             ipfsHash: ipfsHash,
             creator: msg.sender,
             creationTimestamp: creationTimestamp,
@@ -141,7 +136,6 @@ contract ZipFileNFTPublic is ERC721, ERC721URIStorage, Ownable {
             tokenId,
             msg.sender,
             merkleRootHash,
-            encryptedHash,
             creationTimestamp,
             ipfsHash,
             block.timestamp,
@@ -159,16 +153,6 @@ contract ZipFileNFTPublic is ERC721, ERC721URIStorage, Ownable {
     function getZipFileInfo(uint256 tokenId) external view returns (ZipFileInfo memory) {
         require(_ownerOf(tokenId) != address(0), "Token does not exist");
         return zipFileInfo[tokenId];
-    }
-    
-    /**
-     * @dev Get encrypted hash for a token
-     * @param tokenId The token ID to query
-     * @return The encrypted hash (empty string if unencrypted)
-     */
-    function getEncryptedHash(uint256 tokenId) external view returns (string memory) {
-        require(_ownerOf(tokenId) != address(0), "Token does not exist");
-        return zipFileInfo[tokenId].encryptedHash;
     }
     
     /**
@@ -231,27 +215,6 @@ contract ZipFileNFTPublic is ERC721, ERC721URIStorage, Ownable {
     }
     
     /**
-     * @dev Verify that a token matches the provided encrypted hash
-     * @param tokenId The token ID to verify
-     * @param providedEncryptedHash The encrypted hash to check against
-     * @return isValid Whether the token matches the provided encrypted hash
-     */
-    function verifyEncryptedZipFile(
-        uint256 tokenId,
-        string memory providedEncryptedHash
-    ) external view returns (bool isValid) {
-        require(_ownerOf(tokenId) != address(0), "Token does not exist");
-        
-        // If token has no encrypted hash, return false
-        if (bytes(zipFileInfo[tokenId].encryptedHash).length == 0) {
-            return false;
-        }
-        
-        return keccak256(abi.encodePacked(zipFileInfo[tokenId].encryptedHash)) == 
-               keccak256(abi.encodePacked(providedEncryptedHash));
-    }
-    
-    /**
      * @dev Get the current total supply of tokens
      * @return The total number of tokens minted
      */
@@ -293,5 +256,4 @@ contract ZipFileNFTPublic is ERC721, ERC721URIStorage, Ownable {
     function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721URIStorage) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
-}
-
+} 
