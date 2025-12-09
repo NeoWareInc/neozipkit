@@ -14,7 +14,8 @@ export const CONTRACT_CONFIGS: Record<number, ContractConfig> = {
   // Base Sepolia (Primary testnet)
   84532: {
     // address: '0xFD76a5d420704F34d84b0767961835c43D7b30a8', // Production contract v2.0
-    address: '0xdAe9D83d7AC62197fAE7704abc66b13DA28D3143', // Production contract v2.10
+    // address: '0xdAe9D83d7AC62197fAE7704abc66b13DA28D3143', // Production contract v2.10
+    address: '0xD9f88AaD2f27262D6808358B796Da8F1b9694c18', // Production contract v2.11
     network: 'Base Sepolia',
     chainId: 84532,
     explorerUrl: 'https://sepolia.basescan.org',
@@ -46,7 +47,8 @@ export const CONTRACT_CONFIGS: Record<number, ContractConfig> = {
   // Network issues include transaction processing failures and RPC timeouts
   // Consider using Base Sepolia (84532) for more reliable testing
   11155111: {
-    address: '0x2716c4609fD97DaEdF429BC4B4Ec2faa81e2cC60', // Production contract v2.10
+    // address: '0x2716c4609fD97DaEdF429BC4B4Ec2faa81e2cC60', // Production contract v2.10
+    address: '0x3b99a72cCAc108037741cacb0D60d5571CF6412C', // Production contract v2.11
     network: 'Sepolia Testnet',
     chainId: 11155111,
     explorerUrl: 'https://sepolia.etherscan.io',
@@ -65,7 +67,8 @@ export const CONTRACT_CONFIGS: Record<number, ContractConfig> = {
   
   // Arbitrum Sepolia (Testnet)
   421614: {
-    address: '0x2716c4609fD97DaEdF429BC4B4Ec2faa81e2cC60', // Production contract v2.10
+    // address: '0x2716c4609fD97DaEdF429BC4B4Ec2faa81e2cC60', // Production contract v2.10
+    address: '0x243cDc963b80E539723e526F4Fc16FA254725Ccd', // Production contract v2.11
     network: 'Arbitrum Sepolia',
     chainId: 421614,
     explorerUrl: 'https://sepolia.arbiscan.io',
