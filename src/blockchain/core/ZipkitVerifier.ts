@@ -301,6 +301,7 @@ export class ZipkitVerifier {
       let onChainTokenizationTime: number | undefined;
       let onChainCreator: string | undefined;
       let onChainBlockNumber: number | undefined;
+      let onChainEncryptedHash: string | undefined;
       
       try {
         // Get token info including ALL data stored on-chain (merkle root, tokenization time, creator, block number)
@@ -321,7 +322,7 @@ export class ZipkitVerifier {
         
         // v3.0+ also includes encryptedHash (if present)
         // encryptedHash may be undefined for v2.0 contracts or unencrypted ZIPs
-        const onChainEncryptedHash = zipFileInfo.encryptedHash || undefined;
+        onChainEncryptedHash = zipFileInfo.encryptedHash || undefined;
         if (this.debug) {
           if (onChainEncryptedHash) {
             console.log(`[DEBUG] On-chain encrypted hash: ${onChainEncryptedHash}`);
