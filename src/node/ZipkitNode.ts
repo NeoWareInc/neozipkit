@@ -236,6 +236,30 @@ export default class ZipkitNode extends Zipkit {
   }
 
   /**
+   * Extract file to Buffer (in-memory) for file-based ZIP
+   * 
+   * This method extracts a ZIP entry directly to a Buffer without writing to disk.
+   * This is ideal for reading metadata files (like NZIP.TOKEN) that don't need
+   * to be written to temporary files.
+   * 
+   * @param entry - ZIP entry to extract
+   * @param options - Optional extraction options:
+   *   - skipHashCheck: Skip hash verification (default: false)
+   *   - onProgress: Callback function receiving bytes extracted as parameter
+   * @returns Promise that resolves to Buffer containing the extracted file data
+   * @throws Error if not a File-based ZIP or if extraction fails
+   */
+  async extractToBuffer(
+    entry: ZipEntry,
+    options?: {
+      skipHashCheck?: boolean;
+      onProgress?: (bytes: number) => void;
+    }
+  ): Promise<Buffer> {
+    return this.getZipDecompressNode().extractToBuffer(entry, options);
+  }
+
+  /**
    * Test entry integrity without extracting to disk
    * Validates CRC-32 or SHA-256 hash without writing decompressed data
    * 
