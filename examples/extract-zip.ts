@@ -58,13 +58,18 @@ async function main() {
     // Uncomment the following lines to test without extracting:
     /*
     console.log('Testing ZIP integrity (without extracting)...');
-    const testResult = await zip.extractZipFile(archivePath, destination, {
-      testOnly: true,          // Test mode - validate without extracting
-      skipHashCheck: false     // Verify file integrity (CRC-32/SHA-256 checks)
-    });
+    for (const entry of entries) {
+      const testResult = await zip.testEntry(entry, {
+        skipHashCheck: false  // Verify file integrity (CRC-32/SHA-256 checks)
+      });
+      console.log(`✅ ${entry.filename}: Validated`);
+      if (testResult.verifiedHash) {
+        console.log(`   Verified SHA-256: ${testResult.verifiedHash}`);
+      } else {
+        console.log(`   Verified CRC-32: ${entry.crc?.toString(16).toUpperCase().padStart(8, '0')}`);
+      }
+    }
     console.log(`✅ All files validated successfully!`);
-    console.log(`   Files tested: ${testResult.filesExtracted}`);
-    console.log(`   Total bytes validated: ${testResult.bytesExtracted}`);
     return;
     */
 
@@ -89,7 +94,10 @@ async function main() {
     console.log('   const entries = zip.getDirectory();');
     console.log('   await zip.extractToFile(entries[0], "output.txt");');
     console.log('\n💡 Tip: Test integrity without extracting:');
-    console.log('   await zip.extractZipFile("archive.zip", ".", { testOnly: true });');
+    console.log('   const result = await zip.testEntry(entry);');
+    console.log('   if (result.verifiedHash) {');
+    console.log('     console.log("SHA-256:", result.verifiedHash);');
+    console.log('   }');
 
   } catch (error) {
     console.error('❌ Error extracting ZIP archive:');

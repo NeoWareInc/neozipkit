@@ -247,7 +247,7 @@ export default class ZipkitNode extends Zipkit {
    * @param options - Optional test options:
    *   - skipHashCheck: Skip hash verification (default: false)
    *   - onProgress: Callback function receiving bytes processed as parameter
-   * @returns Promise that resolves when validation is complete
+   * @returns Promise that resolves to an object containing the verified hash (if SHA-256) or undefined
    * @throws Error if validation fails (INVALID_CRC or INVALID_SHA256) or if not a File-based ZIP
    */
   async testEntry(
@@ -256,7 +256,7 @@ export default class ZipkitNode extends Zipkit {
       skipHashCheck?: boolean;
       onProgress?: (bytes: number) => void;
     }
-  ): Promise<void> {
+  ): Promise<{ verifiedHash?: string }> {
     return this.getZipDecompressNode().testEntry(entry, options);
   }
 

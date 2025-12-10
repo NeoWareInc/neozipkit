@@ -126,7 +126,7 @@ export class ZipDecompressNode {
    * 
    * @param entry ZIP entry to test
    * @param options Optional test options including progress callback
-   * @returns Promise that resolves when validation is complete
+   * @returns Promise that resolves to an object containing the verified hash (if SHA-256) or undefined
    * @throws Error if validation fails (INVALID_CRC or INVALID_SHA256) or if not a File-based ZIP
    */
   async testEntry(
@@ -135,7 +135,7 @@ export class ZipDecompressNode {
       skipHashCheck?: boolean;
       onProgress?: (bytes: number) => void;
     }
-  ): Promise<void> {
+  ): Promise<{ verifiedHash?: string }> {
     // Lazy ZSTD initialization
     if (entry.cmpMethod === CMP_METHOD.ZSTD && !this.zstdCodec) {
       this.zstdCodec = await initZstd();
@@ -145,7 +145,7 @@ export class ZipDecompressNode {
     const fileHandle = (this.zipkitNode as any).getFileHandle();
     
     // Call internal test method with fileHandle
-    await this.testEntryInternal(fileHandle, entry, options);
+    return await this.testEntryInternal(fileHandle, entry, options);
   }
 
   // ============================================================================
@@ -273,7 +273,7 @@ export class ZipDecompressNode {
       skipHashCheck?: boolean;
       onProgress?: (bytes: number) => void;
     }
-  ): Promise<void> {
+  ): Promise<{ verifiedHash?: string }> {
     this.log(`testEntryInternal called for entry: ${entry.filename}`);
     this.log(`Entry isEncrypted: ${(entry as any).isEncrypted}, has password: ${!!(this.zipkitNode as any)?.password}`);
     
@@ -307,7 +307,7 @@ export class ZipDecompressNode {
 
       // Pipeline: readCompressedDataStream() → DecryptionStream.decrypt() → decompressStream() → hash validation
       // Data is discarded after validation, no file writing
-      await this.unCompressToTest(dataStream, entry, {
+      return await this.unCompressToTest(dataStream, entry, {
         skipHashCheck: options?.skipHashCheck,
         onProgress: options?.onProgress
       });
@@ -426,7 +426,7 @@ export class ZipDecompressNode {
       skipHashCheck?: boolean;
       onProgress?: (bytes: number) => void;
     }
-  ): Promise<void> {
+  ): Promise<{ verifiedHash?: string }> {
     this.log(`unCompressToTest() called for entry: ${entry.filename}, method: ${entry.cmpMethod}`);
     
     // Decompress stream - processes one block at a time
@@ -448,7 +448,7 @@ export class ZipDecompressNode {
         }
       }
       
-      // Verify hash
+      // Verify hash and return verified hash if SHA-256
       if (!options?.skipHashCheck) {
         if (entry.sha256) {
           const calculatedHash = hashCalc.finalizeSHA256();
@@ -457,6 +457,8 @@ export class ZipDecompressNode {
             throw new Error(Errors.INVALID_SHA256);
           }
           this.log(`SHA-256 comparison: calculated=${calculatedHash}, stored=${entry.sha256}`);
+          // Return the verified hash
+          return { verifiedHash: calculatedHash };
         } else {
           const calculatedCRC = hashCalc.finalizeCRC32();
           this.log(`CRC-32 comparison: calculated=${calculatedCRC}, stored=${entry.crc}`);
@@ -464,7 +466,12 @@ export class ZipDecompressNode {
             throw new Error(Errors.INVALID_CRC);
           }
           this.log(`CRC-32 comparison: calculated=${calculatedCRC}, stored=${entry.crc}`);
+          // No hash to return for CRC-32 only entries
+          return { verifiedHash: undefined };
         }
+      } else {
+        // Hash check skipped - return undefined
+        return { verifiedHash: undefined };
       }
     } catch (error) {
       throw error;
