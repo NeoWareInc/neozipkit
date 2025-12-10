@@ -123,16 +123,15 @@ export class ZipkitMinterBrowser {
       const tokenURI = "" // Empty for now, could be implemented later
       
       // Estimate gas for the mint function with timeout
-      // Try v3.0 signature first (with fileName and encryptedHash), fall back to v2.0 if it fails
+      // Try v2.11 signature first (with encryptedHash), fall back to v2.0 if it fails
       const GAS_ESTIMATION_TIMEOUT = 30000 // 30 seconds
       let gasEstimate: bigint
       try {
-        // v3.0 signature: publicMintZipFile(fileName, merkleRootHash, encryptedHash, creationTimestamp, ipfsHash, metadataURI)
+        // v2.11 signature: publicMintZipFile(merkleRootHash, encryptedHash, creationTimestamp, ipfsHash, metadataURI)
         gasEstimate = await Promise.race([
           contractWithSigner.getFunction("publicMintZipFile").estimateGas(
-            '', // fileName (empty for now)
             this.merkleRoot,
-            this.encryptedHash,
+            this.encryptedHash || '', // encryptedHash (empty string if not provided)
             creationTimestamp,
             ipfsHash,
             tokenURI
@@ -142,7 +141,7 @@ export class ZipkitMinterBrowser {
           )
         ])
       } catch (error) {
-        // Fall back to v2.0 signature if v3.0 fails (backward compatibility)
+        // Fall back to v2.0 signature if v2.11 fails (backward compatibility)
         gasEstimate = await Promise.race([
           contractWithSigner.getFunction("publicMintZipFile").estimateGas(
             this.merkleRoot,
@@ -226,7 +225,7 @@ export class ZipkitMinterBrowser {
       const functionCall = contractWithSigner.getFunction("publicMintZipFile")
       
       // Send the transaction (this will trigger wallet approval)
-      // Try v3.0 signature first (with fileName and encryptedHash), fall back to v2.0 if it fails
+      // Try v2.11 signature first (with encryptedHash), fall back to v2.0 if it fails
       // Note: We don't populateTransaction first as it may trigger gas estimation
       // which can hang on some networks. Let the wallet handle it directly.
       // Add timeout to prevent hanging if wallet doesn't respond
@@ -234,12 +233,11 @@ export class ZipkitMinterBrowser {
       console.log("⏳ Waiting for wallet approval...")
       let tx
       try {
-        // v3.0 signature: publicMintZipFile(fileName, merkleRootHash, encryptedHash, creationTimestamp, ipfsHash, metadataURI)
+        // v2.11 signature: publicMintZipFile(merkleRootHash, encryptedHash, creationTimestamp, ipfsHash, metadataURI)
         tx = await Promise.race([
           functionCall(
-            '', // fileName (empty for now)
             this.merkleRoot,
-            this.encryptedHash,
+            this.encryptedHash || '', // encryptedHash (empty string if not provided)
             creationTimestamp,
             ipfsHash,
             tokenURI
@@ -249,7 +247,7 @@ export class ZipkitMinterBrowser {
           )
         ])
       } catch (error) {
-        // Fall back to v2.0 signature if v3.0 fails (backward compatibility)
+        // Fall back to v2.0 signature if v2.11 fails (backward compatibility)
         tx = await Promise.race([
           functionCall(
             this.merkleRoot,

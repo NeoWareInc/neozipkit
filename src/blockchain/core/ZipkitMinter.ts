@@ -249,27 +249,14 @@ export class ZipkitMinter {
     const creationTimestamp = Math.floor(Date.now() / 1000);
     const metadata = this.createTokenMetadataString();
 
-    // Try v3.0 signature first (with fileName and encryptedHash), fall back to v2.0 if it fails
-    let gasLimit: bigint;
-    try {
-      // v3.0 signature: publicMintZipFile(fileName, merkleRootHash, encryptedHash, creationTimestamp, ipfsHash, metadataURI)
-      gasLimit = await this.contract.publicMintZipFile.estimateGas(
-        '', // fileName (empty for now, can be added later)
-        this.merkleRoot,
-        this.encryptedHash,
-        creationTimestamp,
-        '', // ipfsHash
-        metadata
-      );
-    } catch (error) {
-      // Fall back to v2.0 signature if v3.0 fails (backward compatibility)
-      gasLimit = await this.contract.publicMintZipFile.estimateGas(
-        this.merkleRoot,
-        creationTimestamp,
-        '', // ipfsHash
-        metadata
-      );
-    }
+    // v2.11 signature: publicMintZipFile(merkleRootHash, encryptedHash, creationTimestamp, ipfsHash, metadataURI)
+    const gasLimit = await this.contract.publicMintZipFile.estimateGas(
+      this.merkleRoot,
+      this.encryptedHash || '', // encryptedHash (empty string if not provided)
+      creationTimestamp,
+      '', // ipfsHash
+      metadata
+    );
 
     const feeData = await this.provider.getFeeData();
     const gasPrice = feeData.gasPrice || BigInt(0);
@@ -345,29 +332,15 @@ export class ZipkitMinter {
       let gasLimit: bigint;
       let gasPrice: bigint;
       try {
-        // Try v3.0 signature first (with fileName and encryptedHash), fall back to v2.0 if it fails
+        // v2.11 signature: publicMintZipFile(merkleRootHash, encryptedHash, creationTimestamp, ipfsHash, metadataURI)
         const gasEstimate = await Promise.race([
-          (async () => {
-            try {
-              // v3.0 signature: publicMintZipFile(fileName, merkleRootHash, encryptedHash, creationTimestamp, ipfsHash, metadataURI)
-              return await this.contract.publicMintZipFile.estimateGas(
-                '', // fileName (empty for now, can be added later)
-                this.merkleRoot,
-                this.encryptedHash,
-                creationTimestamp,
-                '', // ipfsHash
-                metadata
-              );
-            } catch (error) {
-              // Fall back to v2.0 signature if v3.0 fails (backward compatibility)
-              return await this.contract.publicMintZipFile.estimateGas(
-                this.merkleRoot,
-                creationTimestamp,
-                '', // ipfsHash
-                metadata
-              );
-            }
-          })(),
+          this.contract.publicMintZipFile.estimateGas(
+            this.merkleRoot,
+            this.encryptedHash || '', // encryptedHash (empty string if not provided)
+            creationTimestamp,
+            '', // ipfsHash
+            metadata
+          ),
           new Promise<never>((_, reject) => 
             setTimeout(() => reject(new Error('Gas estimation timeout after 20 seconds')), 20000)
           )
@@ -418,37 +391,19 @@ export class ZipkitMinter {
         console.log(`[DEBUG] Submitting transaction with gas limit: ${gasLimit.toString()}, gas price: ${ethers.formatUnits(gasPrice, 'gwei')} gwei`);
       }
       
-      // Try v3.0 signature first (with fileName and encryptedHash), fall back to v2.0 if it fails
+      // v2.11 signature: publicMintZipFile(merkleRootHash, encryptedHash, creationTimestamp, ipfsHash, metadataURI)
       const tx = await Promise.race([
-        (async () => {
-          try {
-            // v3.0 signature: publicMintZipFile(fileName, merkleRootHash, encryptedHash, creationTimestamp, ipfsHash, metadataURI)
-            return await this.contract.publicMintZipFile(
-              '', // fileName (empty for now, can be added later)
-              this.merkleRoot,
-              this.encryptedHash,
-              creationTimestamp,
-              '', // ipfsHash (empty since we store in ZIP)
-              metadata,
-              {
-                gasLimit: gasLimit,
-                gasPrice: gasPrice
-              }
-            );
-          } catch (error) {
-            // Fall back to v2.0 signature if v3.0 fails (backward compatibility)
-            return await this.contract.publicMintZipFile(
-              this.merkleRoot,
-              creationTimestamp,
-              '', // ipfsHash (empty since we store in ZIP)
-              metadata,
-              {
-                gasLimit: gasLimit,
-                gasPrice: gasPrice
-              }
-            );
+        this.contract.publicMintZipFile(
+          this.merkleRoot,
+          this.encryptedHash || '', // encryptedHash (empty string if not provided)
+          creationTimestamp,
+          '', // ipfsHash (empty since we store in ZIP)
+          metadata,
+          {
+            gasLimit: gasLimit,
+            gasPrice: gasPrice
           }
-        })(),
+        ),
         new Promise<never>((_, reject) => 
           setTimeout(() => reject(new Error('Transaction submission timeout after 30 seconds')), 30000)
         )
