@@ -250,9 +250,10 @@ export class ZipkitMinter {
     const metadata = this.createTokenMetadataString();
 
     // v2.11 signature: publicMintZipFile(merkleRootHash, encryptedHash, creationTimestamp, ipfsHash, metadataURI)
+    // v2.11 contract has overloaded function, so we can also call with 4 params for backward compatibility
     const gasLimit = await this.contract.publicMintZipFile.estimateGas(
       this.merkleRoot,
-      this.encryptedHash || '', // encryptedHash (empty string if not provided)
+      this.encryptedHash || '', // encryptedHash (empty string if not encrypted)
       creationTimestamp,
       '', // ipfsHash
       metadata
@@ -331,12 +332,13 @@ export class ZipkitMinter {
       
       let gasLimit: bigint;
       let gasPrice: bigint;
+      
       try {
         // v2.11 signature: publicMintZipFile(merkleRootHash, encryptedHash, creationTimestamp, ipfsHash, metadataURI)
         const gasEstimate = await Promise.race([
           this.contract.publicMintZipFile.estimateGas(
             this.merkleRoot,
-            this.encryptedHash || '', // encryptedHash (empty string if not provided)
+            this.encryptedHash || '', // encryptedHash (empty string if not encrypted)
             creationTimestamp,
             '', // ipfsHash
             metadata
@@ -346,7 +348,6 @@ export class ZipkitMinter {
           )
         ]);
         
-        // Add 20% buffer to gas estimate
         gasLimit = (gasEstimate * BigInt(120)) / BigInt(100);
         
         // Get current gas price
@@ -395,7 +396,7 @@ export class ZipkitMinter {
       const tx = await Promise.race([
         this.contract.publicMintZipFile(
           this.merkleRoot,
-          this.encryptedHash || '', // encryptedHash (empty string if not provided)
+          this.encryptedHash || '', // encryptedHash (empty string if not encrypted)
           creationTimestamp,
           '', // ipfsHash (empty since we store in ZIP)
           metadata,

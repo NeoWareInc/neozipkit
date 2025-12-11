@@ -84,7 +84,27 @@ contract ZipFileNFTPublic is ERC721, ERC721URIStorage, Ownable {
     }
     
     /**
-     * @dev Public minting function for ZIP files
+     * @dev Public minting function for ZIP files (v2.10 compatible - no encrypted hash)
+     * @param merkleRootHash Merkle root hash of the ZIP contents
+     * @param creationTimestamp Timestamp when the ZIP was created
+     * @param ipfsHash IPFS hash where the ZIP is stored
+     * @param metadataURI URI for the token metadata
+     * @return The newly minted token ID
+     * Note: fileName is not stored on blockchain for privacy - it's stored in ZIP metadata only
+     * This overload maintains compatibility with v2.10 contracts
+     */
+    function publicMintZipFile(
+        string memory merkleRootHash,
+        uint256 creationTimestamp,
+        string memory ipfsHash,
+        string memory metadataURI
+    ) public returns (uint256) {
+        // Call the v2.11 version with empty encrypted hash for backward compatibility
+        return publicMintZipFile(merkleRootHash, "", creationTimestamp, ipfsHash, metadataURI);
+    }
+    
+    /**
+     * @dev Public minting function for ZIP files (v2.11 - with encrypted hash support)
      * @param merkleRootHash Merkle root hash of the ZIP contents
      * @param encryptedHash Optional hash of encrypted ZIP file (empty string if unencrypted)
      * @param creationTimestamp Timestamp when the ZIP was created
