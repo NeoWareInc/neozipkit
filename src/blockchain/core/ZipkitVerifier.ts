@@ -314,20 +314,27 @@ export class ZipkitVerifier {
         ]);
         
         // Extract all on-chain data
-        // Handle both v2.0 (without encryptedHash) and v3.0 (with encryptedHash) structs
+        // Handle both v2.10 (without encryptedHash) and v2.11 (with encryptedHash) structs
         onChainMerkleRoot = zipFileInfo.merkleRootHash;
         onChainTokenizationTime = Number(zipFileInfo.tokenizationTime);
         onChainCreator = zipFileInfo.creator;
         onChainBlockNumber = Number(zipFileInfo.blockNumber);
         
-        // v3.0+ also includes encryptedHash (if present)
-        // encryptedHash may be undefined for v2.0 contracts or unencrypted ZIPs
-        onChainEncryptedHash = zipFileInfo.encryptedHash || undefined;
+        // v2.11+ also includes encryptedHash (if present)
+        // encryptedHash may be undefined for v2.10 contracts or unencrypted ZIPs
+        // Try to access it, but don't fail if it doesn't exist
+        try {
+          onChainEncryptedHash = zipFileInfo.encryptedHash || undefined;
+        } catch (e) {
+          // encryptedHash field doesn't exist (v2.10 contract)
+          onChainEncryptedHash = undefined;
+        }
+        
         if (this.debug) {
           if (onChainEncryptedHash) {
             console.log(`[DEBUG] On-chain encrypted hash: ${onChainEncryptedHash}`);
           } else {
-            console.log(`[DEBUG] No encrypted hash found (v2.0 contract or unencrypted ZIP)`);
+            console.log(`[DEBUG] No encrypted hash found (v2.10 contract or unencrypted ZIP)`);
           }
         }
         
@@ -437,7 +444,7 @@ export class ZipkitVerifier {
   }
 
   /**
-   * Verify encrypted hash for a token (v3.0+)
+   * Verify encrypted hash for a token (v2.11+)
    * @param tokenId Token ID to verify
    * @param contractAddress Contract address
    * @param networkConfig Network configuration
@@ -501,13 +508,18 @@ export class ZipkitVerifier {
           )
         ]);
 
-        // Extract encrypted hash (may be undefined for v2.0 contracts)
-        onChainEncryptedHash = zipFileInfo.encryptedHash || undefined;
+        // Extract encrypted hash (may be undefined for v2.10 contracts)
+        try {
+          onChainEncryptedHash = zipFileInfo.encryptedHash || undefined;
+        } catch (e) {
+          // encryptedHash field doesn't exist (v2.10 contract)
+          onChainEncryptedHash = undefined;
+        }
 
         if (!onChainEncryptedHash) {
           return {
             success: false,
-            error: 'Token does not have an encrypted hash (v2.0 contract or unencrypted ZIP)'
+            error: 'Token does not have an encrypted hash (v2.10 contract or unencrypted ZIP)'
           };
         }
 
@@ -533,11 +545,11 @@ export class ZipkitVerifier {
           console.log(`[DEBUG] Encrypted hash verification failed: ${errorMsg}`);
         }
 
-        // Check if function doesn't exist (v2.0 contract)
+        // Check if function doesn't exist (v2.10 contract)
         if (errorMsg.includes('verifyEncryptedZipFile') || errorMsg.includes('nonexistent token')) {
           return {
             success: false,
-            error: `Token ${tokenId} does not support encrypted hash verification (v2.0 contract or token does not exist)`
+            error: `Token ${tokenId} does not support encrypted hash verification (v2.10 contract or token does not exist)`
           };
         }
 

@@ -238,9 +238,9 @@ export class TokenVerifierBrowser {
   }
 
   /**
-   * Queries the blockchain to get the actual merkle root, timestamp, and owner stored in the smart contract
+   * Queries the blockchain to get the actual merkle root, timestamp, owner, and encrypted hash stored in the smart contract
    */
-  private async queryBlockchainData(tokenMetadata: TokenMetadata): Promise<{merkleRoot: string | null, timestamp: number | null, owner: string | null}> {
+  private async queryBlockchainData(tokenMetadata: TokenMetadata): Promise<{merkleRoot: string | null, timestamp: number | null, owner: string | null, encryptedHash?: string}> {
     try {
       // Get network configuration from contracts.ts (single source of truth)
       if (!tokenMetadata.networkChainId) {
@@ -252,7 +252,7 @@ export class TokenVerifierBrowser {
       
       if (!networkConfig) {
         console.error(`[TokenVerifier] ❌ Could not resolve network configuration for chainId: ${tokenMetadata.networkChainId}`);
-        return { merkleRoot: null, timestamp: null, owner: null };
+        return { merkleRoot: null, timestamp: null, owner: null, encryptedHash: undefined };
       }
 
       // Test RPC endpoints first to find working ones (same as server-side)
@@ -321,10 +321,24 @@ export class TokenVerifierBrowser {
           // Get the token owner
           const owner = await contract.ownerOf(tokenMetadata.tokenId);
           
+          // Extract merkle root and timestamp (compatible with both v2.10 and v2.11)
+          const merkleRoot = zipInfo.merkleRootHash;
+          const timestamp = Number(zipInfo.tokenizationTime);
+          
+          // Try to get encrypted hash (v2.11+), but don't fail if it doesn't exist (v2.10)
+          let encryptedHash: string | undefined;
+          try {
+            encryptedHash = zipInfo.encryptedHash || undefined;
+          } catch (e) {
+            // encryptedHash field doesn't exist (v2.10 contract)
+            encryptedHash = undefined;
+          }
+          
           return {
-            merkleRoot: zipInfo.merkleRootHash,
-            timestamp: Number(zipInfo.tokenizationTime),
-            owner: owner
+            merkleRoot: merkleRoot,
+            timestamp: timestamp,
+            owner: owner,
+            encryptedHash: encryptedHash
           };
           
         } catch (error: any) {
@@ -334,11 +348,11 @@ export class TokenVerifierBrowser {
       }
       
       console.error(`[TokenVerifier] ❌ All RPC endpoints failed for network: ${tokenMetadata.network}`);
-      return { merkleRoot: null, timestamp: null, owner: null };
+      return { merkleRoot: null, timestamp: null, owner: null, encryptedHash: undefined };
       
     } catch (error: any) {
       console.error(`[TokenVerifier] ❌ Blockchain query error:`, error?.message || error);
-      return { merkleRoot: null, timestamp: null, owner: null };
+      return { merkleRoot: null, timestamp: null, owner: null, encryptedHash: undefined };
     }
   }
 

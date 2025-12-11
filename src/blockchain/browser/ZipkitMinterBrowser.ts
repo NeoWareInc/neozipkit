@@ -123,37 +123,20 @@ export class ZipkitMinterBrowser {
       const tokenURI = "" // Empty for now, could be implemented later
       
       // Estimate gas for the mint function with timeout
-      // Try v2.11 signature first (with encryptedHash), fall back to v2.0 if it fails
+      // v2.11 signature: publicMintZipFile(merkleRootHash, encryptedHash, creationTimestamp, ipfsHash, metadataURI)
       const GAS_ESTIMATION_TIMEOUT = 30000 // 30 seconds
-      let gasEstimate: bigint
-      try {
-        // v2.11 signature: publicMintZipFile(merkleRootHash, encryptedHash, creationTimestamp, ipfsHash, metadataURI)
-        gasEstimate = await Promise.race([
-          contractWithSigner.getFunction("publicMintZipFile").estimateGas(
-            this.merkleRoot,
-            this.encryptedHash || '', // encryptedHash (empty string if not provided)
-            creationTimestamp,
-            ipfsHash,
-            tokenURI
-          ),
-          new Promise<never>((_, reject) => 
-            setTimeout(() => reject(new Error('Gas estimation timeout')), GAS_ESTIMATION_TIMEOUT)
-          )
-        ])
-      } catch (error) {
-        // Fall back to v2.0 signature if v2.11 fails (backward compatibility)
-        gasEstimate = await Promise.race([
-          contractWithSigner.getFunction("publicMintZipFile").estimateGas(
-            this.merkleRoot,
-            creationTimestamp,
-            ipfsHash,
-            tokenURI
-          ),
-          new Promise<never>((_, reject) => 
-            setTimeout(() => reject(new Error('Gas estimation timeout')), GAS_ESTIMATION_TIMEOUT)
-          )
-        ])
-      }
+      const gasEstimate: bigint = await Promise.race([
+        contractWithSigner.getFunction("publicMintZipFile").estimateGas(
+          this.merkleRoot,
+          this.encryptedHash || '', // encryptedHash (empty string if not encrypted)
+          creationTimestamp,
+          ipfsHash,
+          tokenURI
+        ),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Gas estimation timeout')), GAS_ESTIMATION_TIMEOUT)
+        )
+      ])
       
       // Get current gas price (use read provider if available) with timeout
       const readProvider = this.walletManager.getReadProvider()
@@ -225,41 +208,25 @@ export class ZipkitMinterBrowser {
       const functionCall = contractWithSigner.getFunction("publicMintZipFile")
       
       // Send the transaction (this will trigger wallet approval)
-      // Try v2.11 signature first (with encryptedHash), fall back to v2.0 if it fails
+      // v2.11 signature: publicMintZipFile(merkleRootHash, encryptedHash, creationTimestamp, ipfsHash, metadataURI)
       // Note: We don't populateTransaction first as it may trigger gas estimation
       // which can hang on some networks. Let the wallet handle it directly.
       // Add timeout to prevent hanging if wallet doesn't respond
       const TX_SEND_TIMEOUT = 60000 // 60 seconds for user to approve
       console.log("⏳ Waiting for wallet approval...")
-      let tx
-      try {
-        // v2.11 signature: publicMintZipFile(merkleRootHash, encryptedHash, creationTimestamp, ipfsHash, metadataURI)
-        tx = await Promise.race([
-          functionCall(
-            this.merkleRoot,
-            this.encryptedHash || '', // encryptedHash (empty string if not provided)
-            creationTimestamp,
-            ipfsHash,
-            tokenURI
-          ),
-          new Promise<never>((_, reject) => 
-            setTimeout(() => reject(new Error('Transaction send timeout - wallet approval dialog may not have appeared. Please check your wallet.')), TX_SEND_TIMEOUT)
-          )
-        ])
-      } catch (error) {
-        // Fall back to v2.0 signature if v2.11 fails (backward compatibility)
-        tx = await Promise.race([
-          functionCall(
-            this.merkleRoot,
-            creationTimestamp,
-            ipfsHash,
-            tokenURI
-          ),
-          new Promise<never>((_, reject) => 
-            setTimeout(() => reject(new Error('Transaction send timeout - wallet approval dialog may not have appeared. Please check your wallet.')), TX_SEND_TIMEOUT)
-          )
-        ])
-      }
+      
+      const tx = await Promise.race([
+        functionCall(
+          this.merkleRoot,
+          this.encryptedHash || '', // encryptedHash (empty string if not encrypted)
+          creationTimestamp,
+          ipfsHash,
+          tokenURI
+        ),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Transaction send timeout - wallet approval dialog may not have appeared. Please check your wallet.')), TX_SEND_TIMEOUT)
+        )
+      ])
       
       console.log(`📜 Transaction submitted: ${tx.hash}`)
       console.log("⏳ Waiting for confirmation...")
@@ -412,6 +379,7 @@ export class ZipkitMinterBrowser {
       networkChainId: config.chainId,
       transactionHash,
       merkleRoot: this.merkleRoot,
+      encryptedHash: this.encryptedHash || undefined,
       mintedAt: now.toISOString(),
       creationTimestamp: Math.floor(now.getTime() / 1000)
     }
