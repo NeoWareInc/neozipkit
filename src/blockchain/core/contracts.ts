@@ -4,7 +4,6 @@ export interface ContractConfig {
   address: string
   network: string
   chainId: number
-  version: 'v2.10' | 'v2.11' | string  // Contract version
   explorerUrl: string
   rpcUrls: string[]
   nameAliases?: string[]  // Alternative network name formats (e.g., ["base-sepolia", "base sepolia"])
@@ -19,7 +18,6 @@ export const CONTRACT_CONFIGS: Record<number, ContractConfig> = {
     address: '0xD9f88AaD2f27262D6808358B796Da8F1b9694c18', // Production contract v2.11
     network: 'Base Sepolia',
     chainId: 84532,
-    version: 'v2.11',
     explorerUrl: 'https://sepolia.basescan.org',
     rpcUrls: [
       'https://sepolia.base.org',
@@ -35,7 +33,6 @@ export const CONTRACT_CONFIGS: Record<number, ContractConfig> = {
     address: '0xd871Fba59F85108aF29299786DD8243B38dD9686',  // Production contract v2.10
     network: 'Base Mainnet',
     chainId: 8453,
-    version: 'v2.10',
     explorerUrl: 'https://basescan.org',
     rpcUrls: [
       'https://mainnet.base.org',
@@ -54,7 +51,6 @@ export const CONTRACT_CONFIGS: Record<number, ContractConfig> = {
     address: '0x3b99a72cCAc108037741cacb0D60d5571CF6412C', // Production contract v2.11
     network: 'Sepolia Testnet',
     chainId: 11155111,
-    version: 'v2.11',
     explorerUrl: 'https://sepolia.etherscan.io',
     rpcUrls: [
       // Official Sepolia RPC endpoints (most reliable)
@@ -75,7 +71,6 @@ export const CONTRACT_CONFIGS: Record<number, ContractConfig> = {
     address: '0x243cDc963b80E539723e526F4Fc16FA254725Ccd', // Production contract v2.11
     network: 'Arbitrum Sepolia',
     chainId: 421614,
-    version: 'v2.11',
     explorerUrl: 'https://sepolia.arbiscan.io',
     rpcUrls: [
       'https://sepolia-rollup.arbitrum.io/rpc',
@@ -91,7 +86,6 @@ export const CONTRACT_CONFIGS: Record<number, ContractConfig> = {
     address: '0x2716c4609fD97DaEdF429BC4B4Ec2faa81e2cC60', // Production contract v2.10
     network: 'Arbitrum One',
     chainId: 42161,
-    version: 'v2.10',
     explorerUrl: 'https://arbiscan.io',
     rpcUrls: [
       'https://arb1.arbitrum.io/rpc',
@@ -112,26 +106,7 @@ export const CONTRACT_CONFIGS: Record<number, ContractConfig> = {
 }
 
 // Contract ABI (ethers.js human-readable format)
-// v2.10 ABI (without encryptedHash in getZipFileInfo return tuple)
-export const NZIP_CONTRACT_ABI_V2_10 = [
-  "function publicMintZipFile(string memory merkleRootHash, string memory encryptedHash, uint256 creationTimestamp, string memory ipfsHash, string memory metadataURI) public returns (uint256)",
-  "function totalSupply() external view returns (uint256)",
-  "function getTokensByMerkleRoot(string memory merkleRoot) external view returns (uint256[])",
-  "function getTokensByOwner(address owner) external view returns (uint256[])",
-  // v2.10 getZipFileInfo (without encryptedHash in return tuple)
-  "function getZipFileInfo(uint256 tokenId) external view returns (tuple(string merkleRootHash, string ipfsHash, address creator, uint256 creationTimestamp, uint256 tokenizationTime, uint256 blockNumber))",
-  "function ownerOf(uint256 tokenId) external view returns (address)",
-  "function balanceOf(address owner) external view returns (uint256)",
-  "function isZipFileTokenized(string memory merkleRootHash, uint256 creationTimestamp) external view returns (bool exists, uint256 tokenId)",
-  "function verifyZipFile(uint256 tokenId, string memory providedMerkleRoot) external view returns (bool isValid)",
-  "function verifyEncryptedZipFile(uint256 tokenId, string memory providedEncryptedHash) external view returns (bool isValid)",
-  "function getVersion() external pure returns (string memory)",
-  "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
-  "event ZipFileTokenized(uint256 indexed tokenId, address indexed creator, string merkleRootHash, string encryptedHash, uint256 creationTimestamp, string ipfsHash, uint256 tokenizationTime, uint256 blockNumber)"
-]
-
-// v2.11+ ABI (with encryptedHash in getZipFileInfo return tuple)
-export const NZIP_CONTRACT_ABI_V2_11 = [
+export const NZIP_CONTRACT_ABI = [
   // v2.11 function signature (with encryptedHash, NO fileName)
   "function publicMintZipFile(string memory merkleRootHash, string memory encryptedHash, uint256 creationTimestamp, string memory ipfsHash, string memory metadataURI) public returns (uint256)",
   "function totalSupply() external view returns (uint256)",
@@ -149,74 +124,6 @@ export const NZIP_CONTRACT_ABI_V2_11 = [
   // v2.11 event (with encryptedHash, NO fileName)
   "event ZipFileTokenized(uint256 indexed tokenId, address indexed creator, string merkleRootHash, string encryptedHash, uint256 creationTimestamp, string ipfsHash, uint256 tokenizationTime, uint256 blockNumber)"
 ]
-
-// Default ABI (v2.11+) - for backward compatibility
-export const NZIP_CONTRACT_ABI = NZIP_CONTRACT_ABI_V2_11
-
-/**
- * Determine contract version based on chainId and contract address
- * @param chainId Chain ID to look up the contract configuration
- * @param contractAddress Contract address to check
- * @returns Contract version ('v2.10' | 'v2.11' | 'unknown')
- */
-export function getContractVersion(chainId: number, contractAddress: string): 'v2.10' | 'v2.11' | 'unknown' {
-  const address = contractAddress.toLowerCase();
-  
-  // Look up the contract configuration for this chain
-  const config = CONTRACT_CONFIGS[chainId];
-  if (!config) {
-    // Chain not found in config - try to match by address only (backward compatibility)
-    return getContractVersionByAddress(contractAddress);
-  }
-  
-  // Check if the provided address matches the configured address for this chain
-  if (config.address.toLowerCase() === address) {
-    // Return the version from the config
-    if (config.version === 'v2.10' || config.version === 'v2.11') {
-      return config.version;
-    }
-    // If version is not v2.10 or v2.11, default to v2.11 for newer contracts
-    return 'v2.11';
-  }
-  
-  // Address doesn't match configured address - try to match by address only
-  // This handles cases where a different contract address is used on the same chain
-  return getContractVersionByAddress(contractAddress);
-}
-
-/**
- * Determine contract version based on contract address only (backward compatibility)
- * Used when chainId is not available or address doesn't match configured address
- * @param contractAddress Contract address to check
- * @returns Contract version ('v2.10' | 'v2.11' | 'unknown')
- */
-function getContractVersionByAddress(contractAddress: string): 'v2.10' | 'v2.11' | 'unknown' {
-  const address = contractAddress.toLowerCase();
-  
-  // v2.10 contract addresses (historical - for backward compatibility)
-  const v210Addresses = [
-    '0xdae9d83d7ac62197fae7704abc66b13da28d3143', // Base Sepolia v2.10
-    '0xd871fba59f85108af29299786dd8243b38dd9686', // Base Mainnet v2.10
-    '0x2716c4609fd97daedf429bc4b4ec2faa81e2cc60', // Arbitrum One v2.10, Sepolia v2.10 (commented)
-  ];
-  
-  // v2.11 contract addresses (historical - for backward compatibility)
-  const v211Addresses = [
-    '0xd9f88aad2f27262d6808358b796da8f1b9694c18', // Base Sepolia v2.11
-    '0x3b99a72ccac108037741cacb0d60d5571cf6412c', // Sepolia Testnet v2.11
-    '0x243cdc963b80e539723e526f4fc16fa254725ccd', // Arbitrum Sepolia v2.11
-  ];
-  
-  if (v210Addresses.includes(address)) {
-    return 'v2.10';
-  }
-  if (v211Addresses.includes(address)) {
-    return 'v2.11';
-  }
-  
-  // Default to v2.11 for unknown addresses (newer contracts)
-  return 'v2.11';
-}
 
 // Contract ABI (Web3.js JSON format)
 // Supports both v2.10 (without encryptedHash) and v2.11 (with encryptedHash)
