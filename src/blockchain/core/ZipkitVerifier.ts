@@ -6,7 +6,7 @@
  */
 
 import { ethers } from 'ethers';
-import { NZIP_CONTRACT_ABI, CONTRACT_CONFIGS, getContractConfig, getNetworkByName, fuzzyMatchNetworkName, type ContractConfig } from './contracts';
+import { NZIP_CONTRACT_ABI, NZIP_CONTRACT_ABI_V2_10, NZIP_CONTRACT_ABI_V2_11, getContractVersion, CONTRACT_CONFIGS, getContractConfig, getNetworkByName, fuzzyMatchNetworkName, type ContractConfig } from './contracts';
 import type { TokenMetadata } from '../../types';
 
 export interface VerificationOptions {
@@ -290,10 +290,20 @@ export class ZipkitVerifier {
       }
 
       provider = new ethers.JsonRpcProvider(rpcUrl);
-      const contract = new ethers.Contract(contractAddress, NZIP_CONTRACT_ABI, provider);
 
       if (this.debug) {
         console.log(`[DEBUG] Calling contract.verifyZipFile(${tokenId}, ${merkleRoot.substring(0, 10)}...)`);
+      }
+
+      // Determine contract version based on chainId and contract address
+      const contractVersion = getContractVersion(networkConfig.chainId, contractAddress);
+      const contractABI = contractVersion === 'v2.10' ? NZIP_CONTRACT_ABI_V2_10 : NZIP_CONTRACT_ABI_V2_11;
+      const contract = new ethers.Contract(contractAddress, contractABI, provider);
+
+      if (this.debug) {
+        console.log(`[DEBUG] Contract address: ${contractAddress}`);
+        console.log(`[DEBUG] Detected contract version: ${contractVersion}`);
+        console.log(`[DEBUG] Using ${contractVersion} ABI`);
       }
 
       // First check if token exists and get ALL actual on-chain data (not from metadata)
@@ -313,25 +323,25 @@ export class ZipkitVerifier {
           )
         ]);
         
-        // Extract all on-chain data
-        // Handle both v2.0 (without encryptedHash) and v3.0 (with encryptedHash) structs
+        // Extract all on-chain data based on contract version
         onChainMerkleRoot = zipFileInfo.merkleRootHash;
         onChainTokenizationTime = Number(zipFileInfo.tokenizationTime);
         onChainCreator = zipFileInfo.creator;
         onChainBlockNumber = Number(zipFileInfo.blockNumber);
         
-        // v3.0+ also includes encryptedHash (if present)
-        // encryptedHash may be undefined for v2.0 contracts or unencrypted ZIPs
-        onChainEncryptedHash = zipFileInfo.encryptedHash || undefined;
+        // v2.11+ includes encryptedHash in return tuple, v2.10 does not
+        if (contractVersion === 'v2.11') {
+          onChainEncryptedHash = zipFileInfo.encryptedHash || undefined;
+        } else {
+          onChainEncryptedHash = undefined; // v2.10 doesn't have encryptedHash in return tuple
+        }
+        
         if (this.debug) {
           if (onChainEncryptedHash) {
             console.log(`[DEBUG] On-chain encrypted hash: ${onChainEncryptedHash}`);
           } else {
-            console.log(`[DEBUG] No encrypted hash found (v2.0 contract or unencrypted ZIP)`);
+            console.log(`[DEBUG] No encrypted hash (${contractVersion === 'v2.10' ? 'v2.10 contract' : 'unencrypted ZIP'})`);
           }
-        }
-        
-        if (this.debug) {
           console.log(`[DEBUG] Token ${tokenId} exists`);
           console.log(`[DEBUG] On-chain merkle root: ${onChainMerkleRoot}`);
           console.log(`[DEBUG] On-chain tokenization time: ${onChainTokenizationTime} (${new Date(onChainTokenizationTime * 1000).toLocaleString()})`);
@@ -486,7 +496,17 @@ export class ZipkitVerifier {
       }
 
       provider = new ethers.JsonRpcProvider(rpcUrl);
-      const contract = new ethers.Contract(contractAddress, NZIP_CONTRACT_ABI, provider);
+      
+      // Determine contract version based on chainId and contract address
+      const contractVersion = getContractVersion(networkConfig.chainId, contractAddress);
+      const contractABI = contractVersion === 'v2.10' ? NZIP_CONTRACT_ABI_V2_10 : NZIP_CONTRACT_ABI_V2_11;
+      const contract = new ethers.Contract(contractAddress, contractABI, provider);
+
+      if (this.debug) {
+        console.log(`[DEBUG] Contract address: ${contractAddress}`);
+        console.log(`[DEBUG] Detected contract version: ${contractVersion}`);
+        console.log(`[DEBUG] Using ${contractVersion} ABI for encrypted hash verification`);
+      }
 
       // Call verifyEncryptedZipFile (v3.0+)
       let isValid: boolean;
@@ -501,8 +521,13 @@ export class ZipkitVerifier {
           )
         ]);
 
-        // Extract encrypted hash (may be undefined for v2.0 contracts)
-        onChainEncryptedHash = zipFileInfo.encryptedHash || undefined;
+        // Extract encrypted hash based on contract version
+        // v2.11+ includes encryptedHash in return tuple, v2.10 does not
+        if (contractVersion === 'v2.11') {
+          onChainEncryptedHash = zipFileInfo.encryptedHash || undefined;
+        } else {
+          onChainEncryptedHash = undefined; // v2.10 doesn't have encryptedHash in return tuple
+        }
 
         if (!onChainEncryptedHash) {
           return {
