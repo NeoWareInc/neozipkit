@@ -183,7 +183,6 @@ async function main() {
       
       // Create token metadata object
       const tokenMetadata: TokenMetadata = {
-        version: '1.0',
         tokenId: mintResult.tokenId!,
         contractAddress: mintResult.contractAddress!,
         network: walletInfo.networkName,
@@ -191,7 +190,8 @@ async function main() {
         transactionHash: mintResult.transactionHash,
         merkleRoot: merkleRoot,
         mintedAt: new Date().toISOString(),
-        mintDate: new Date().toISOString()
+        mintDate: new Date().toISOString(),
+        contractVersion: '2.11'  // Using v2.11 contract
       };
 
       // Rebuild ZIP with token metadata

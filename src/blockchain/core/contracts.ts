@@ -6,6 +6,7 @@ export interface ContractConfig {
   chainId: number
   explorerUrl: string
   rpcUrls: string[]
+  version: string  // Contract version (e.g., "2.11", "2.10")
   nameAliases?: string[]  // Alternative network name formats (e.g., ["base-sepolia", "base sepolia"])
 }
 
@@ -24,6 +25,7 @@ export const CONTRACT_CONFIGS: Record<number, ContractConfig> = {
       'https://base-sepolia-rpc.publicnode.com',
       'https://base-sepolia.gateway.tenderly.co'
     ],
+    version: '2.11',
     nameAliases: ['base-sepolia', 'base sepolia', 'basesepolia', 'base-sepolia-testnet']
   },
   
@@ -39,6 +41,7 @@ export const CONTRACT_CONFIGS: Record<number, ContractConfig> = {
       'https://base.drpc.org',
       'https://base.gateway.tenderly.co'
     ],
+    version: '2.10',
     nameAliases: ['base-mainnet', 'base mainnet', 'basemainnet', 'base']
   },
   
@@ -62,6 +65,7 @@ export const CONTRACT_CONFIGS: Record<number, ContractConfig> = {
       'https://sepolia.drpc.org',
       'https://1rpc.io/sepolia',
     ],
+    version: '2.11',
     nameAliases: ['sepolia-testnet', 'sepolia testnet', 'sepoliatestnet', 'sepolia', 'ethereum-sepolia', 'ethereum sepolia']
   },
   
@@ -76,6 +80,7 @@ export const CONTRACT_CONFIGS: Record<number, ContractConfig> = {
       'https://sepolia-rollup.arbitrum.io/rpc',
       'https://arbitrum-sepolia-rpc.publicnode.com'
     ],
+    version: '2.11',
     nameAliases: ['arbitrum-sepolia', 'arbitrum sepolia', 'arbitrumsepolia', 'arbitrum-sepolia-testnet']
   },
   
@@ -92,6 +97,7 @@ export const CONTRACT_CONFIGS: Record<number, ContractConfig> = {
       'https://arbitrum.llamarpc.com',
       'https://arbitrum.publicnode.com'
     ],
+    version: '2.10',
     nameAliases: ['arbitrum-one', 'arbitrum one', 'arbitrumone', 'arbitrum', 'arbitrum-mainnet', 'arbitrum mainnet']
   },
   

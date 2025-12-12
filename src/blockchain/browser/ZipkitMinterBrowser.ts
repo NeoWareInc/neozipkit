@@ -372,7 +372,6 @@ export class ZipkitMinterBrowser {
     const config = this.walletManager.getCurrentConfig()
 
     return {
-      version: "1.0",
       tokenId,
       contractAddress: config.address,
       network: config.network,
@@ -381,7 +380,8 @@ export class ZipkitMinterBrowser {
       merkleRoot: this.merkleRoot,
       encryptedHash: this.encryptedHash || undefined,
       mintedAt: now.toISOString(),
-      creationTimestamp: Math.floor(now.getTime() / 1000)
+      creationTimestamp: Math.floor(now.getTime() / 1000),
+      contractVersion: config.version || 'unknown'
     }
   }
 

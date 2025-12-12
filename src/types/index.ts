@@ -49,6 +49,7 @@ export interface TokenMetadata {
   contractAddress: string;
   network: string;
   merkleRoot: string;
+  encryptedHash?: string;  // Hash of encrypted ZIP file (SHA-256 of encrypted bytes) - currently unused
 
   // Optional chain info
   networkChainId?: number;
@@ -64,11 +65,8 @@ export interface TokenMetadata {
   // Optional content link
   ipfsHash?: string;
 
-  // Encrypted ZIP support (v2.11+)
-  encryptedHash?: string;  // Hash of encrypted ZIP file (SHA-256 of encrypted bytes)
-
   // Versioning
-  version?: string;
+  contractVersion?: string;  // Contract version (e.g., "2.11", "2.10", or "unknown" for contracts prior to v2.11)
 }
 
 // ============================================================================

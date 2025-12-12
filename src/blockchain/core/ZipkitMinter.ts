@@ -302,7 +302,8 @@ export class ZipkitMinter {
       mintDate: now.toLocaleDateString('en-US') + ' at ' + now.toLocaleTimeString('en-US'),
       creationTimestamp: Math.floor(now.getTime() / 1000),
       transactionHash,
-      blockNumber
+      blockNumber,
+      contractVersion: this.networkConfig.version || 'unknown'
     };
   }
 
