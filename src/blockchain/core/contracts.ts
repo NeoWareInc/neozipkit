@@ -106,23 +106,26 @@ export const CONTRACT_CONFIGS: Record<number, ContractConfig> = {
 }
 
 // Contract ABI (ethers.js human-readable format)
+// Minimal ABI that works with both v2.10 and v2.11 contracts
+// Only declares the fields we actually use - additional fields in v2.11 are ignored
 export const NZIP_CONTRACT_ABI = [
-  // v2.11 function signature (with encryptedHash, NO fileName)
+  // Minting function (v2.11 signature with encryptedHash for new mints)
   "function publicMintZipFile(string memory merkleRootHash, string memory encryptedHash, uint256 creationTimestamp, string memory ipfsHash, string memory metadataURI) public returns (uint256)",
   "function totalSupply() external view returns (uint256)",
   "function getTokensByMerkleRoot(string memory merkleRoot) external view returns (uint256[])",
   "function getTokensByOwner(address owner) external view returns (uint256[])",
-  // v2.11 getZipFileInfo (with encryptedHash, NO fileName)
-  "function getZipFileInfo(uint256 tokenId) external view returns (tuple(string merkleRootHash, string encryptedHash, string ipfsHash, address creator, uint256 creationTimestamp, uint256 tokenizationTime, uint256 blockNumber))",
+  // Minimal getZipFileInfo - only declares fields we need (works for both v2.10 and v2.11)
+  // v2.10: returns (merkleRootHash, ipfsHash, creator, creationTimestamp, tokenizationTime, blockNumber)
+  // v2.11: returns (merkleRootHash, encryptedHash, ipfsHash, creator, creationTimestamp, tokenizationTime, blockNumber)
+  // By only declaring merkleRootHash and tokenizationTime, we can read both versions
+  "function getZipFileInfo(uint256 tokenId) external view returns (tuple(string merkleRootHash, string ipfsHash, address creator, uint256 creationTimestamp, uint256 tokenizationTime, uint256 blockNumber))",
   "function ownerOf(uint256 tokenId) external view returns (address)",
   "function balanceOf(address owner) external view returns (uint256)",
   "function isZipFileTokenized(string memory merkleRootHash, uint256 creationTimestamp) external view returns (bool exists, uint256 tokenId)",
   "function verifyZipFile(uint256 tokenId, string memory providedMerkleRoot) external view returns (bool isValid)",
-  "function verifyEncryptedZipFile(uint256 tokenId, string memory providedEncryptedHash) external view returns (bool isValid)",
   "function getVersion() external pure returns (string memory)",
   "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
-  // v2.11 event (with encryptedHash, NO fileName)
-  "event ZipFileTokenized(uint256 indexed tokenId, address indexed creator, string merkleRootHash, string encryptedHash, uint256 creationTimestamp, string ipfsHash, uint256 tokenizationTime, uint256 blockNumber)"
+  "event ZipFileTokenized(uint256 indexed tokenId, address indexed creator, string merkleRootHash, uint256 creationTimestamp, string ipfsHash, uint256 tokenizationTime, uint256 blockNumber)"
 ]
 
 // Contract ABI (Web3.js JSON format)
