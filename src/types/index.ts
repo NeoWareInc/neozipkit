@@ -153,4 +153,20 @@ export interface Support {
   fileReader: boolean;
 }
 
+// ============================================================================
+// Archive Statistics
+// ============================================================================
+
+export interface ArchiveStatistics {
+  fileSize: number;
+  created: Date;
+  modified: Date;
+  totalFiles: number;
+  totalFolders: number;
+  uncompressedSize: number;
+  compressedSize: number;
+  compressionRatio: number;
+  averageCompressionRatio: number;
+}
+
 // External module types are handled by installed @types packages

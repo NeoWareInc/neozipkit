@@ -260,6 +260,75 @@ export default class ZipkitNode extends Zipkit {
   }
 
   /**
+   * Get comprehensive archive statistics
+   * 
+   * Calculates statistics about the loaded ZIP archive including file counts,
+   * sizes, compression ratios, and file system metadata.
+   * 
+   * @param archivePath - Optional path to archive file (if not already loaded)
+   * @returns Promise that resolves to ArchiveStatistics object
+   * @throws Error if archive is not loaded and archivePath is not provided
+   * 
+   * @example
+   * ```typescript
+   * const zipkit = new ZipkitNode();
+   * await zipkit.loadZipFile('archive.zip');
+   * const stats = await zipkit.getArchiveStatistics();
+   * console.log(`Total files: ${stats.totalFiles}`);
+   * console.log(`Compression ratio: ${stats.compressionRatio.toFixed(2)}%`);
+   * ```
+   */
+  async getArchiveStatistics(archivePath?: string): Promise<import('../types').ArchiveStatistics> {
+    // Load archive if path provided and not already loaded
+    if (archivePath && !this.filePath) {
+      await this.loadZipFile(archivePath);
+    }
+    
+    if (!this.filePath) {
+      throw new Error('Archive not loaded. Call loadZipFile() first or provide archivePath parameter.');
+    }
+    
+    // Get file system stats
+    const stats = await fs.promises.stat(this.filePath);
+    
+    // Get entries
+    const entries = this.getDirectory();
+    
+    // Calculate statistics
+    const totalFiles = entries.filter((e) => !e.isDirectory).length;
+    const totalFolders = entries.filter((e) => e.isDirectory).length;
+    const uncompressedSize = entries.reduce((sum, e) => sum + e.uncompressedSize, 0);
+    const compressedSize = entries.reduce((sum, e) => sum + e.compressedSize, 0);
+    
+    // Calculate compression ratios
+    const compressionRatio = uncompressedSize > 0 
+      ? ((1 - compressedSize / uncompressedSize) * 100) 
+      : 0;
+    
+    // Calculate average compression ratio per file
+    const averageCompressionRatio = totalFiles > 0
+      ? entries
+          .filter((e) => !e.isDirectory && e.uncompressedSize > 0)
+          .reduce((sum, e) => {
+            const fileRatio = (1 - e.compressedSize / e.uncompressedSize) * 100;
+            return sum + fileRatio;
+          }, 0) / totalFiles
+      : 0;
+    
+    return {
+      fileSize: stats.size,
+      created: stats.birthtime,
+      modified: stats.mtime,
+      totalFiles,
+      totalFolders,
+      uncompressedSize,
+      compressedSize,
+      compressionRatio,
+      averageCompressionRatio
+    };
+  }
+
+  /**
    * Test entry integrity without extracting to disk
    * Validates CRC-32 or SHA-256 hash without writing decompressed data
    * 

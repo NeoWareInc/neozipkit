@@ -179,6 +179,28 @@ All contract-related constants and configurations in one place:
 ### Token Verification (ZipKitVerifier.ts)
 - High-level verification API for NZIP‑NFT contract and on-chain checks.
 
+#### Static Methods
+
+**`extractTokenMetadata(zipkit: ZipkitNode): Promise<TokenMetadata | null>`**
+
+Extracts and normalizes token metadata from a tokenized ZIP archive. Handles field name variations across different token versions (chainId vs networkChainId, timestamp vs mintedAt) and validates required fields.
+
+```typescript
+import { ZipkitNode } from 'neozipkit/node';
+import { ZipkitVerifier } from 'neozipkit/blockchain';
+
+const zipkit = new ZipkitNode();
+await zipkit.loadZipFile('archive.nzip');
+const metadata = await ZipkitVerifier.extractTokenMetadata(zipkit);
+if (metadata) {
+  console.log(`Token ID: ${metadata.tokenId}`);
+  console.log(`Network: ${metadata.network}`);
+}
+```
+
+**Returns**: Normalized `TokenMetadata` or `null` if not tokenized  
+**Throws**: Error if TOKEN file exists but is invalid
+
 ### Token Query
 Token querying functionality is integrated into the core wallet and verification classes:
 - `CoreWalletManager.queryWalletTokens()` - Query tokens for a wallet address

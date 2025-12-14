@@ -89,6 +89,89 @@ export class ZipkitVerifier {
   }
 
   /**
+   * Extracts and normalizes token metadata from a tokenized ZIP archive.
+   * 
+   * Handles field name variations across different token versions:
+   * - chainId vs networkChainId
+   * - timestamp vs mintedAt
+   * - Validates required fields
+   * 
+   * @param zipkit - ZipkitNode instance with loaded archive
+   * @returns Normalized TokenMetadata or null if not tokenized
+   * @throws Error if TOKEN file exists but is invalid
+   * 
+   * @example
+   * ```typescript
+   * import { ZipkitNode } from 'neozipkit/node';
+   * import { ZipkitVerifier } from 'neozipkit/blockchain';
+   * 
+   * const zipkit = new ZipkitNode();
+   * await zipkit.loadZipFile('archive.nzip');
+   * const metadata = await ZipkitVerifier.extractTokenMetadata(zipkit);
+   * if (metadata) {
+   *   console.log(`Token ID: ${metadata.tokenId}`);
+   *   console.log(`Network: ${metadata.network}`);
+   * }
+   * ```
+   */
+  static async extractTokenMetadata(zipkit: any): Promise<TokenMetadata | null> {
+    try {
+      // Check for META-INF/NZIP.TOKEN entry
+      const tokenEntry = zipkit.getZipEntry('META-INF/NZIP.TOKEN');
+      if (!tokenEntry) {
+        return null;
+      }
+      
+      // Extract token data to buffer
+      const tokenDataBuffer = await zipkit.extractToBuffer(tokenEntry, {
+        skipHashCheck: false
+      });
+      
+      const tokenData = tokenDataBuffer.toString('utf-8');
+      const rawMetadata = JSON.parse(tokenData);
+      
+      // Normalize field names for compatibility across versions
+      const chainId = rawMetadata.chainId ?? rawMetadata.networkChainId;
+      const timestamp = rawMetadata.timestamp ?? rawMetadata.mintedAt;
+      
+      // Create normalized metadata object
+      const metadata: TokenMetadata = {
+        tokenId: rawMetadata.tokenId,
+        contractAddress: rawMetadata.contractAddress,
+        network: rawMetadata.network,
+        networkChainId: chainId,
+        merkleRoot: rawMetadata.merkleRoot,
+        creationTimestamp: rawMetadata.blockNumber || rawMetadata.creationTimestamp,
+        transactionHash: rawMetadata.transactionHash,
+        ownerAddress: rawMetadata.ownerAddress,
+        ...rawMetadata
+      };
+      
+      // Validate required fields
+      if (!metadata.tokenId || !metadata.contractAddress || !metadata.merkleRoot) {
+        throw new Error('Invalid token metadata: missing required fields');
+      }
+      
+      return metadata;
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('Invalid token metadata')) {
+        throw error;
+      }
+      // Return null for non-tokenized archives or extraction errors
+      return null;
+    }
+  }
+
+  /**
+   * Instance method for convenience - extracts token metadata from loaded archive
+   * @param zipkit - ZipkitNode instance with loaded archive
+   * @returns Normalized TokenMetadata or null if not tokenized
+   */
+  async getTokenMetadata(zipkit: any): Promise<TokenMetadata | null> {
+    return ZipkitVerifier.extractTokenMetadata(zipkit);
+  }
+
+  /**
    * Extract and validate token metadata from ZIP
    */
   async extractTokenMetadata(tokenBuffer: Buffer): Promise<{ success: boolean; metadata?: TokenMetadata; error?: string }> {
