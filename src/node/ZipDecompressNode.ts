@@ -26,17 +26,6 @@ import { EncryptionMethod } from '../core/encryption/types';
 import { StreamingFileHandle } from '../core';
 import * as fs from 'fs';
 
-// Module-level singleton for ZSTD (shared across all instances)
-let zstdCodec: { ZstdSimple: typeof ZstdSimple } | null = null;
-
-// Async initialization function for zstd
-async function initZstd(): Promise<{ ZstdSimple: typeof ZstdSimple }> {
-  if (!zstdCodec) {
-    zstdCodec = await ZstdInit();
-  }
-  return zstdCodec;
-}
-
 /**
  * ZipDecompressNode - Node.js file-based decompression operations
  * 
@@ -78,6 +67,18 @@ export class ZipDecompressNode {
     }
   }
 
+  /**
+   * Ensure Zstd codec is initialized (instance-based initialization)
+   * Each ZipDecompressNode instance gets its own Zstd codec to prevent memory corruption
+   * from shared WASM module state across multiple instances
+   */
+  private async ensureZstdInitialized(): Promise<void> {
+    if (!this.zstdCodec) {
+      this.zstdCodec = await ZstdInit();
+      this.log(`Zstd codec initialized for this ZipDecompressNode instance`);
+    }
+  }
+
   // ============================================================================
   // File-Based Extraction Methods
   // ============================================================================
@@ -103,10 +104,9 @@ export class ZipDecompressNode {
       onProgress?: (bytes: number) => void;
     }
   ): Promise<void> {
-    // Lazy ZSTD initialization
-    // Note: ZSTD codec is lazily initialized on first use (module-level singleton)
-    if (entry.cmpMethod === CMP_METHOD.ZSTD && !this.zstdCodec) {
-      this.zstdCodec = await initZstd();
+    // Lazy ZSTD initialization (instance-based)
+    if (entry.cmpMethod === CMP_METHOD.ZSTD) {
+      await this.ensureZstdInitialized();
     }
     
     // Get fileHandle from zipkitNode (merged from ZipLoadEntriesServer)
@@ -135,9 +135,9 @@ export class ZipDecompressNode {
       onProgress?: (bytes: number) => void;
     }
   ): Promise<Buffer> {
-    // Lazy ZSTD initialization
-    if (entry.cmpMethod === CMP_METHOD.ZSTD && !this.zstdCodec) {
-      this.zstdCodec = await initZstd();
+    // Lazy ZSTD initialization (instance-based)
+    if (entry.cmpMethod === CMP_METHOD.ZSTD) {
+      await this.ensureZstdInitialized();
     }
     
     // Get fileHandle from zipkitNode
@@ -167,9 +167,9 @@ export class ZipDecompressNode {
       onProgress?: (bytes: number) => void;
     }
   ): Promise<{ verifiedHash?: string }> {
-    // Lazy ZSTD initialization
-    if (entry.cmpMethod === CMP_METHOD.ZSTD && !this.zstdCodec) {
-      this.zstdCodec = await initZstd();
+    // Lazy ZSTD initialization (instance-based)
+    if (entry.cmpMethod === CMP_METHOD.ZSTD) {
+      await this.ensureZstdInitialized();
     }
     
     // Get fileHandle from zipkitNode
@@ -822,6 +822,16 @@ export class ZipDecompressNode {
     }
 
     return outBuf;
+  }
+
+  /**
+   * Dispose of resources and cleanup Zstd codec
+   * Call this method when you're done with the ZipDecompressNode instance
+   * to release WASM module references and allow garbage collection
+   */
+  public dispose(): void {
+    this.log(`Disposing ZipDecompressNode instance and releasing Zstd codec`);
+    this.zstdCodec = null;
   }
 }
 

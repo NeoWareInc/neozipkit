@@ -142,6 +142,7 @@
     "example:list-zip": "npx ts-node examples/list-zip.ts",
     "example:blockchain-tokenize": "npx ts-node examples/blockchain-tokenize.ts",
     "example:verify-tokenized-zip": "npx ts-node examples/verify-tokenized-zip.ts",
+    "example:test-zstd-memory-issue": "npx ts-node examples/test-zstd-memory-issue.ts",
     "check:nft": "npx ts-node scripts/check-nft.ts",
     "deploy:base": "node contracts/deploy-bytecode.mjs",
     "deploy:base:sepolia": "NETWORK=base-sepolia node contracts/deploy-bytecode.mjs",
