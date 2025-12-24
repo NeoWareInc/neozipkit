@@ -20,7 +20,7 @@ import { Logger } from '../core/components/Logger';
 import { CMP_METHOD, GP_FLAG, ENCRYPT_HDR_SIZE } from '../core/constants/Headers';
 import { HashCalculator } from '../core/components/HashCalculator';
 import { ZipCrypto } from '../core/encryption/ZipCrypto';
-import { ZstdInit, ZstdSimple } from '@oneidentity/zstd-js';
+import { ZstdManager } from '../core/ZstdManager';
 import Errors from '../core/constants/Errors';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -45,7 +45,6 @@ export { CompressOptions } from '../core/ZipCompress';
  */
 export class ZipCompressNode {
   private zipkitNode: ZipkitNode;
-  private zstdCodec: { ZstdSimple: typeof ZstdSimple } | null = null;
 
   // Class-level logging control - set to true to enable logging
   private static loggingEnabled: boolean = false;
@@ -56,18 +55,6 @@ export class ZipCompressNode {
   private log(...args: any[]): void {
     if (ZipCompressNode.loggingEnabled) {
       Logger.debug(`[ZipCompressNode]`, ...args);
-    }
-  }
-
-  /**
-   * Ensure Zstd codec is initialized (instance-based initialization)
-   * Each ZipCompressNode instance gets its own Zstd codec to prevent memory corruption
-   * from shared WASM module state across multiple instances
-   */
-  private async ensureZstdInitialized(): Promise<void> {
-    if (!this.zstdCodec) {
-      this.zstdCodec = await ZstdInit();
-      this.log(`Zstd codec initialized for this ZipCompressNode instance`);
     }
   }
 
@@ -381,9 +368,6 @@ export class ZipCompressNode {
     }
     
     try {
-      // Ensure zstd is initialized (instance-based)
-      await this.ensureZstdInitialized();
-      
       // Zstd compression levels range from 1 (fastest) to 22 (highest compression)
       // Map our 1-9 level to a reasonable zstd range (1-19)
       const level = options?.level ?? 6;
@@ -407,11 +391,11 @@ export class ZipCompressNode {
         throw new Error('ZSTD compression: empty input buffer');
       }
       
-      // Convert Buffer to Uint8Array for WASM module (same fix as decompression)
+      // Convert Buffer to Uint8Array for WASM module
       const inputArray = new Uint8Array(inbuf.buffer, inbuf.byteOffset, inbuf.byteLength);
       
-      // Compress the data with zstd
-      const compressedData = this.zstdCodec!.ZstdSimple.compress(inputArray, zstdLevel);
+      // Compress the data with zstd using global ZstdManager
+      const compressedData = await ZstdManager.compress(inputArray, zstdLevel);
       const compressedBuffer = Buffer.from(compressedData);
       
       // Set the compressed size in the entry for ZIP file structure
@@ -630,15 +614,5 @@ export class ZipCompressNode {
     // For now, this is a placeholder
     // Full implementation would write ZIP structure to outputPath
     throw new Error('compressFiles() - Full implementation pending. Use neozip CLI for now.');
-  }
-
-  /**
-   * Dispose of resources and cleanup Zstd codec
-   * Call this method when you're done with the ZipCompressNode instance
-   * to release WASM module references and allow garbage collection
-   */
-  public dispose(): void {
-    this.log(`Disposing ZipCompressNode instance and releasing Zstd codec`);
-    this.zstdCodec = null;
   }
 }
