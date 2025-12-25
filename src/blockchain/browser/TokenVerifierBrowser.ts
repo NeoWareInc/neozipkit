@@ -153,11 +153,6 @@ export class TokenVerifierBrowser {
       const normalizedCalculated = calculatedMerkleRoot?.toLowerCase().trim() || '';
       const verificationPassed = normalizedBlockchain === normalizedCalculated;
       
-      // Log mismatch only (success is silent)
-      if (!verificationPassed) {
-        console.warn(`[TokenVerifier] ⚠️ Merkle root mismatch - Calculated: ${calculatedMerkleRoot}, Blockchain: ${blockchainData.merkleRoot}`);
-      }
-      
       // Add owner information to tokenMetadata
       const enhancedTokenMetadata = {
         ...tokenMetadata,

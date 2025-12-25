@@ -149,30 +149,17 @@ export class ZipkitVerifier {
         }
       }
       
-      // If contractVersion is missing, try to infer from network config
-      if (!contractVersion) {
-        if (networkChainId) {
-          const networkConfig = getContractConfig(networkChainId);
-          if (networkConfig?.version) {
-            contractVersion = networkConfig.version;
-            console.warn(`[WARNING] TOKEN file missing contractVersion - inferred "${contractVersion}" from network config (chainId: ${networkChainId})`);
-          }
-        } else if (rawMetadata.network) {
-          const networkConfig = getNetworkByName(rawMetadata.network);
-          if (networkConfig?.version) {
-            contractVersion = networkConfig.version;
-            console.warn(`[WARNING] TOKEN file missing contractVersion - inferred "${contractVersion}" from network name "${rawMetadata.network}"`);
-          }
-        }
-      }
-      
       // Validate required fields (after migration attempts)
       if (!networkChainId) {
         throw new Error('Invalid token metadata: missing required field "networkChainId" (and could not infer from network name)');
       }
-      // contractVersion can be 'unknown' - verification will try multiple versions
+      
+      // contractVersion: Do NOT infer from network config because:
+      // 1. Old v2.10 files never had contractVersion in TOKEN file
+      // 2. Network configs may have been updated to newer contract versions
+      // 3. Verification will try all versions automatically if version is 'unknown'
       if (!contractVersion) {
-        console.warn(`[WARNING] TOKEN file missing contractVersion - will try all versions during verification`);
+        console.warn(`[WARNING] TOKEN file missing contractVersion (common for v2.10 files) - verification will try all versions automatically`);
         contractVersion = 'unknown';
       }
       
@@ -311,27 +298,6 @@ export class ZipkitVerifier {
         }
       }
       
-      // If contractVersion is missing, try to infer from network config
-      if (!contractVersion) {
-        if (networkChainId) {
-          const networkConfig = getContractConfig(networkChainId);
-          if (networkConfig?.version) {
-            contractVersion = networkConfig.version;
-            if (this.debug) {
-              console.log(`[DEBUG] TOKEN file missing contractVersion - inferred "${contractVersion}" from network config (chainId: ${networkChainId})`);
-            }
-          }
-        } else if (tokenData.network) {
-          const networkConfig = getNetworkByName(tokenData.network);
-          if (networkConfig?.version) {
-            contractVersion = networkConfig.version;
-            if (this.debug) {
-              console.log(`[DEBUG] TOKEN file missing contractVersion - inferred "${contractVersion}" from network name "${tokenData.network}"`);
-            }
-          }
-        }
-      }
-      
       // Validate networkChainId (required for blockchain queries)
       if (!networkChainId) {
         return {
@@ -340,7 +306,12 @@ export class ZipkitVerifier {
         };
       }
 
-      // If contractVersion is still missing, try to query from blockchain
+      // contractVersion: Do NOT infer from network config because:
+      // 1. Old v2.10 files never had contractVersion in TOKEN file
+      // 2. Network configs may have been updated to newer contract versions
+      // 3. Query from blockchain first, then let verification try all versions if needed
+      
+      // If contractVersion is missing, try to query from blockchain
       if (!contractVersion && networkChainId && tokenData.contractAddress) {
         const networkConfig = getContractConfig(networkChainId);
         if (networkConfig) {
