@@ -80,7 +80,7 @@ export function getVersionCapabilities(version: string): VersionCapabilities | n
  * List of versions that have adapter implementations
  * This is separate from the registry to distinguish between "known" and "implemented"
  */
-const IMPLEMENTED_VERSIONS: ContractVersion[] = ['2.10', '2.11'];
+export const IMPLEMENTED_VERSIONS: ContractVersion[] = ['2.10', '2.11'];
 
 /**
  * Check if a contract version is supported (has both registry entry and adapter implementation)
