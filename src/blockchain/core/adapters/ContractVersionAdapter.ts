@@ -5,7 +5,7 @@
  * differences in function signatures, return types, and available fields.
  */
 
-import type { Contract, ContractTransactionResponse } from 'ethers';
+import type { Contract, ContractTransactionResponse, BaseContract } from 'ethers';
 
 /**
  * ZipFileInfo structure returned by adapters
@@ -47,7 +47,7 @@ export interface ContractVersionAdapter {
   
   /**
    * Mint a new ZIP file token
-   * @param contract Contract instance
+   * @param contract Contract instance (Contract or BaseContract for browser compatibility)
    * @param merkleRoot Merkle root hash of ZIP contents
    * @param encryptedHash Encrypted hash (if supported, undefined otherwise)
    * @param creationTimestamp Creation timestamp
@@ -57,7 +57,7 @@ export interface ContractVersionAdapter {
    * @returns Transaction response
    */
   mintZipFile(
-    contract: Contract,
+    contract: Contract | BaseContract,
     merkleRoot: string,
     encryptedHash: string | undefined,
     creationTimestamp: number,
@@ -68,12 +68,12 @@ export interface ContractVersionAdapter {
   
   /**
    * Get ZIP file information for a token
-   * @param contract Contract instance
+   * @param contract Contract instance (Contract or BaseContract for browser compatibility)
    * @param tokenId Token ID
    * @returns ZipFileInfo with all available fields for this version
    */
   getZipFileInfo(
-    contract: Contract,
+    contract: Contract | BaseContract,
     tokenId: bigint
   ): Promise<ZipFileInfo>;
   
@@ -86,7 +86,7 @@ export interface ContractVersionAdapter {
   
   /**
    * Estimate gas for mintZipFile operation
-   * @param contract Contract instance
+   * @param contract Contract instance (Contract or BaseContract for browser compatibility)
    * @param merkleRoot Merkle root hash
    * @param encryptedHash Encrypted hash (if supported)
    * @param creationTimestamp Creation timestamp
@@ -95,7 +95,7 @@ export interface ContractVersionAdapter {
    * @returns Estimated gas limit
    */
   estimateGasForMint(
-    contract: Contract,
+    contract: Contract | BaseContract,
     merkleRoot: string,
     encryptedHash: string | undefined,
     creationTimestamp: number,

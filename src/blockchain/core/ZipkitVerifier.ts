@@ -498,10 +498,8 @@ export class ZipkitVerifier {
       let onChainEncryptedHash: string | undefined;
       
       try {
-        // Get adapter for this contract version (from tokenMetadata or networkConfig)
-        const adapter = tokenMetadata.contractVersion 
-          ? getContractAdapter(networkConfig.chainId)
-          : getContractAdapter(networkConfig.chainId);
+        // Get adapter for this contract version (from networkConfig)
+        const adapter = getContractAdapter(networkConfig.chainId);
         
         // Get token info using adapter (handles version-specific differences)
         // CRITICAL: We trust ONLY blockchain data, not metadata file which can be tampered with

@@ -45,6 +45,12 @@ function removeFile(filePath) {
   }
 }
 
+// Files to preserve in root (should not be deleted)
+const PRESERVED_FILES = [
+  'jest.config.js',  // Jest configuration
+  'scripts/clean.js' // This script itself
+];
+
 // Find and remove root-level .js and .d.ts files
 function removeRootLevelFiles() {
   try {
@@ -54,8 +60,11 @@ function removeRootLevelFiles() {
       const stat = fs.statSync(filePath);
       
       // Only process files (not directories) in root
+      // Skip preserved files
       if (stat.isFile() && (file.endsWith('.js') || file.endsWith('.d.ts'))) {
-        removeFile(filePath);
+        if (!PRESERVED_FILES.includes(file)) {
+          removeFile(filePath);
+        }
       }
     }
   } catch (error) {

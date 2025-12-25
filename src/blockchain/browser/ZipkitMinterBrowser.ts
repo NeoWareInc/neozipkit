@@ -243,7 +243,7 @@ export class ZipkitMinterBrowser {
       console.log("⏳ Waiting for confirmation...")
       
       // Use read provider for waiting to avoid rate limiting with timeout
-      let receipt
+      let receipt: any = null
       const CONFIRMATION_TIMEOUT = 120000 // 2 minutes timeout
       
       try {
@@ -280,55 +280,62 @@ export class ZipkitMinterBrowser {
           throw confirmationError
         }
       }
-      console.log(`✅ Transaction confirmed in block: ${receipt?.blockNumber}`)
+      
+      if (!receipt) {
+        throw new Error('Transaction receipt not available')
+      }
+      
+      console.log(`✅ Transaction confirmed in block: ${receipt.blockNumber}`)
       
       // Extract token ID from the transaction logs
       let tokenId: string | undefined
       
       // Extract token ID from transaction logs
-      for (let i = 0; i < receipt.logs.length; i++) {
-        const log = receipt.logs[i]
+      if (receipt.logs && Array.isArray(receipt.logs)) {
+        for (let i = 0; i < receipt.logs.length; i++) {
+          const log = receipt.logs[i]
         
-        try {
-          const parsed = contract.interface.parseLog(log)
-          
-          if (parsed) {
-            if (parsed.name === 'ZipFileTokenized') {
-              tokenId = parsed.args.tokenId.toString()
-              break
-            } else if (parsed.name === 'Transfer') {
-              // ERC721 Transfer event: Transfer(from, to, tokenId)
-              const from = parsed.args.from
-              const transferTokenId = parsed.args.tokenId
-              
-              // Only use Transfer events that are minting (from zero address)
-              if (from === '0x0000000000000000000000000000000000000000') {
-                tokenId = transferTokenId.toString()
+          try {
+            const parsed = contract.interface.parseLog(log)
+            
+            if (parsed) {
+              if (parsed.name === 'ZipFileTokenized') {
+                tokenId = parsed.args.tokenId.toString()
                 break
+              } else if (parsed.name === 'Transfer') {
+                // ERC721 Transfer event: Transfer(from, to, tokenId)
+                const from = parsed.args.from
+                const transferTokenId = parsed.args.tokenId
+                
+                // Only use Transfer events that are minting (from zero address)
+                if (from === '0x0000000000000000000000000000000000000000') {
+                  tokenId = transferTokenId.toString()
+                  break
+                }
               }
             }
-          }
-        } catch (parseError) {
-          console.warn(`⚠️ Could not parse log ${i}:`, parseError)
-          
-          // Try manual parsing for standard ERC721 Transfer event
-          if (log.topics.length >= 4 && log.topics[0] === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef') {
-            try {
-              // ERC721 Transfer event signature
-              const from = log.topics[1]
-              const to = log.topics[2] 
-              const transferTokenId = log.topics[3]
-              
-              console.log(`🔄 Manual Transfer parse: from=${from}, to=${to}, tokenId=${transferTokenId}`)
-              
-              // Check if this is a mint (from zero address)
-              if (from === '0x0000000000000000000000000000000000000000000000000000000000000000') {
-                tokenId = parseInt(transferTokenId, 16).toString()
-                console.log(`🎯 Found minting via manual parse with token ID: ${tokenId}`)
-                break
+          } catch (parseError) {
+            console.warn(`⚠️ Could not parse log ${i}:`, parseError)
+            
+            // Try manual parsing for standard ERC721 Transfer event
+            if (log.topics && log.topics.length >= 4 && log.topics[0] === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef') {
+              try {
+                // ERC721 Transfer event signature
+                const from = log.topics[1]
+                const to = log.topics[2] 
+                const transferTokenId = log.topics[3]
+                
+                console.log(`🔄 Manual Transfer parse: from=${from}, to=${to}, tokenId=${transferTokenId}`)
+                
+                // Check if this is a mint (from zero address)
+                if (from === '0x0000000000000000000000000000000000000000000000000000000000000000') {
+                  tokenId = parseInt(transferTokenId, 16).toString()
+                  console.log(`🎯 Found minting via manual parse with token ID: ${tokenId}`)
+                  break
+                }
+              } catch (manualParseError) {
+                console.warn(`⚠️ Manual parsing also failed:`, manualParseError)
               }
-            } catch (manualParseError) {
-              console.warn(`⚠️ Manual parsing also failed:`, manualParseError)
             }
           }
         }

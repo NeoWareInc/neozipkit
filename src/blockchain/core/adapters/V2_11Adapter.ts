@@ -7,7 +7,7 @@
  * - publicMintZipFile signature: (merkleRootHash, encryptedHash, creationTimestamp, ipfsHash, metadataURI)
  */
 
-import type { Contract, ContractTransactionResponse } from 'ethers';
+import type { Contract, ContractTransactionResponse, BaseContract } from 'ethers';
 import { Interface } from 'ethers';
 import type { ContractVersionAdapter, ZipFileInfo, ZipFileTokenizedEvent } from './ContractVersionAdapter';
 
@@ -24,7 +24,7 @@ export class V2_11Adapter implements ContractVersionAdapter {
   readonly version = '2.11';
 
   async mintZipFile(
-    contract: Contract,
+    contract: Contract | BaseContract,
     merkleRoot: string,
     encryptedHash: string | undefined,
     creationTimestamp: number,
@@ -34,6 +34,7 @@ export class V2_11Adapter implements ContractVersionAdapter {
   ): Promise<ContractTransactionResponse> {
     // v2.11 signature: publicMintZipFile(merkleRootHash, encryptedHash, creationTimestamp, ipfsHash, metadataURI)
     // Use empty string if encryptedHash is not provided
+    const contractTyped = contract as Contract;
     const args = [
       merkleRoot,
       encryptedHash || '',
@@ -43,18 +44,19 @@ export class V2_11Adapter implements ContractVersionAdapter {
     ];
     
     if (gasOptions) {
-      return await contract.publicMintZipFile(...args, gasOptions) as ContractTransactionResponse;
+      return await contractTyped.publicMintZipFile(...args, gasOptions) as ContractTransactionResponse;
     }
     
-    return await contract.publicMintZipFile(...args) as ContractTransactionResponse;
+    return await contractTyped.publicMintZipFile(...args) as ContractTransactionResponse;
   }
 
   async getZipFileInfo(
-    contract: Contract,
+    contract: Contract | BaseContract,
     tokenId: bigint
   ): Promise<ZipFileInfo> {
     // v2.11 returns: (merkleRootHash, encryptedHash, ipfsHash, creator, creationTimestamp, tokenizationTime, blockNumber)
-    const result = await contract.getZipFileInfo(tokenId);
+    const contractTyped = contract as Contract;
+    const result = await contractTyped.getZipFileInfo(tokenId);
     
     return {
       merkleRootHash: result[0],
@@ -92,7 +94,7 @@ export class V2_11Adapter implements ContractVersionAdapter {
   }
 
   async estimateGasForMint(
-    contract: Contract,
+    contract: Contract | BaseContract,
     merkleRoot: string,
     encryptedHash: string | undefined,
     creationTimestamp: number,
@@ -100,7 +102,8 @@ export class V2_11Adapter implements ContractVersionAdapter {
     metadataURI: string
   ): Promise<bigint> {
     // v2.11 signature: publicMintZipFile(merkleRootHash, encryptedHash, creationTimestamp, ipfsHash, metadataURI)
-    return await contract.publicMintZipFile.estimateGas(
+    const contractTyped = contract as Contract;
+    return await contractTyped.publicMintZipFile.estimateGas(
       merkleRoot,
       encryptedHash || '',
       creationTimestamp,
