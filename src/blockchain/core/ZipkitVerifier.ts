@@ -557,44 +557,19 @@ export class ZipkitVerifier {
         console.log(`[DEBUG] Calling contract.verifyZipFile(${tokenId}, ${merkleRoot.substring(0, 10)}...)`);
       }
 
-      // Try to detect contract version from blockchain if not in networkConfig or if version is 'unknown'
-      let detectedVersion: string | null = null;
-      if (!networkConfig.version || networkConfig.version === 'unknown') {
-        if (this.debug) {
-          console.log(`[DEBUG] Contract version not in network config (or is 'unknown'), querying blockchain...`);
-        }
-        detectedVersion = await this.queryContractVersion(contractAddress, networkConfig, rpcUrlIndex);
-        if (detectedVersion) {
-          const normalized = normalizeVersion(detectedVersion);
-          if (normalized && isVersionSupported(normalized)) {
-            if (this.debug) {
-              console.log(`[DEBUG] Detected contract version from blockchain: ${normalized}`);
-            }
-          } else {
-            if (this.debug) {
-              console.log(`[DEBUG] Detected version ${detectedVersion} (normalized: ${normalized}) is not supported`);
-            }
-            detectedVersion = null;
-          }
-        }
-      }
+      // If contractVersion is missing/unknown, we'll default to v2.10 (old files never had contractVersion)
+      // No need to query blockchain - just use the version from networkConfig or default to v2.10
 
-      // Determine which version to try first
+      // Determine which version to try
+      // If contractVersion is missing/unknown, only try v2.10 (old files never had contractVersion)
       const versionsToTry: string[] = [];
+      
       if (networkConfig.version && networkConfig.version !== 'unknown') {
+        // Use the version from network config if available
         versionsToTry.push(networkConfig.version);
-      }
-      if (detectedVersion) {
-        const normalized = normalizeVersion(detectedVersion);
-        if (normalized && !versionsToTry.includes(normalized)) {
-          versionsToTry.unshift(normalized); // Try detected version first
-        }
-      }
-      // Add fallback versions (try all implemented versions)
-      for (const version of IMPLEMENTED_VERSIONS) {
-        if (!versionsToTry.includes(version)) {
-          versionsToTry.push(version);
-        }
+      } else {
+        // If version is missing/unknown, only try v2.10 (old files were v2.10)
+        versionsToTry.push('2.10');
       }
 
       if (versionsToTry.length === 0) {
@@ -602,10 +577,6 @@ export class ZipkitVerifier {
           success: false,
           error: 'No contract versions available to try. No versions implemented or detected.'
         };
-      }
-
-      if (this.debug) {
-        console.log(`[DEBUG] Will try contract versions in order: ${versionsToTry.join(', ')}`);
       }
 
       // First check if token exists and get ALL actual on-chain data (not from metadata)
@@ -824,11 +795,21 @@ export class ZipkitVerifier {
         };
       }
 
+      // If contractVersion is missing/unknown in metadata, override networkConfig version to default to v2.10
+      // Old v2.10 files never had contractVersion, so we should try v2.10, not the networkConfig version
+      const configToUse = { ...networkConfig };
+      if (!tokenMetadata.contractVersion || tokenMetadata.contractVersion === 'unknown') {
+        if (this.debug) {
+          console.log(`[DEBUG] TOKEN file missing contractVersion - overriding network config version to default to v2.10`);
+        }
+        configToUse.version = 'unknown'; // This will trigger default to v2.10 in verifyOnChain
+      }
+
       // Perform on-chain verification - this will fetch the actual merkle root from the blockchain
       const onChainResult = await this.verifyOnChain(
         tokenMetadata.tokenId,
         tokenMetadata.contractAddress,
-        networkConfig,
+        configToUse,
         calculatedMerkleRoot,
         rpcUrlIndex
       );
