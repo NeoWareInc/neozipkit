@@ -5,6 +5,8 @@
 
 import { WalletManagerBrowser } from './WalletManagerBrowser';
 import type { TokenMetadata } from '../../types';
+import { getContractAdapterByVersion } from '../core/contracts';
+import type { ContractVersionAdapter } from '../core/adapters/ContractVersionAdapter';
 
 export interface TokenizationResult {
   success: boolean
@@ -122,13 +124,20 @@ export class ZipkitMinterBrowser {
       const ipfsHash = "" // Empty for now, could be implemented later
       const tokenURI = "" // Empty for now, could be implemented later
       
-      // Estimate gas for the mint function with timeout
-      // v2.11 signature: publicMintZipFile(merkleRootHash, encryptedHash, creationTimestamp, ipfsHash, metadataURI)
+      // Get adapter for this contract version
+      const config = this.walletManager.getCurrentConfig()
+      if (!config.version) {
+        throw new Error(`Contract version not specified for network ${config.network}`)
+      }
+      const adapter = getContractAdapterByVersion(config.version)
+      
+      // Estimate gas using adapter (handles version-specific signatures)
       const GAS_ESTIMATION_TIMEOUT = 30000 // 30 seconds
       const gasEstimate: bigint = await Promise.race([
-        contractWithSigner.getFunction("publicMintZipFile").estimateGas(
+        adapter.estimateGasForMint(
+          contractWithSigner,
           this.merkleRoot,
-          this.encryptedHash || '', // encryptedHash (empty string if not encrypted)
+          this.encryptedHash || undefined,
           creationTimestamp,
           ipfsHash,
           tokenURI
@@ -204,21 +213,23 @@ export class ZipkitMinterBrowser {
       console.log(`🕐 Creation timestamp: ${creationTimestamp}`)
       console.log("🔒 Note: Filename is not stored on blockchain for privacy")
       
-      // Get the function to call
-      const functionCall = contractWithSigner.getFunction("publicMintZipFile")
+      // Get adapter for this contract version
+      if (!config.version) {
+        throw new Error(`Contract version not specified for network ${config.network}`)
+      }
+      const adapter = getContractAdapterByVersion(config.version)
       
-      // Send the transaction (this will trigger wallet approval)
-      // v2.11 signature: publicMintZipFile(merkleRootHash, encryptedHash, creationTimestamp, ipfsHash, metadataURI)
-      // Note: We don't populateTransaction first as it may trigger gas estimation
-      // which can hang on some networks. Let the wallet handle it directly.
+      // Send the transaction using adapter (this will trigger wallet approval)
+      // Adapter handles version-specific function signatures
       // Add timeout to prevent hanging if wallet doesn't respond
       const TX_SEND_TIMEOUT = 60000 // 60 seconds for user to approve
       console.log("⏳ Waiting for wallet approval...")
       
       const tx = await Promise.race([
-        functionCall(
+        adapter.mintZipFile(
+          contractWithSigner,
           this.merkleRoot,
-          this.encryptedHash || '', // encryptedHash (empty string if not encrypted)
+          this.encryptedHash || undefined,
           creationTimestamp,
           ipfsHash,
           tokenURI
@@ -371,6 +382,11 @@ export class ZipkitMinterBrowser {
     const now = new Date()
     const config = this.walletManager.getCurrentConfig()
 
+    // Ensure contractVersion is always set (required field)
+    if (!config.version) {
+      throw new Error(`Contract version not specified for network ${config.network} (chainId: ${config.chainId})`);
+    }
+
     return {
       tokenId,
       contractAddress: config.address,
@@ -381,7 +397,7 @@ export class ZipkitMinterBrowser {
       encryptedHash: this.encryptedHash || undefined,
       mintedAt: now.toISOString(),
       creationTimestamp: Math.floor(now.getTime() / 1000),
-      contractVersion: config.version || 'unknown'
+      contractVersion: config.version  // Required - always set from config
     }
   }
 

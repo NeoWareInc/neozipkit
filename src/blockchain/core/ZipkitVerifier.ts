@@ -6,7 +6,7 @@
  */
 
 import { ethers } from 'ethers';
-import { NZIP_CONTRACT_ABI, CONTRACT_CONFIGS, getContractConfig, getNetworkByName, fuzzyMatchNetworkName, type ContractConfig } from './contracts';
+import { NZIP_CONTRACT_ABI, CONTRACT_CONFIGS, getContractConfig, getNetworkByName, fuzzyMatchNetworkName, getContractAdapter, type ContractConfig } from './contracts';
 import type { TokenMetadata } from '../../types';
 
 export interface VerificationOptions {
@@ -134,22 +134,65 @@ export class ZipkitVerifier {
       const chainId = rawMetadata.chainId ?? rawMetadata.networkChainId;
       const timestamp = rawMetadata.timestamp ?? rawMetadata.mintedAt;
       
+      // Migration: Infer missing required fields from network config (backward compatibility)
+      let networkChainId = chainId;
+      let contractVersion = rawMetadata.contractVersion;
+      
+      // If networkChainId is missing, try to infer from network name
+      if (!networkChainId && rawMetadata.network) {
+        const networkConfig = getNetworkByName(rawMetadata.network);
+        if (networkConfig) {
+          networkChainId = networkConfig.chainId;
+          console.warn(`[WARNING] TOKEN file missing networkChainId - inferred ${networkChainId} from network name "${rawMetadata.network}"`);
+        }
+      }
+      
+      // If contractVersion is missing, try to infer from network config
+      if (!contractVersion) {
+        if (networkChainId) {
+          const networkConfig = getContractConfig(networkChainId);
+          if (networkConfig?.version) {
+            contractVersion = networkConfig.version;
+            console.warn(`[WARNING] TOKEN file missing contractVersion - inferred "${contractVersion}" from network config (chainId: ${networkChainId})`);
+          }
+        } else if (rawMetadata.network) {
+          const networkConfig = getNetworkByName(rawMetadata.network);
+          if (networkConfig?.version) {
+            contractVersion = networkConfig.version;
+            console.warn(`[WARNING] TOKEN file missing contractVersion - inferred "${contractVersion}" from network name "${rawMetadata.network}"`);
+          }
+        }
+      }
+      
+      // Validate required fields (after migration attempts)
+      if (!networkChainId) {
+        throw new Error('Invalid token metadata: missing required field "networkChainId" (and could not infer from network name)');
+      }
+      if (!contractVersion) {
+        throw new Error('Invalid token metadata: missing required field "contractVersion" (and could not infer from network config)');
+      }
+      
       // Create normalized metadata object
       const metadata: TokenMetadata = {
         tokenId: rawMetadata.tokenId,
         contractAddress: rawMetadata.contractAddress,
         network: rawMetadata.network,
-        networkChainId: chainId,
+        networkChainId: networkChainId,  // Required - now guaranteed to be set
+        contractVersion: contractVersion,  // Required - now guaranteed to be set
         merkleRoot: rawMetadata.merkleRoot,
         creationTimestamp: rawMetadata.blockNumber || rawMetadata.creationTimestamp,
         transactionHash: rawMetadata.transactionHash,
-        ownerAddress: rawMetadata.ownerAddress,
-        ...rawMetadata
+        owner: rawMetadata.owner || rawMetadata.ownerAddress,
+        encryptedHash: rawMetadata.encryptedHash,
+        mintedAt: rawMetadata.mintedAt || rawMetadata.mintDate,
+        mintDate: rawMetadata.mintDate || rawMetadata.mintedAt,
+        ipfsHash: rawMetadata.ipfsHash,
+        blockNumber: rawMetadata.blockNumber
       };
       
-      // Validate required fields
+      // Validate other required fields
       if (!metadata.tokenId || !metadata.contractAddress || !metadata.merkleRoot) {
-        throw new Error('Invalid token metadata: missing required fields');
+        throw new Error('Invalid token metadata: missing required fields (tokenId, contractAddress, or merkleRoot)');
       }
       
       return metadata;
@@ -182,8 +225,8 @@ export class ZipkitVerifier {
 
       const tokenData = JSON.parse(tokenBuffer.toString('utf8'));
       
-      // Validate required fields
-      const requiredFields = ['tokenId', 'contractAddress', 'network'];
+      // Validate basic required fields
+      const requiredFields = ['tokenId', 'contractAddress', 'network', 'merkleRoot'];
       for (const field of requiredFields) {
         if (!tokenData[field]) {
           if (this.debug) {
@@ -196,14 +239,82 @@ export class ZipkitVerifier {
         }
       }
 
+      // Migration: Infer missing required fields from network config (backward compatibility)
+      let networkChainId = tokenData.networkChainId ?? tokenData.chainId;
+      let contractVersion = tokenData.contractVersion;
+      
+      // If networkChainId is missing, try to infer from network name
+      if (!networkChainId && tokenData.network) {
+        const networkConfig = getNetworkByName(tokenData.network);
+        if (networkConfig) {
+          networkChainId = networkConfig.chainId;
+          if (this.debug) {
+            console.log(`[DEBUG] TOKEN file missing networkChainId - inferred ${networkChainId} from network name "${tokenData.network}"`);
+          }
+        }
+      }
+      
+      // If contractVersion is missing, try to infer from network config
+      if (!contractVersion) {
+        if (networkChainId) {
+          const networkConfig = getContractConfig(networkChainId);
+          if (networkConfig?.version) {
+            contractVersion = networkConfig.version;
+            if (this.debug) {
+              console.log(`[DEBUG] TOKEN file missing contractVersion - inferred "${contractVersion}" from network config (chainId: ${networkChainId})`);
+            }
+          }
+        } else if (tokenData.network) {
+          const networkConfig = getNetworkByName(tokenData.network);
+          if (networkConfig?.version) {
+            contractVersion = networkConfig.version;
+            if (this.debug) {
+              console.log(`[DEBUG] TOKEN file missing contractVersion - inferred "${contractVersion}" from network name "${tokenData.network}"`);
+            }
+          }
+        }
+      }
+      
+      // Validate version fields (after migration attempts)
+      if (!networkChainId) {
+        return {
+          success: false,
+          error: 'Missing required field: networkChainId (and could not infer from network name)'
+        };
+      }
+      if (!contractVersion) {
+        return {
+          success: false,
+          error: 'Missing required field: contractVersion (and could not infer from network config)'
+        };
+      }
+
+      // Create normalized metadata object
+      const metadata: TokenMetadata = {
+        tokenId: tokenData.tokenId,
+        contractAddress: tokenData.contractAddress,
+        network: tokenData.network,
+        networkChainId: networkChainId,  // Required - now guaranteed to be set
+        contractVersion: contractVersion,  // Required - now guaranteed to be set
+        merkleRoot: tokenData.merkleRoot,
+        transactionHash: tokenData.transactionHash,
+        blockNumber: tokenData.blockNumber,
+        owner: tokenData.owner || tokenData.ownerAddress,
+        encryptedHash: tokenData.encryptedHash,
+        mintedAt: tokenData.mintedAt || tokenData.mintDate,
+        mintDate: tokenData.mintDate || tokenData.mintedAt,
+        creationTimestamp: tokenData.creationTimestamp || tokenData.blockNumber,
+        ipfsHash: tokenData.ipfsHash
+      };
+
       if (this.debug) {
         console.log(`[DEBUG] Token metadata extracted successfully`);
-        console.log(`[DEBUG] Token ID: ${tokenData.tokenId}, Network: ${tokenData.network}`);
+        console.log(`[DEBUG] Token ID: ${metadata.tokenId}, Network: ${metadata.network}, ChainId: ${metadata.networkChainId}, Version: ${metadata.contractVersion}`);
       }
 
       return { 
         success: true, 
-        metadata: tokenData as TokenMetadata 
+        metadata
       };
 
     } catch (error) {
@@ -379,7 +490,7 @@ export class ZipkitVerifier {
       }
 
       // First check if token exists and get ALL actual on-chain data (not from metadata)
-      // Using minimal ABI that works with both v2.10 and v2.11 contracts
+      // Use adapter to handle version-specific differences
       let onChainMerkleRoot: string | undefined;
       let onChainTokenizationTime: number | undefined;
       let onChainCreator: string | undefined;
@@ -387,25 +498,28 @@ export class ZipkitVerifier {
       let onChainEncryptedHash: string | undefined;
       
       try {
-        // Get token info including ALL data stored on-chain (merkle root, tokenization time, creator, block number)
+        // Get adapter for this contract version (from tokenMetadata or networkConfig)
+        const adapter = tokenMetadata.contractVersion 
+          ? getContractAdapter(networkConfig.chainId)
+          : getContractAdapter(networkConfig.chainId);
+        
+        // Get token info using adapter (handles version-specific differences)
         // CRITICAL: We trust ONLY blockchain data, not metadata file which can be tampered with
-        // The ABI only declares the fields we need, so it works with both v2.10 and v2.11
         const zipFileInfo = await Promise.race([
-          contract.getZipFileInfo(tokenId),
+          adapter.getZipFileInfo(contract, BigInt(tokenId)),
           new Promise<never>((_, reject) => 
             setTimeout(() => reject(new Error('getZipFileInfo timeout after 10 seconds')), 10000)
           )
         ]);
         
-        // Extract all on-chain data (fields present in both v2.10 and v2.11)
+        // Extract all on-chain data (adapter returns full structure for this version)
         onChainMerkleRoot = zipFileInfo.merkleRootHash;
         onChainTokenizationTime = Number(zipFileInfo.tokenizationTime);
         onChainCreator = zipFileInfo.creator;
         onChainBlockNumber = Number(zipFileInfo.blockNumber);
         
-        // Note: We're not reading encryptedHash since our ABI doesn't declare it
-        // This keeps the code simple and works with both contract versions
-        onChainEncryptedHash = undefined;
+        // encryptedHash is available if contract version supports it (v2.11+)
+        onChainEncryptedHash = zipFileInfo.encryptedHash || undefined;
         
         if (this.debug) {
           console.log(`[DEBUG] Token ${tokenId} exists`);

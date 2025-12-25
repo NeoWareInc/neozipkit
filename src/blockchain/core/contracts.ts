@@ -353,6 +353,41 @@ export function getSupportedNetworkNames(): string[] {
 }
 
 /**
+ * Get contract adapter for a given chain ID
+ * Uses the version from CONTRACT_CONFIGS to select the appropriate adapter
+ * @param chainId Chain ID
+ * @returns ContractVersionAdapter instance
+ * @throws Error if chainId not found or version not supported
+ */
+export function getContractAdapter(chainId: number): import('./adapters/ContractVersionAdapter').ContractVersionAdapter {
+  const config = getContractConfig(chainId);
+  
+  if (!config) {
+    throw new Error(`No contract config found for chainId: ${chainId}`);
+  }
+  
+  if (!config.version) {
+    throw new Error(`Contract version not specified for chainId: ${chainId}`);
+  }
+  
+  // Import here to avoid circular dependency
+  const { getAdapter } = require('./adapters/AdapterFactory');
+  return getAdapter(config.version);
+}
+
+/**
+ * Get contract adapter by version string
+ * @param version Contract version (e.g., "2.11", "2.10")
+ * @returns ContractVersionAdapter instance
+ * @throws Error if version not supported
+ */
+export function getContractAdapterByVersion(version: string): import('./adapters/ContractVersionAdapter').ContractVersionAdapter {
+  // Import here to avoid circular dependency
+  const { getAdapter } = require('./adapters/AdapterFactory');
+  return getAdapter(version);
+}
+
+/**
  * Fuzzy match network name (for backward compatibility)
  * Handles partial matches like "sepolia" matching "Base Sepolia" or "Arbitrum Sepolia"
  * Returns best match or null

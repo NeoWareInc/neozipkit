@@ -188,17 +188,37 @@ export class TokenVerifierBrowser {
 
   /**
    * Validates token metadata structure
+   * Validates required fields: tokenId, contractAddress, network, merkleRoot, networkChainId, contractVersion
    */
   private validateTokenInfo(tokenMetadata: any): tokenMetadata is TokenMetadata {
-    return tokenMetadata &&
-           typeof tokenMetadata.version === 'string' &&
-           typeof tokenMetadata.tokenId === 'string' &&
-           typeof tokenMetadata.contractAddress === 'string' &&
-           typeof tokenMetadata.network === 'string' &&
-           typeof tokenMetadata.networkChainId === 'number' &&
-           typeof tokenMetadata.transactionHash === 'string' &&
-           typeof tokenMetadata.merkleRoot === 'string' &&
-           typeof tokenMetadata.mintedAt === 'string';
+    // Check basic structure
+    if (!tokenMetadata || typeof tokenMetadata !== 'object') {
+      return false;
+    }
+    
+    // Required core fields
+    if (typeof tokenMetadata.tokenId !== 'string' || !tokenMetadata.tokenId) {
+      return false;
+    }
+    if (typeof tokenMetadata.contractAddress !== 'string' || !tokenMetadata.contractAddress) {
+      return false;
+    }
+    if (typeof tokenMetadata.network !== 'string' || !tokenMetadata.network) {
+      return false;
+    }
+    if (typeof tokenMetadata.merkleRoot !== 'string' || !tokenMetadata.merkleRoot) {
+      return false;
+    }
+    
+    // Required version fields (new requirement)
+    if (typeof tokenMetadata.networkChainId !== 'number' || tokenMetadata.networkChainId === undefined) {
+      return false;
+    }
+    if (typeof tokenMetadata.contractVersion !== 'string' || !tokenMetadata.contractVersion) {
+      return false;
+    }
+    
+    return true;
   }
 
   /**
