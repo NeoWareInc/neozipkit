@@ -48,6 +48,7 @@ export interface WalletInfo {
   address: string;
   balance: string;
   networkName: string;
+  chainId: number;  // Chain ID for network identification
 }
 
 /**
@@ -137,7 +138,8 @@ export class ZipkitMinter {
     return {
       address: this.wallet.address,
       balance: balanceInEth,
-      networkName: this.networkConfig.network
+      networkName: this.networkConfig.network,
+      chainId: this.networkConfig.chainId
     };
   }
 

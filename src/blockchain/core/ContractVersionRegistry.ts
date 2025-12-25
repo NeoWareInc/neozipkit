@@ -77,12 +77,24 @@ export function getVersionCapabilities(version: string): VersionCapabilities | n
 }
 
 /**
- * Check if a contract version is supported
+ * List of versions that have adapter implementations
+ * This is separate from the registry to distinguish between "known" and "implemented"
+ */
+const IMPLEMENTED_VERSIONS: ContractVersion[] = ['2.10', '2.11'];
+
+/**
+ * Check if a contract version is supported (has both registry entry and adapter implementation)
  * @param version Contract version string
- * @returns true if version is supported, false otherwise
+ * @returns true if version is supported and has an adapter, false otherwise
  */
 export function isVersionSupported(version: string): boolean {
-  return getVersionCapabilities(version) !== null;
+  const normalized = normalizeVersion(version);
+  if (!normalized) {
+    return false;
+  }
+  // Version must be in registry AND have an adapter implementation
+  return getVersionCapabilities(normalized) !== null && 
+         IMPLEMENTED_VERSIONS.includes(normalized as ContractVersion);
 }
 
 /**

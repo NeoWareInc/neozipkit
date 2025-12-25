@@ -32,7 +32,8 @@ export function getAdapter(version: string): ContractVersionAdapter {
     case '2.11':
       return new V2_11Adapter();
     default:
-      throw new Error(`No adapter implementation for version: "${normalized}"`);
+      // This should never happen if isVersionSupported is correct, but keep as safety check
+      throw new Error(`Unsupported contract version: "${version}" (normalized: "${normalized}"). Supported versions: 2.10, 2.11`);
   }
 }
 

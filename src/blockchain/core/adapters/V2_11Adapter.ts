@@ -8,7 +8,7 @@
  */
 
 import type { Contract, ContractTransactionResponse, BaseContract } from 'ethers';
-import { Interface } from 'ethers';
+import { Interface, Contract as EthersContract } from 'ethers';
 import type { ContractVersionAdapter, ZipFileInfo, ZipFileTokenizedEvent } from './ContractVersionAdapter';
 
 // Minimal ABI for v2.11 operations
@@ -55,8 +55,20 @@ export class V2_11Adapter implements ContractVersionAdapter {
     tokenId: bigint
   ): Promise<ZipFileInfo> {
     // v2.11 returns: (merkleRootHash, encryptedHash, ipfsHash, creator, creationTimestamp, tokenizationTime, blockNumber)
+    // Use adapter's ABI to ensure we get all 7 fields
     const contractTyped = contract as Contract;
-    const result = await contractTyped.getZipFileInfo(tokenId);
+    
+    // Get the provider/runner from the contract
+    const runner = (contractTyped as any).runner || (contractTyped as any).provider;
+    
+    // Create a contract with the adapter's ABI to get the full return structure
+    const adapterContract = new EthersContract(
+      contractTyped.target as string,
+      V2_11_ABI,
+      runner
+    );
+    
+    const result = await adapterContract.getZipFileInfo(tokenId);
     
     return {
       merkleRootHash: result[0],
