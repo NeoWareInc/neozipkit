@@ -25,7 +25,7 @@ jobs:
           corepack prepare yarn@4.9.2 --activate
       
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: yarn install --immutable
       
       - name: Build (main branch) or Dev Build (PR branch)
         run: |
