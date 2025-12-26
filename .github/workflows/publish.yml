@@ -18,10 +18,11 @@ jobs:
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
-          cache: 'yarn'
       
-      - name: Enable Corepack
-        run: corepack enable
+      - name: Enable and prepare Corepack
+        run: |
+          corepack enable
+          corepack prepare yarn@4.9.2 --activate
       
       - name: Install dependencies
         run: yarn install --frozen-lockfile
