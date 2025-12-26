@@ -59,7 +59,7 @@ export {
   CENTRAL_DIRECTORY_END,
   HDR_ID
 };
-export { CompressOptions, CreateZipOptions } from './ZipCompress';
+export type { CompressOptions, CreateZipOptions } from './ZipCompress';
 
 /**
  * Configuration options for Zipkit instances

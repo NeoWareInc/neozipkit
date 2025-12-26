@@ -5,6 +5,8 @@
 
 import { WalletManagerBrowser } from './WalletManagerBrowser';
 import type { TokenMetadata } from '../../types';
+import { getContractAdapterByVersion } from '../core/contracts';
+import type { ContractVersionAdapter } from '../core/adapters/ContractVersionAdapter';
 
 export interface TokenizationResult {
   success: boolean
@@ -24,9 +26,11 @@ export interface ExistingToken {
 export class ZipkitMinterBrowser {
   private walletManager: WalletManagerBrowser
   private merkleRoot: string
+  private encryptedHash: string  // Hash of encrypted ZIP file (v3.0+)
 
-  constructor(merkleRoot: string, walletManager: WalletManagerBrowser) {
+  constructor(merkleRoot: string, walletManager: WalletManagerBrowser, encryptedHash?: string) {
     this.merkleRoot = merkleRoot
+    this.encryptedHash = encryptedHash || ''
     this.walletManager = walletManager
   }
 
@@ -120,13 +124,22 @@ export class ZipkitMinterBrowser {
       const ipfsHash = "" // Empty for now, could be implemented later
       const tokenURI = "" // Empty for now, could be implemented later
       
-      // Estimate gas for the mint function with timeout
+      // Get adapter for this contract version
+      const config = this.walletManager.getCurrentConfig()
+      if (!config.version) {
+        throw new Error(`Contract version not specified for network ${config.network}`)
+      }
+      const adapter = getContractAdapterByVersion(config.version)
+      
+      // Estimate gas using adapter (handles version-specific signatures)
       const GAS_ESTIMATION_TIMEOUT = 30000 // 30 seconds
-      const gasEstimate = await Promise.race([
-        contractWithSigner.getFunction("publicMintZipFile").estimateGas(
-          this.merkleRoot, 
-          creationTimestamp, 
-          ipfsHash, 
+      const gasEstimate: bigint = await Promise.race([
+        adapter.estimateGasForMint(
+          contractWithSigner,
+          this.merkleRoot,
+          this.encryptedHash || undefined,
+          creationTimestamp,
+          ipfsHash,
           tokenURI
         ),
         new Promise<never>((_, reject) => 
@@ -200,20 +213,25 @@ export class ZipkitMinterBrowser {
       console.log(`🕐 Creation timestamp: ${creationTimestamp}`)
       console.log("🔒 Note: Filename is not stored on blockchain for privacy")
       
-      // Get the function to call
-      const functionCall = contractWithSigner.getFunction("publicMintZipFile")
+      // Get adapter for this contract version
+      if (!config.version) {
+        throw new Error(`Contract version not specified for network ${config.network}`)
+      }
+      const adapter = getContractAdapterByVersion(config.version)
       
-      // Send the transaction (this will trigger wallet approval)
-      // Note: We don't populateTransaction first as it may trigger gas estimation
-      // which can hang on some networks. Let the wallet handle it directly.
+      // Send the transaction using adapter (this will trigger wallet approval)
+      // Adapter handles version-specific function signatures
       // Add timeout to prevent hanging if wallet doesn't respond
       const TX_SEND_TIMEOUT = 60000 // 60 seconds for user to approve
       console.log("⏳ Waiting for wallet approval...")
+      
       const tx = await Promise.race([
-        functionCall(
-          this.merkleRoot, 
-          creationTimestamp, 
-          ipfsHash, 
+        adapter.mintZipFile(
+          contractWithSigner,
+          this.merkleRoot,
+          this.encryptedHash || undefined,
+          creationTimestamp,
+          ipfsHash,
           tokenURI
         ),
         new Promise<never>((_, reject) => 
@@ -225,7 +243,7 @@ export class ZipkitMinterBrowser {
       console.log("⏳ Waiting for confirmation...")
       
       // Use read provider for waiting to avoid rate limiting with timeout
-      let receipt
+      let receipt: any = null
       const CONFIRMATION_TIMEOUT = 120000 // 2 minutes timeout
       
       try {
@@ -262,55 +280,62 @@ export class ZipkitMinterBrowser {
           throw confirmationError
         }
       }
-      console.log(`✅ Transaction confirmed in block: ${receipt?.blockNumber}`)
+      
+      if (!receipt) {
+        throw new Error('Transaction receipt not available')
+      }
+      
+      console.log(`✅ Transaction confirmed in block: ${receipt.blockNumber}`)
       
       // Extract token ID from the transaction logs
       let tokenId: string | undefined
       
       // Extract token ID from transaction logs
-      for (let i = 0; i < receipt.logs.length; i++) {
-        const log = receipt.logs[i]
+      if (receipt.logs && Array.isArray(receipt.logs)) {
+        for (let i = 0; i < receipt.logs.length; i++) {
+          const log = receipt.logs[i]
         
-        try {
-          const parsed = contract.interface.parseLog(log)
-          
-          if (parsed) {
-            if (parsed.name === 'ZipFileTokenized') {
-              tokenId = parsed.args.tokenId.toString()
-              break
-            } else if (parsed.name === 'Transfer') {
-              // ERC721 Transfer event: Transfer(from, to, tokenId)
-              const from = parsed.args.from
-              const transferTokenId = parsed.args.tokenId
-              
-              // Only use Transfer events that are minting (from zero address)
-              if (from === '0x0000000000000000000000000000000000000000') {
-                tokenId = transferTokenId.toString()
+          try {
+            const parsed = contract.interface.parseLog(log)
+            
+            if (parsed) {
+              if (parsed.name === 'ZipFileTokenized') {
+                tokenId = parsed.args.tokenId.toString()
                 break
+              } else if (parsed.name === 'Transfer') {
+                // ERC721 Transfer event: Transfer(from, to, tokenId)
+                const from = parsed.args.from
+                const transferTokenId = parsed.args.tokenId
+                
+                // Only use Transfer events that are minting (from zero address)
+                if (from === '0x0000000000000000000000000000000000000000') {
+                  tokenId = transferTokenId.toString()
+                  break
+                }
               }
             }
-          }
-        } catch (parseError) {
-          console.warn(`⚠️ Could not parse log ${i}:`, parseError)
-          
-          // Try manual parsing for standard ERC721 Transfer event
-          if (log.topics.length >= 4 && log.topics[0] === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef') {
-            try {
-              // ERC721 Transfer event signature
-              const from = log.topics[1]
-              const to = log.topics[2] 
-              const transferTokenId = log.topics[3]
-              
-              console.log(`🔄 Manual Transfer parse: from=${from}, to=${to}, tokenId=${transferTokenId}`)
-              
-              // Check if this is a mint (from zero address)
-              if (from === '0x0000000000000000000000000000000000000000000000000000000000000000') {
-                tokenId = parseInt(transferTokenId, 16).toString()
-                console.log(`🎯 Found minting via manual parse with token ID: ${tokenId}`)
-                break
+          } catch (parseError) {
+            console.warn(`⚠️ Could not parse log ${i}:`, parseError)
+            
+            // Try manual parsing for standard ERC721 Transfer event
+            if (log.topics && log.topics.length >= 4 && log.topics[0] === '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef') {
+              try {
+                // ERC721 Transfer event signature
+                const from = log.topics[1]
+                const to = log.topics[2] 
+                const transferTokenId = log.topics[3]
+                
+                console.log(`🔄 Manual Transfer parse: from=${from}, to=${to}, tokenId=${transferTokenId}`)
+                
+                // Check if this is a mint (from zero address)
+                if (from === '0x0000000000000000000000000000000000000000000000000000000000000000') {
+                  tokenId = parseInt(transferTokenId, 16).toString()
+                  console.log(`🎯 Found minting via manual parse with token ID: ${tokenId}`)
+                  break
+                }
+              } catch (manualParseError) {
+                console.warn(`⚠️ Manual parsing also failed:`, manualParseError)
               }
-            } catch (manualParseError) {
-              console.warn(`⚠️ Manual parsing also failed:`, manualParseError)
             }
           }
         }
@@ -364,16 +389,22 @@ export class ZipkitMinterBrowser {
     const now = new Date()
     const config = this.walletManager.getCurrentConfig()
 
+    // Ensure contractVersion is always set (required field)
+    if (!config.version) {
+      throw new Error(`Contract version not specified for network ${config.network} (chainId: ${config.chainId})`);
+    }
+
     return {
-      version: "1.0",
       tokenId,
       contractAddress: config.address,
       network: config.network,
       networkChainId: config.chainId,
       transactionHash,
       merkleRoot: this.merkleRoot,
+      encryptedHash: this.encryptedHash || undefined,
       mintedAt: now.toISOString(),
-      creationTimestamp: Math.floor(now.getTime() / 1000)
+      creationTimestamp: Math.floor(now.getTime() / 1000),
+      contractVersion: config.version  // Required - always set from config
     }
   }
 

@@ -14,7 +14,7 @@
 //
 
 const pako = require('pako');
-import { ZstdInit, ZstdSimple } from '@oneidentity/zstd-js';
+import { ZstdManager } from './ZstdManager';
 import Zipkit from './Zipkit';
 import { Logger } from './components/Logger';
 import ZipEntry from './ZipEntry';
@@ -22,17 +22,6 @@ import Errors from './constants/Errors';
 import { CMP_METHOD, GP_FLAG, ENCRYPT_HDR_SIZE } from './constants/Headers';
 import { HashCalculator } from './components/HashCalculator';
 import { ZipCrypto } from './encryption/ZipCrypto';
-
-// We'll initialize zstd when needed
-let zstdCodec: { ZstdSimple: typeof ZstdSimple } | null = null;
-
-// Async initialization function for zstd
-async function initZstd(): Promise<{ ZstdSimple: typeof ZstdSimple }> {
-  if (!zstdCodec) {
-    zstdCodec = await ZstdInit();
-  }
-  return zstdCodec;
-}
 
 /**
  * Options for compressing files in a ZIP archive
@@ -298,33 +287,16 @@ export class ZipCompress {
       throw new Error('Chunked reader mode not supported in ZipCompress');
     }
     
-    // Lazy ZSTD initialization
-    const zstdCodec = await initZstd();
-    
     // Validate input
     if (!input || input.length === 0) {
       throw new Error('ZSTD compression: empty input buffer');
     }
     
-    // Convert Buffer to Uint8Array for WASM module (same fix as decompression)
+    // Convert Buffer to Uint8Array for WASM module
     const inputArray = new Uint8Array(input.buffer, input.byteOffset, input.byteLength);
     
-    // For small data, compress in one go
-    if (input.length <= effectiveBufferSize) {
-      const compressed = zstdCodec.ZstdSimple.compress(inputArray, level);
-      const compressedBuffer = Buffer.from(compressed);
-      
-      if (onOutputBuffer) {
-        await onOutputBuffer(compressedBuffer);
-      }
-      
-      return compressedBuffer;
-    }
-    
-    // For large data, compress in chunks (ZSTD supports streaming)
-    // Note: ZSTD streaming compression is more complex, so for now we compress the whole buffer
-    // This could be optimized in the future for true streaming
-    const compressed = zstdCodec.ZstdSimple.compress(inputArray, level);
+    // Use global ZstdManager for compression (handles queuing and initialization)
+    const compressed = await ZstdManager.compress(inputArray, level);
     const compressedBuffer = Buffer.from(compressed);
     
     if (onOutputBuffer) {

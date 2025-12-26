@@ -20,7 +20,7 @@ import { Logger } from '../core/components/Logger';
 import { CMP_METHOD, GP_FLAG, ENCRYPT_HDR_SIZE } from '../core/constants/Headers';
 import { HashCalculator } from '../core/components/HashCalculator';
 import { ZipCrypto } from '../core/encryption/ZipCrypto';
-import { ZstdInit, ZstdSimple } from '@oneidentity/zstd-js';
+import { ZstdManager } from '../core/ZstdManager';
 import Errors from '../core/constants/Errors';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -29,17 +29,6 @@ const pako = require('pako');
 
 // Re-export types from ZipCompress (from core module)
 export { CompressOptions } from '../core/ZipCompress';
-
-// We'll initialize zstd when needed
-let zstdCodec: { ZstdSimple: typeof ZstdSimple } | null = null;
-
-// Async initialization function for zstd
-async function initZstd(): Promise<{ ZstdSimple: typeof ZstdSimple }> {
-  if (!zstdCodec) {
-    zstdCodec = await ZstdInit();
-  }
-  return zstdCodec;
-}
 
 /**
  * ZipCompressNode - Node.js file-based compression operations
@@ -379,9 +368,6 @@ export class ZipCompressNode {
     }
     
     try {
-      // Ensure zstd is initialized
-      const codec = await initZstd();
-      
       // Zstd compression levels range from 1 (fastest) to 22 (highest compression)
       // Map our 1-9 level to a reasonable zstd range (1-19)
       const level = options?.level ?? 6;
@@ -405,11 +391,11 @@ export class ZipCompressNode {
         throw new Error('ZSTD compression: empty input buffer');
       }
       
-      // Convert Buffer to Uint8Array for WASM module (same fix as decompression)
+      // Convert Buffer to Uint8Array for WASM module
       const inputArray = new Uint8Array(inbuf.buffer, inbuf.byteOffset, inbuf.byteLength);
       
-      // Compress the data with zstd
-      const compressedData = codec.ZstdSimple.compress(inputArray, zstdLevel);
+      // Compress the data with zstd using global ZstdManager
+      const compressedData = await ZstdManager.compress(inputArray, zstdLevel);
       const compressedBuffer = Buffer.from(compressedData);
       
       // Set the compressed size in the entry for ZIP file structure

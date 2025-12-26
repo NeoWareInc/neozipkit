@@ -6,7 +6,9 @@
  */
 
 import { ethers } from 'ethers';
-import { NZIP_CONTRACT_ABI, CONTRACT_CONFIGS, getContractConfig, getNetworkByName, fuzzyMatchNetworkName, type ContractConfig } from './contracts';
+import { NZIP_CONTRACT_ABI, CONTRACT_CONFIGS, getContractConfig, getNetworkByName, fuzzyMatchNetworkName, getContractAdapter, type ContractConfig } from './contracts';
+import { getAdapter } from './adapters/AdapterFactory';
+import { IMPLEMENTED_VERSIONS, normalizeVersion, isVersionSupported } from './ContractVersionRegistry';
 import type { TokenMetadata } from '../../types';
 
 export interface VerificationOptions {
@@ -89,6 +91,174 @@ export class ZipkitVerifier {
   }
 
   /**
+   * Extracts and normalizes token metadata from a tokenized ZIP archive.
+   * 
+   * Handles field name variations across different token versions:
+   * - chainId vs networkChainId
+   * - timestamp vs mintedAt
+   * - Validates required fields
+   * 
+   * @param zipkit - ZipkitNode instance with loaded archive
+   * @returns Normalized TokenMetadata or null if not tokenized
+   * @throws Error if TOKEN file exists but is invalid
+   * 
+   * @example
+   * ```typescript
+   * import { ZipkitNode } from 'neozipkit/node';
+   * import { ZipkitVerifier } from 'neozipkit/blockchain';
+   * 
+   * const zipkit = new ZipkitNode();
+   * await zipkit.loadZipFile('archive.nzip');
+   * const metadata = await ZipkitVerifier.extractTokenMetadata(zipkit);
+   * if (metadata) {
+   *   console.log(`Token ID: ${metadata.tokenId}`);
+   *   console.log(`Network: ${metadata.network}`);
+   * }
+   * ```
+   */
+  static async extractTokenMetadata(zipkit: any): Promise<TokenMetadata | null> {
+    try {
+      // Check for META-INF/NZIP.TOKEN entry
+      const tokenEntry = zipkit.getZipEntry('META-INF/NZIP.TOKEN');
+      if (!tokenEntry) {
+        return null;
+      }
+      
+      // Extract token data to buffer
+      const tokenDataBuffer = await zipkit.extractToBuffer(tokenEntry, {
+        skipHashCheck: false
+      });
+      
+      const tokenData = tokenDataBuffer.toString('utf-8');
+      const rawMetadata = JSON.parse(tokenData);
+      
+      // Normalize field names for compatibility across versions
+      const chainId = rawMetadata.chainId ?? rawMetadata.networkChainId;
+      const timestamp = rawMetadata.timestamp ?? rawMetadata.mintedAt;
+      
+      // Migration: Infer missing required fields from network config (backward compatibility)
+      let networkChainId = chainId;
+      let contractVersion = rawMetadata.contractVersion;
+      
+      // If networkChainId is missing, try to infer from network name
+      if (!networkChainId && rawMetadata.network) {
+        const networkConfig = getNetworkByName(rawMetadata.network);
+        if (networkConfig) {
+          networkChainId = networkConfig.chainId;
+          console.warn(`[WARNING] TOKEN file missing networkChainId - inferred ${networkChainId} from network name "${rawMetadata.network}"`);
+        }
+      }
+      
+      // Validate required fields (after migration attempts)
+      if (!networkChainId) {
+        throw new Error('Invalid token metadata: missing required field "networkChainId" (and could not infer from network name)');
+      }
+      
+      // contractVersion: Do NOT infer from network config because:
+      // 1. Old v2.10 files never had contractVersion in TOKEN file
+      // 2. Network configs may have been updated to newer contract versions
+      // 3. Verification will try all versions automatically if version is 'unknown'
+      if (!contractVersion) {
+        console.warn(`[WARNING] TOKEN file missing contractVersion (common for v2.10 files) - verification will try all versions automatically`);
+        contractVersion = 'unknown';
+      }
+      
+      // Create normalized metadata object
+      const metadata: TokenMetadata = {
+        tokenId: rawMetadata.tokenId,
+        contractAddress: rawMetadata.contractAddress,
+        network: rawMetadata.network,
+        networkChainId: networkChainId,  // Required - now guaranteed to be set
+        contractVersion: contractVersion,  // Required - now guaranteed to be set
+        merkleRoot: rawMetadata.merkleRoot,
+        creationTimestamp: rawMetadata.blockNumber || rawMetadata.creationTimestamp,
+        transactionHash: rawMetadata.transactionHash,
+        owner: rawMetadata.owner || rawMetadata.ownerAddress,
+        encryptedHash: rawMetadata.encryptedHash,
+        mintedAt: rawMetadata.mintedAt || rawMetadata.mintDate,
+        mintDate: rawMetadata.mintDate || rawMetadata.mintedAt,
+        ipfsHash: rawMetadata.ipfsHash,
+        blockNumber: rawMetadata.blockNumber
+      };
+      
+      // Validate other required fields
+      if (!metadata.tokenId || !metadata.contractAddress || !metadata.merkleRoot) {
+        throw new Error('Invalid token metadata: missing required fields (tokenId, contractAddress, or merkleRoot)');
+      }
+      
+      return metadata;
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('Invalid token metadata')) {
+        throw error;
+      }
+      // Return null for non-tokenized archives or extraction errors
+      return null;
+    }
+  }
+
+  /**
+   * Instance method for convenience - extracts token metadata from loaded archive
+   * @param zipkit - ZipkitNode instance with loaded archive
+   * @returns Normalized TokenMetadata or null if not tokenized
+   */
+  async getTokenMetadata(zipkit: any): Promise<TokenMetadata | null> {
+    return ZipkitVerifier.extractTokenMetadata(zipkit);
+  }
+
+  /**
+   * Query contract version from blockchain
+   * @param contractAddress - Contract address
+   * @param networkConfig - Network configuration with RPC URLs
+   * @param rpcUrlIndex - Optional RPC URL index (default: 0)
+   * @returns Contract version string or null if query fails
+   */
+  private async queryContractVersion(
+    contractAddress: string,
+    networkConfig: ContractConfig,
+    rpcUrlIndex: number = 0
+  ): Promise<string | null> {
+    const rpcUrls = networkConfig.rpcUrls.length > 0 ? networkConfig.rpcUrls : [];
+    if (rpcUrls.length === 0 || rpcUrlIndex >= rpcUrls.length) {
+      return null;
+    }
+
+    const rpcUrl = rpcUrls[rpcUrlIndex];
+    let provider: ethers.JsonRpcProvider | null = null;
+
+    try {
+      provider = new ethers.JsonRpcProvider(rpcUrl);
+      const contract = new ethers.Contract(contractAddress, NZIP_CONTRACT_ABI, provider);
+
+      // Query getVersion() function with timeout
+      const version = await Promise.race([
+        contract.getVersion(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('getVersion timeout after 10 seconds')), 10000)
+        )
+      ]);
+
+      if (this.debug) {
+        console.log(`[DEBUG] Contract version queried from blockchain: ${version}`);
+      }
+
+      return version as string;
+    } catch (error: any) {
+      if (this.debug) {
+        console.log(`[DEBUG] Failed to query contract version: ${error.message || String(error)}`);
+      }
+      return null;
+    } finally {
+      try {
+        if (provider) {
+          provider.destroy();
+        }
+      } catch (cleanupError) {
+        // Ignore cleanup errors
+      }
+    }
+  }
+
+  /**
    * Extract and validate token metadata from ZIP
    */
   async extractTokenMetadata(tokenBuffer: Buffer): Promise<{ success: boolean; metadata?: TokenMetadata; error?: string }> {
@@ -99,8 +269,8 @@ export class ZipkitVerifier {
 
       const tokenData = JSON.parse(tokenBuffer.toString('utf8'));
       
-      // Validate required fields
-      const requiredFields = ['tokenId', 'contractAddress', 'network'];
+      // Validate basic required fields
+      const requiredFields = ['tokenId', 'contractAddress', 'network', 'merkleRoot'];
       for (const field of requiredFields) {
         if (!tokenData[field]) {
           if (this.debug) {
@@ -113,14 +283,106 @@ export class ZipkitVerifier {
         }
       }
 
+      // Migration: Infer missing required fields from network config (backward compatibility)
+      let networkChainId = tokenData.networkChainId ?? tokenData.chainId;
+      let contractVersion = tokenData.contractVersion;
+      
+      // If networkChainId is missing, try to infer from network name
+      if (!networkChainId && tokenData.network) {
+        const networkConfig = getNetworkByName(tokenData.network);
+        if (networkConfig) {
+          networkChainId = networkConfig.chainId;
+          if (this.debug) {
+            console.log(`[DEBUG] TOKEN file missing networkChainId - inferred ${networkChainId} from network name "${tokenData.network}"`);
+          }
+        }
+      }
+      
+      // Validate networkChainId (required for blockchain queries)
+      if (!networkChainId) {
+        return {
+          success: false,
+          error: 'Missing required field: networkChainId (and could not infer from network name)'
+        };
+      }
+
+      // contractVersion: Do NOT infer from network config because:
+      // 1. Old v2.10 files never had contractVersion in TOKEN file
+      // 2. Network configs may have been updated to newer contract versions
+      // 3. Query from blockchain first, then let verification try all versions if needed
+      
+      // If contractVersion is missing, try to query from blockchain
+      if (!contractVersion && networkChainId && tokenData.contractAddress) {
+        const networkConfig = getContractConfig(networkChainId);
+        if (networkConfig) {
+          if (this.debug) {
+            console.log(`[DEBUG] TOKEN file missing contractVersion - attempting to query from blockchain...`);
+          }
+          try {
+            const blockchainVersion = await this.queryContractVersion(
+              tokenData.contractAddress,
+              networkConfig,
+              0
+            );
+            if (blockchainVersion) {
+              const normalized = normalizeVersion(blockchainVersion);
+              if (normalized && isVersionSupported(normalized)) {
+                contractVersion = normalized;
+                if (this.debug) {
+                  console.log(`[DEBUG] Successfully queried contractVersion from blockchain: ${contractVersion}`);
+                }
+              } else {
+                if (this.debug) {
+                  console.log(`[DEBUG] Queried version ${blockchainVersion} (normalized: ${normalized}) is not supported`);
+                }
+              }
+            }
+          } catch (queryError: any) {
+            if (this.debug) {
+              console.log(`[DEBUG] Failed to query contract version from blockchain: ${queryError.message || String(queryError)}`);
+            }
+            // Continue - we'll try multiple versions during verification
+          }
+        }
+      }
+
+      // Final validation - contractVersion is preferred but not strictly required
+      // (we can try multiple versions during verification)
+      if (!contractVersion) {
+        if (this.debug) {
+          console.log(`[DEBUG] ⚠️  Contract version not found in TOKEN file or blockchain. Will try all versions during verification.`);
+        }
+        // Don't fail here - let verification try multiple versions
+        // But we still need a version for the metadata object, so use a placeholder
+        contractVersion = 'unknown';
+      }
+
+      // Create normalized metadata object
+      const metadata: TokenMetadata = {
+        tokenId: tokenData.tokenId,
+        contractAddress: tokenData.contractAddress,
+        network: tokenData.network,
+        networkChainId: networkChainId,  // Required - now guaranteed to be set
+        contractVersion: contractVersion,  // Required - now guaranteed to be set
+        merkleRoot: tokenData.merkleRoot,
+        transactionHash: tokenData.transactionHash,
+        blockNumber: tokenData.blockNumber,
+        owner: tokenData.owner || tokenData.ownerAddress,
+        encryptedHash: tokenData.encryptedHash,
+        mintedAt: tokenData.mintedAt || tokenData.mintDate,
+        mintDate: tokenData.mintDate || tokenData.mintedAt,
+        creationTimestamp: tokenData.creationTimestamp || tokenData.blockNumber,
+        ipfsHash: tokenData.ipfsHash
+      };
+
       if (this.debug) {
         console.log(`[DEBUG] Token metadata extracted successfully`);
-        console.log(`[DEBUG] Token ID: ${tokenData.tokenId}, Network: ${tokenData.network}`);
+        console.log(`[DEBUG] Token ID: ${metadata.tokenId}, Network: ${metadata.network}, ChainId: ${metadata.networkChainId}, Version: ${metadata.contractVersion}`);
       }
 
       return { 
         success: true, 
-        metadata: tokenData as TokenMetadata 
+        metadata
       };
 
     } catch (error) {
@@ -295,53 +557,118 @@ export class ZipkitVerifier {
         console.log(`[DEBUG] Calling contract.verifyZipFile(${tokenId}, ${merkleRoot.substring(0, 10)}...)`);
       }
 
+      // If contractVersion is missing/unknown, we'll default to v2.10 (old files never had contractVersion)
+      // No need to query blockchain - just use the version from networkConfig or default to v2.10
+
+      // Determine which version to try
+      // If contractVersion is missing/unknown, only try v2.10 (old files never had contractVersion)
+      const versionsToTry: string[] = [];
+      
+      if (networkConfig.version && networkConfig.version !== 'unknown') {
+        // Use the version from network config if available
+        versionsToTry.push(networkConfig.version);
+      } else {
+        // If version is missing/unknown, only try v2.10 (old files were v2.10)
+        versionsToTry.push('2.10');
+      }
+
+      if (versionsToTry.length === 0) {
+        return {
+          success: false,
+          error: 'No contract versions available to try. No versions implemented or detected.'
+        };
+      }
+
       // First check if token exists and get ALL actual on-chain data (not from metadata)
+      // Use adapter to handle version-specific differences
       let onChainMerkleRoot: string | undefined;
       let onChainTokenizationTime: number | undefined;
       let onChainCreator: string | undefined;
       let onChainBlockNumber: number | undefined;
+      let onChainEncryptedHash: string | undefined;
+      let lastError: string | undefined;
+      let successfulVersion: string | undefined;
       
-      try {
-        // Get token info including ALL data stored on-chain (merkle root, tokenization time, creator, block number)
-        // CRITICAL: We trust ONLY blockchain data, not metadata file which can be tampered with
-        const zipFileInfo = await Promise.race([
-          contract.getZipFileInfo(tokenId),
-          new Promise<never>((_, reject) => 
-            setTimeout(() => reject(new Error('getZipFileInfo timeout after 10 seconds')), 10000)
-          )
-        ]);
-        
-        // Extract all on-chain data
-        onChainMerkleRoot = zipFileInfo.merkleRootHash;
-        onChainTokenizationTime = Number(zipFileInfo.tokenizationTime);
-        onChainCreator = zipFileInfo.creator;
-        onChainBlockNumber = Number(zipFileInfo.blockNumber);
-        
-        if (this.debug) {
-          console.log(`[DEBUG] Token ${tokenId} exists`);
-          console.log(`[DEBUG] On-chain merkle root: ${onChainMerkleRoot}`);
-          console.log(`[DEBUG] On-chain tokenization time: ${onChainTokenizationTime} (${new Date(onChainTokenizationTime * 1000).toLocaleString()})`);
-          console.log(`[DEBUG] On-chain creator: ${onChainCreator}`);
-          console.log(`[DEBUG] On-chain block number: ${onChainBlockNumber}`);
-          console.log(`[DEBUG] Calculated merkle root: ${merkleRoot}`);
+      // Try each version until one works
+      for (const version of versionsToTry) {
+        try {
+          if (this.debug) {
+            console.log(`[DEBUG] Trying contract version: ${version}`);
+          }
+
+          const adapter = getAdapter(version);
+          
+          // Get token info using adapter (handles version-specific differences)
+          // CRITICAL: We trust ONLY blockchain data, not metadata file which can be tampered with
+          const zipFileInfo = await Promise.race([
+            adapter.getZipFileInfo(contract, BigInt(tokenId)),
+            new Promise<never>((_, reject) => 
+              setTimeout(() => reject(new Error('getZipFileInfo timeout after 10 seconds')), 10000)
+            )
+          ]);
+          
+          // Extract all on-chain data (adapter returns full structure for this version)
+          onChainMerkleRoot = zipFileInfo.merkleRootHash;
+          onChainTokenizationTime = Number(zipFileInfo.tokenizationTime);
+          onChainCreator = zipFileInfo.creator;
+          onChainBlockNumber = Number(zipFileInfo.blockNumber);
+          
+          // encryptedHash is available if contract version supports it (v2.11+)
+          onChainEncryptedHash = zipFileInfo.encryptedHash || undefined;
+          successfulVersion = version;
+          
+          if (this.debug) {
+            console.log(`[DEBUG] Successfully queried token info using version ${version}`);
+            console.log(`[DEBUG] Token ${tokenId} exists`);
+            console.log(`[DEBUG] On-chain merkle root: ${onChainMerkleRoot}`);
+            console.log(`[DEBUG] On-chain tokenization time: ${onChainTokenizationTime} (${new Date(onChainTokenizationTime * 1000).toLocaleString()})`);
+            console.log(`[DEBUG] On-chain creator: ${onChainCreator}`);
+            console.log(`[DEBUG] On-chain block number: ${onChainBlockNumber}`);
+            console.log(`[DEBUG] Calculated merkle root: ${merkleRoot}`);
+          }
+          
+          // Success! Break out of version loop
+          break;
+        } catch (infoError: any) {
+          const errorMsg = infoError.message || String(infoError);
+          lastError = errorMsg;
+          
+          if (this.debug) {
+            console.log(`[DEBUG] Version ${version} failed: ${errorMsg}`);
+          }
+          
+          // If token doesn't exist, don't try other versions
+          if (errorMsg.includes('nonexistent token') || errorMsg.includes('ERC721: invalid token ID')) {
+            return {
+              success: false,
+              error: `Token ${tokenId} does not exist on contract ${contractAddress}`
+            };
+          }
+          
+          // If it's an "out of result range" error, try next version
+          if (errorMsg.includes('out of result range') || errorMsg.includes('data out-of-bounds')) {
+            if (this.debug) {
+              console.log(`[DEBUG] Version ${version} incompatible (wrong return structure), trying next version...`);
+            }
+            continue; // Try next version
+          }
+          
+          // For other errors, continue to next version
+          continue;
         }
-      } catch (infoError: any) {
-        const errorMsg = infoError.message || String(infoError);
-        if (this.debug) {
-          console.log(`[DEBUG] Token info check failed: ${errorMsg}`);
-        }
-        // If token doesn't exist, return error
-        if (errorMsg.includes('nonexistent token') || errorMsg.includes('ERC721: invalid token ID')) {
-          return {
-            success: false,
-            error: `Token ${tokenId} does not exist on contract ${contractAddress}`
-          };
-        }
-        // For other errors, fail immediately
+      }
+
+      // If we tried all versions and none worked
+      if (!onChainMerkleRoot) {
+        const triedVersions = versionsToTry.join(', ');
         return {
           success: false,
-          error: `Failed to get token info: ${errorMsg}`
+          error: `Failed to get token info after trying all versions (${triedVersions}). Last error: ${lastError || 'Unknown error'}`
         };
+      }
+
+      if (this.debug && successfulVersion && successfulVersion !== networkConfig.version) {
+        console.log(`[DEBUG] ⚠️  Contract version mismatch: network config says "${networkConfig.version || 'unknown'}", but "${successfulVersion}" worked. Consider updating network config.`);
       }
 
       // Compare the calculated merkle root with the on-chain merkle root
@@ -388,7 +715,7 @@ export class ZipkitVerifier {
         }
       }
 
-      return { 
+        return { 
         success: true, 
         isValid, 
         onChainMerkleRoot,
@@ -420,6 +747,7 @@ export class ZipkitVerifier {
       };
     }
   }
+
 
   /**
    * Complete verification process
@@ -467,11 +795,21 @@ export class ZipkitVerifier {
         };
       }
 
+      // If contractVersion is missing/unknown in metadata, override networkConfig version to default to v2.10
+      // Old v2.10 files never had contractVersion, so we should try v2.10, not the networkConfig version
+      const configToUse = { ...networkConfig };
+      if (!tokenMetadata.contractVersion || tokenMetadata.contractVersion === 'unknown') {
+        if (this.debug) {
+          console.log(`[DEBUG] TOKEN file missing contractVersion - overriding network config version to default to v2.10`);
+        }
+        configToUse.version = 'unknown'; // This will trigger default to v2.10 in verifyOnChain
+      }
+
       // Perform on-chain verification - this will fetch the actual merkle root from the blockchain
       const onChainResult = await this.verifyOnChain(
         tokenMetadata.tokenId,
         tokenMetadata.contractAddress,
-        networkConfig,
+        configToUse,
         calculatedMerkleRoot,
         rpcUrlIndex
       );

@@ -24,6 +24,7 @@
 
 import { ZipkitNode } from '../src/node';
 import { ZipkitMinter } from '../src/blockchain/core/ZipkitMinter';
+import { getContractConfig } from '../src/blockchain/core/contracts';
 import type { CompressOptions } from '../src/core';
 import type { TokenMetadata } from '../src/types';
 import { TOKENIZED_METADATA } from '../src/core/constants/Headers';
@@ -181,17 +182,23 @@ async function main() {
       // Step 7: Add token metadata to ZIP file
       console.log('Step 7: Adding token metadata to ZIP file...');
       
+      // Get contract version from network config
+      const networkConfig = getContractConfig(walletInfo.chainId);
+      if (!networkConfig.version) {
+        throw new Error(`Contract version not specified for network ${walletInfo.networkName} (chainId: ${walletInfo.chainId})`);
+      }
+      
       // Create token metadata object
       const tokenMetadata: TokenMetadata = {
-        version: '1.0',
         tokenId: mintResult.tokenId!,
         contractAddress: mintResult.contractAddress!,
         network: walletInfo.networkName,
-        networkChainId: walletInfo.networkName === 'Base Sepolia' ? 84532 : undefined,
+        networkChainId: walletInfo.chainId,  // Required field - get from walletInfo
         transactionHash: mintResult.transactionHash,
         merkleRoot: merkleRoot,
         mintedAt: new Date().toISOString(),
-        mintDate: new Date().toISOString()
+        mintDate: new Date().toISOString(),
+        contractVersion: networkConfig.version  // Required field - get from network config
       };
 
       // Rebuild ZIP with token metadata

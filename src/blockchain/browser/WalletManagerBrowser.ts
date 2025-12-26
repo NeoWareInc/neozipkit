@@ -22,6 +22,7 @@ export interface WalletConfigBrowser {
   address: string
   rpcUrls: string[]
   explorerUrl: string
+  version: string  // Contract version (e.g., "2.11", "2.10")
 }
 
 export class WalletManagerBrowser extends CoreWalletManager {

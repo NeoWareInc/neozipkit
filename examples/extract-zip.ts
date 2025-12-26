@@ -5,10 +5,12 @@
  * 
  * Demonstrates extracting files from a ZIP archive using ZipkitNode.
  * This is a minimal example showing the basic extraction API.
+ * 
+ * Note: CRC-32 and SHA-256 validation happens automatically during extraction.
+ * If extraction completes without errors, all files have been validated.
  */
 
 import ZipkitNode from '../src/node';
-import { crc32 } from '../src/core/encryption/ZipCrypto';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -35,8 +37,7 @@ async function main() {
   const zip = new ZipkitNode();
 
   try {
-    // Method 1: Simple API - extract entire ZIP to directory
-    // This is the easiest way to extract a ZIP file
+    // Load ZIP file - this reads the central directory and populates entries
     console.log('Loading ZIP file...');
     await zip.loadZipFile(archivePath);
 
@@ -53,73 +54,50 @@ async function main() {
     });
     console.log();
 
+    // Option: Test mode - validate integrity without extracting files
+    // Uncomment the following lines to test without extracting:
+    /*
+    console.log('Testing ZIP integrity (without extracting)...');
+    for (const entry of entries) {
+      const testResult = await zip.testEntry(entry, {
+        skipHashCheck: false  // Verify file integrity (CRC-32/SHA-256 checks)
+      });
+      console.log(`✅ ${entry.filename}: Validated`);
+      if (testResult.verifiedHash) {
+        console.log(`   Verified SHA-256: ${testResult.verifiedHash}`);
+      } else {
+        console.log(`   Verified CRC-32: ${entry.crc?.toString(16).toUpperCase().padStart(8, '0')}`);
+      }
+    }
+    console.log(`✅ All files validated successfully!`);
+    return;
+    */
+
     // Extract all files to destination directory
+    // CRC-32 and SHA-256 validation happens automatically during extraction
+    // If extraction completes without errors, all files have been validated
     console.log('Extracting files...');
     const result = await zip.extractZipFile(archivePath, destination, {
       overwrite: true,        // Overwrite existing files
       preserveTimestamps: true, // Preserve file timestamps
-      skipHashCheck: false    // Verify file integrity (CRC/SHA checks)
+      skipHashCheck: false    // Verify file integrity (CRC-32/SHA-256 checks)
+      // Note: skipHashCheck: false is the default - validation happens automatically
     });
 
     console.log(`✅ Extraction completed successfully!`);
     console.log(`   Files extracted: ${result.filesExtracted}`);
     console.log(`   Total bytes: ${result.bytesExtracted}`);
-
-    // Verify CRC-32 for each extracted file
-    console.log('\nCRC-32 Verification:');
-    const extractedFiles = getAllFiles(destination);
-    let allCrcMatch = true;
-    
-    // Create a map of filename to entry for quick lookup
-    const entryMap = new Map<string, typeof entries[0]>();
-    entries.forEach(entry => {
-      const filename = path.basename(entry.filename);
-      entryMap.set(filename, entry);
-    });
-    
-    extractedFiles.forEach(file => {
-      const relativePath = path.relative(destination, file);
-      const filename = path.basename(file);
-      const stats = fs.statSync(file);
-      const entry = entryMap.get(filename);
-      
-      if (entry) {
-        const storedCrc = entry.crc || 0;
-        const storedCrcHex = `0x${storedCrc.toString(16).padStart(8, '0').toUpperCase()}`;
-        
-        // Calculate CRC-32 of extracted file
-        const fileData = fs.readFileSync(file);
-        const calculatedCrc = crc32(fileData);
-        const calculatedCrcHex = `0x${calculatedCrc.toString(16).padStart(8, '0').toUpperCase()}`;
-        
-        // Compare CRC-32 values
-        const crcMatch = storedCrc === calculatedCrc;
-        const status = crcMatch ? '✓' : '✗';
-        const statusText = crcMatch ? 'PASS' : 'FAILED';
-        
-        if (!crcMatch) {
-          allCrcMatch = false;
-        }
-        
-        console.log(`  ${filename}:`);
-        console.log(`    Stored CRC-32:   ${storedCrcHex}`);
-        console.log(`    Calculated CRC-32: ${calculatedCrcHex}`);
-        console.log(`    Status: ${status} ${statusText}`);
-      } else {
-        console.log(`  ${filename}: Entry not found in ZIP`);
-      }
-    });
-    
-    if (allCrcMatch) {
-      console.log('\n✅ All CRC-32 checks passed!');
-    } else {
-      console.log('\n❌ Some CRC-32 checks failed!');
-    }
+    console.log(`\n   All files validated (CRC-32/SHA-256 checks passed automatically)`);
 
     console.log('\n💡 Tip: You can also extract individual entries:');
     console.log('   await zip.loadZipFile("archive.zip");');
     console.log('   const entries = zip.getDirectory();');
     console.log('   await zip.extractToFile(entries[0], "output.txt");');
+    console.log('\n💡 Tip: Test integrity without extracting:');
+    console.log('   const result = await zip.testEntry(entry);');
+    console.log('   if (result.verifiedHash) {');
+    console.log('     console.log("SHA-256:", result.verifiedHash);');
+    console.log('   }');
 
   } catch (error) {
     console.error('❌ Error extracting ZIP archive:');
@@ -130,24 +108,6 @@ async function main() {
     }
     process.exit(1);
   }
-}
-
-/**
- * Helper function to recursively get all files in a directory
- */
-function getAllFiles(dirPath: string, arrayOfFiles: string[] = []): string[] {
-  const files = fs.readdirSync(dirPath);
-
-  files.forEach((file) => {
-    const filePath = path.join(dirPath, file);
-    if (fs.statSync(filePath).isDirectory()) {
-      arrayOfFiles = getAllFiles(filePath, arrayOfFiles);
-    } else {
-      arrayOfFiles.push(filePath);
-    }
-  });
-
-  return arrayOfFiles;
 }
 
 // Run the example

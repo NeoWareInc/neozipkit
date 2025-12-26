@@ -235,6 +235,124 @@ export default class ZipkitNode extends Zipkit {
     return this.extractToFile(entry, outputPath, options);
   }
 
+  /**
+   * Extract file to Buffer (in-memory) for file-based ZIP
+   * 
+   * This method extracts a ZIP entry directly to a Buffer without writing to disk.
+   * This is ideal for reading metadata files (like NZIP.TOKEN) that don't need
+   * to be written to temporary files.
+   * 
+   * @param entry - ZIP entry to extract
+   * @param options - Optional extraction options:
+   *   - skipHashCheck: Skip hash verification (default: false)
+   *   - onProgress: Callback function receiving bytes extracted as parameter
+   * @returns Promise that resolves to Buffer containing the extracted file data
+   * @throws Error if not a File-based ZIP or if extraction fails
+   */
+  async extractToBuffer(
+    entry: ZipEntry,
+    options?: {
+      skipHashCheck?: boolean;
+      onProgress?: (bytes: number) => void;
+    }
+  ): Promise<Buffer> {
+    return this.getZipDecompressNode().extractToBuffer(entry, options);
+  }
+
+  /**
+   * Get comprehensive archive statistics
+   * 
+   * Calculates statistics about the loaded ZIP archive including file counts,
+   * sizes, compression ratios, and file system metadata.
+   * 
+   * @param archivePath - Optional path to archive file (if not already loaded)
+   * @returns Promise that resolves to ArchiveStatistics object
+   * @throws Error if archive is not loaded and archivePath is not provided
+   * 
+   * @example
+   * ```typescript
+   * const zipkit = new ZipkitNode();
+   * await zipkit.loadZipFile('archive.zip');
+   * const stats = await zipkit.getArchiveStatistics();
+   * console.log(`Total files: ${stats.totalFiles}`);
+   * console.log(`Compression ratio: ${stats.compressionRatio.toFixed(2)}%`);
+   * ```
+   */
+  async getArchiveStatistics(archivePath?: string): Promise<import('../types').ArchiveStatistics> {
+    // Load archive if path provided and not already loaded
+    if (archivePath && !this.filePath) {
+      await this.loadZipFile(archivePath);
+    }
+    
+    if (!this.filePath) {
+      throw new Error('Archive not loaded. Call loadZipFile() first or provide archivePath parameter.');
+    }
+    
+    // Get file system stats
+    const stats = await fs.promises.stat(this.filePath);
+    
+    // Get entries
+    const entries = this.getDirectory();
+    
+    // Calculate statistics
+    const totalFiles = entries.filter((e) => !e.isDirectory).length;
+    const totalFolders = entries.filter((e) => e.isDirectory).length;
+    const uncompressedSize = entries.reduce((sum, e) => sum + e.uncompressedSize, 0);
+    const compressedSize = entries.reduce((sum, e) => sum + e.compressedSize, 0);
+    
+    // Calculate compression ratios
+    const compressionRatio = uncompressedSize > 0 
+      ? ((1 - compressedSize / uncompressedSize) * 100) 
+      : 0;
+    
+    // Calculate average compression ratio per file
+    const averageCompressionRatio = totalFiles > 0
+      ? entries
+          .filter((e) => !e.isDirectory && e.uncompressedSize > 0)
+          .reduce((sum, e) => {
+            const fileRatio = (1 - e.compressedSize / e.uncompressedSize) * 100;
+            return sum + fileRatio;
+          }, 0) / totalFiles
+      : 0;
+    
+    return {
+      fileSize: stats.size,
+      created: stats.birthtime,
+      modified: stats.mtime,
+      totalFiles,
+      totalFolders,
+      uncompressedSize,
+      compressedSize,
+      compressionRatio,
+      averageCompressionRatio
+    };
+  }
+
+  /**
+   * Test entry integrity without extracting to disk
+   * Validates CRC-32 or SHA-256 hash without writing decompressed data
+   * 
+   * This method processes chunks as they are decompressed and validates them,
+   * but discards the decompressed data instead of writing to disk. This is useful
+   * for verifying ZIP file integrity without extracting files.
+   * 
+   * @param entry - ZIP entry to test
+   * @param options - Optional test options:
+   *   - skipHashCheck: Skip hash verification (default: false)
+   *   - onProgress: Callback function receiving bytes processed as parameter
+   * @returns Promise that resolves to an object containing the verified hash (if SHA-256) or undefined
+   * @throws Error if validation fails (INVALID_CRC or INVALID_SHA256) or if not a File-based ZIP
+   */
+  async testEntry(
+    entry: ZipEntry,
+    options?: {
+      skipHashCheck?: boolean;
+      onProgress?: (bytes: number) => void;
+    }
+  ): Promise<{ verifiedHash?: string }> {
+    return this.getZipDecompressNode().testEntry(entry, options);
+  }
+
   // ============================================================================
   // File-Based Compression Methods (ZipCompressNode wrappers)
   // ============================================================================
@@ -1453,7 +1571,7 @@ export default class ZipkitNode extends Zipkit {
    * Simple API that uses the modular subfunctions
    * 
    * @param archivePath - Path to the ZIP file
-   * @param destination - Directory where files should be extracted
+   * @param destination - Directory where files should be extracted (ignored if testOnly is true)
    * @param options - Optional extraction options
    * @returns Promise resolving to extraction statistics
    */
@@ -1471,6 +1589,7 @@ export default class ZipkitNode extends Zipkit {
       symlinks?: boolean; // Handle symbolic links
       hardLinks?: boolean; // Handle hard links
       skipHashCheck?: boolean; // Skip hash verification
+      testOnly?: boolean; // Test integrity without extracting files
       onProgress?: (entry: ZipEntry, bytes: number) => void; // Progress callback
       onOverwritePrompt?: (filename: string) => Promise<'y' | 'n' | 'a' | 'q'>; // Overwrite prompt callback
     }
@@ -1505,6 +1624,26 @@ export default class ZipkitNode extends Zipkit {
     let bytesExtracted = 0;
     let alwaysOverwrite = false; // Track "always" response from user
     
+    // If testOnly mode, validate entries without extracting
+    if (options?.testOnly) {
+      for (const entry of filteredEntries) {
+        try {
+          await this.testEntry(entry, {
+            skipHashCheck: options?.skipHashCheck,
+            onProgress: options?.onProgress ? (bytes: number) => options.onProgress!(entry, bytes) : undefined
+          });
+          // If we get here, validation passed
+          filesExtracted++;
+          bytesExtracted += (entry.uncompressedSize || 0);
+        } catch (error) {
+          // Validation failed - rethrow the error
+          throw error;
+        }
+      }
+      return { filesExtracted, bytesExtracted };
+    }
+    
+    // Normal extraction mode
     for (const entry of filteredEntries) {
       // Prepare output path
       const outputPath = this.prepareExtractionPath(entry, destination, {

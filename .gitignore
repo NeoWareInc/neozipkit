@@ -25,6 +25,9 @@ wallet/
 *.pem
 secrets/
 
+# Documentation
+admin_docs/
+
 # Coverage
 coverage/
 
@@ -35,4 +38,3 @@ dev-build/
 # Misc
 *.tgz
 *.log
-

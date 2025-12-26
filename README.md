@@ -338,6 +338,7 @@ ZipDecompress is the decompression component of Zipkit, responsible for:
 **Methods:**
 - `extract(entry, skipHashCheck?)`: Extracts a ZIP entry from a buffer-based ZIP archive
 - `extractToFile(entry, outputPath, options?)`: Extracts a ZIP entry directly to disk with true streaming
+- `testEntry(entry, options?)`: Tests entry integrity without extracting to disk. Fully decompresses and validates CRC-32 or SHA-256 hash, but discards the decompressed data (extract-to-null pattern). Returns verified hash if SHA-256 is available.
 
 **Supported Compression Methods:**
 - **STORED (0)**: No decompression needed, data passed through unchanged
@@ -354,8 +355,16 @@ By default, extracted data is verified against stored hashes:
 For file-based ZIPs, ZipDecompress uses a streaming architecture:
 1. Reads compressed data in chunks from the ZIP file
 2. Decompresses chunks incrementally
-3. Writes decompressed chunks directly to output file
+3. Writes decompressed chunks directly to output file (or discards for `testEntry`)
 4. Calculates and verifies hash during decompression
+
+**Integrity Testing:**
+The `testEntry` method provides an efficient way to verify ZIP file integrity without extracting:
+- Fully decompresses the entry data to validate integrity
+- Verifies CRC-32 or SHA-256 hash during decompression
+- Discards decompressed data immediately (memory-efficient)
+- Useful for blockchain verification, archive validation, and integrity checks
+- Returns the verified SHA-256 hash if available
 
 #### ZipCompress Component
 
@@ -439,6 +448,8 @@ For blockchain integration, Zipkit can calculate Merkle roots from entry SHA-256
   - `extractToFile(entry, outputPath, options?)` - Extract entry to file with streaming support
   - `extractEntryToFile(entry, outputPath, options?)` - Alias for `extractToFile()`
   - `extractEntryToPath(entry, outputPath, options?)` - Extract entry with advanced features (symlinks, hardlinks, timestamps, permissions)
+  - `extractToBuffer(entry, options?)` - Extract entry directly to Buffer without writing to disk (useful for metadata files)
+  - `testEntry(entry, options?)` - Test entry integrity without extracting (extract-to-null). Validates CRC-32 or SHA-256 hash by fully decompressing data but discarding it. Useful for verifying ZIP file integrity without extracting files.
   - `extractAll(outputDir, options?)` - Extract all entries to directory with progress tracking
   
   **File Compression:**
@@ -457,6 +468,9 @@ For blockchain integration, Zipkit can calculate Merkle roots from entry SHA-256
   - `writeCentralDirectory(writer, entries, options?)` - Write central directory
   - `writeEndOfCentralDirectory(writer, totalEntries, centralDirSize, centralDirOffset, comment?)` - Write end of central directory
   - `finalizeZipFile(writer)` - Finalize and close ZIP file
+  
+  **Archive Information:**
+  - `getArchiveStatistics(archivePath?)` - Get comprehensive archive statistics (file counts, sizes, compression ratios)
   
   **File Management:**
   - `getFileHandle()` - Get underlying file handle for advanced operations

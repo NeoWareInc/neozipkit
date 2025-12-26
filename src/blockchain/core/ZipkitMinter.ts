@@ -6,8 +6,9 @@
  */
 
 import { ethers } from 'ethers';
-import { NZIP_CONTRACT_ABI, CONTRACT_CONFIGS, getContractConfig, getChainIdByName, getSupportedNetworkNames, type ContractConfig } from './contracts';
+import { NZIP_CONTRACT_ABI, CONTRACT_CONFIGS, getContractConfig, getChainIdByName, getSupportedNetworkNames, getContractAdapter, type ContractConfig } from './contracts';
 import type { TokenMetadata } from '../../types';
+import type { ContractVersionAdapter } from './adapters/ContractVersionAdapter';
 
 export interface MintingOptions {
   walletPrivateKey: string;
@@ -47,6 +48,7 @@ export interface WalletInfo {
   address: string;
   balance: string;
   networkName: string;
+  chainId: number;  // Chain ID for network identification
 }
 
 /**
@@ -64,12 +66,14 @@ export class ZipkitMinter {
   protected wallet: ethers.Wallet;
   protected contract: ethers.Contract;
   protected merkleRoot: string;
+  protected encryptedHash: string;  // Hash of encrypted ZIP file (v3.0+)
   protected networkConfig: ContractConfig;
   protected debug: boolean;
   protected rpcUrlIndex: number;
   
-  constructor(merkleRoot: string, options: MintingOptions) {
+  constructor(merkleRoot: string, options: MintingOptions & { encryptedHash?: string }) {
     this.merkleRoot = merkleRoot;
+    this.encryptedHash = options.encryptedHash || '';
     this.debug = options.debug || false;
     this.rpcUrlIndex = options.rpcUrlIndex ?? 0;
     
@@ -134,7 +138,8 @@ export class ZipkitMinter {
     return {
       address: this.wallet.address,
       balance: balanceInEth,
-      networkName: this.networkConfig.network
+      networkName: this.networkConfig.network,
+      chainId: this.networkConfig.chainId
     };
   }
 
@@ -247,9 +252,14 @@ export class ZipkitMinter {
     const creationTimestamp = Math.floor(Date.now() / 1000);
     const metadata = this.createTokenMetadataString();
 
-    // Estimate gas for the minting transaction
-    const gasLimit = await this.contract.publicMintZipFile.estimateGas(
+    // Get adapter for this contract version
+    const adapter = getContractAdapter(this.networkConfig.chainId);
+    
+    // Use adapter to estimate gas (handles version-specific signatures)
+    const gasLimit = await adapter.estimateGasForMint(
+      this.contract,
       this.merkleRoot,
+      this.encryptedHash || undefined,
       creationTimestamp,
       '', // ipfsHash
       metadata
@@ -288,16 +298,23 @@ export class ZipkitMinter {
   private createTokenMetadata(tokenId: string, transactionHash: string, blockNumber?: number): TokenMetadata {
     const now = new Date();
     
+    // Ensure contractVersion is always set (required field)
+    if (!this.networkConfig.version) {
+      throw new Error(`Contract version not specified for network ${this.networkConfig.network} (chainId: ${this.networkConfig.chainId})`);
+    }
+    
     return {
       tokenId,
       network: this.networkConfig.network,
       networkChainId: this.networkConfig.chainId,
       contractAddress: this.networkConfig.address,
       merkleRoot: this.merkleRoot,
+      encryptedHash: this.encryptedHash || undefined,  // Include encrypted hash if present (v2.11+)
       mintDate: now.toLocaleDateString('en-US') + ' at ' + now.toLocaleTimeString('en-US'),
       creationTimestamp: Math.floor(now.getTime() / 1000),
       transactionHash,
-      blockNumber
+      blockNumber,
+      contractVersion: this.networkConfig.version  // Required - always set from networkConfig
     };
   }
 
@@ -327,10 +344,17 @@ export class ZipkitMinter {
       
       let gasLimit: bigint;
       let gasPrice: bigint;
+      
+      // Get adapter for this contract version
+      const adapter = getContractAdapter(this.networkConfig.chainId);
+      
       try {
+        // Use adapter to estimate gas (handles version-specific signatures)
         const gasEstimate = await Promise.race([
-          this.contract.publicMintZipFile.estimateGas(
+          adapter.estimateGasForMint(
+            this.contract,
             this.merkleRoot,
+            this.encryptedHash || undefined,
             creationTimestamp,
             '', // ipfsHash
             metadata
@@ -340,7 +364,6 @@ export class ZipkitMinter {
           )
         ]);
         
-        // Add 20% buffer to gas estimate
         gasLimit = (gasEstimate * BigInt(120)) / BigInt(100);
         
         // Get current gas price
@@ -380,14 +403,17 @@ export class ZipkitMinter {
         throw new Error(`Gas estimation failed: ${errorMessage}`);
       }
       
-      // Call the contract publicMintZipFile function with explicit gas parameters
+      // Call the contract using adapter (handles version-specific signatures)
       if (this.debug) {
         console.log(`[DEBUG] Submitting transaction with gas limit: ${gasLimit.toString()}, gas price: ${ethers.formatUnits(gasPrice, 'gwei')} gwei`);
       }
       
+      // Use adapter to mint (handles version-specific function signatures)
       const tx = await Promise.race([
-        this.contract.publicMintZipFile(
+        adapter.mintZipFile(
+          this.contract,
           this.merkleRoot,
+          this.encryptedHash || undefined,
           creationTimestamp,
           '', // ipfsHash (empty since we store in ZIP)
           metadata,
@@ -449,22 +475,24 @@ export class ZipkitMinter {
         console.log(`[DEBUG] Gas used: ${receipt.gasUsed}`);
       }
 
-      // Extract actual token ID from contract events
+      // Extract actual token ID from contract events using adapter
       let actualTokenId = tokenId; // fallback
       
       if (receipt.logs && receipt.logs.length > 0) {
         try {
-          const iface = new ethers.Interface(NZIP_CONTRACT_ABI);
           for (const log of receipt.logs) {
             try {
-              const parsed = iface.parseLog(log);
-              if (parsed?.name === 'ZipFileTokenized') {
-                actualTokenId = parsed.args.tokenId.toString();
-                if (this.debug) {
-                  console.log(`[DEBUG] Actual token ID from contract event: ${actualTokenId}`);
-                }
-                break;
+              // Use adapter to parse event (handles version-specific event structures)
+              const parsedEvent = adapter.parseZipFileTokenizedEvent({
+                topics: log.topics as string[],
+                data: log.data
+              });
+              
+              actualTokenId = parsedEvent.tokenId.toString();
+              if (this.debug) {
+                console.log(`[DEBUG] Actual token ID from contract event: ${actualTokenId}`);
               }
+              break;
             } catch (e) {
               // Ignore parsing errors for non-matching logs
             }

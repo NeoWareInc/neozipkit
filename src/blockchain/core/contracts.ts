@@ -6,6 +6,7 @@ export interface ContractConfig {
   chainId: number
   explorerUrl: string
   rpcUrls: string[]
+  version: string  // Contract version (e.g., "2.11", "2.10")
   nameAliases?: string[]  // Alternative network name formats (e.g., ["base-sepolia", "base sepolia"])
 }
 
@@ -14,7 +15,8 @@ export const CONTRACT_CONFIGS: Record<number, ContractConfig> = {
   // Base Sepolia (Primary testnet)
   84532: {
     // address: '0xFD76a5d420704F34d84b0767961835c43D7b30a8', // Production contract v2.0
-    address: '0xdAe9D83d7AC62197fAE7704abc66b13DA28D3143', // Production contract v2.10
+    // address: '0xdAe9D83d7AC62197fAE7704abc66b13DA28D3143', // Production contract v2.10
+    address: '0xc88F1a9C32bC024Bd082BAe023E10a3BCC5c0e3e', // Production contract v2.11
     network: 'Base Sepolia',
     chainId: 84532,
     explorerUrl: 'https://sepolia.basescan.org',
@@ -23,6 +25,7 @@ export const CONTRACT_CONFIGS: Record<number, ContractConfig> = {
       'https://base-sepolia-rpc.publicnode.com',
       'https://base-sepolia.gateway.tenderly.co'
     ],
+    version: '2.11',
     nameAliases: ['base-sepolia', 'base sepolia', 'basesepolia', 'base-sepolia-testnet']
   },
   
@@ -38,6 +41,7 @@ export const CONTRACT_CONFIGS: Record<number, ContractConfig> = {
       'https://base.drpc.org',
       'https://base.gateway.tenderly.co'
     ],
+    version: '2.10',
     nameAliases: ['base-mainnet', 'base mainnet', 'basemainnet', 'base']
   },
   
@@ -46,7 +50,8 @@ export const CONTRACT_CONFIGS: Record<number, ContractConfig> = {
   // Network issues include transaction processing failures and RPC timeouts
   // Consider using Base Sepolia (84532) for more reliable testing
   11155111: {
-    address: '0x2716c4609fD97DaEdF429BC4B4Ec2faa81e2cC60', // Production contract v2.10
+    // address: '0x2716c4609fD97DaEdF429BC4B4Ec2faa81e2cC60', // Production contract v2.10
+    address: '0x007e8888D976b0b9B6073694Da32B7b6e393f890', // Production contract v2.11
     network: 'Sepolia Testnet',
     chainId: 11155111,
     explorerUrl: 'https://sepolia.etherscan.io',
@@ -60,12 +65,14 @@ export const CONTRACT_CONFIGS: Record<number, ContractConfig> = {
       'https://sepolia.drpc.org',
       'https://1rpc.io/sepolia',
     ],
+    version: '2.11',
     nameAliases: ['sepolia-testnet', 'sepolia testnet', 'sepoliatestnet', 'sepolia', 'ethereum-sepolia', 'ethereum sepolia']
   },
   
   // Arbitrum Sepolia (Testnet)
   421614: {
-    address: '0x2716c4609fD97DaEdF429BC4B4Ec2faa81e2cC60', // Production contract v2.10
+    // address: '0x2716c4609fD97DaEdF429BC4B4Ec2faa81e2cC60', // Production contract v2.10
+    address: '0x3b99a72cCAc108037741cacb0D60d5571CF6412C', // Production contract v2.11
     network: 'Arbitrum Sepolia',
     chainId: 421614,
     explorerUrl: 'https://sepolia.arbiscan.io',
@@ -73,6 +80,7 @@ export const CONTRACT_CONFIGS: Record<number, ContractConfig> = {
       'https://sepolia-rollup.arbitrum.io/rpc',
       'https://arbitrum-sepolia-rpc.publicnode.com'
     ],
+    version: '2.11',
     nameAliases: ['arbitrum-sepolia', 'arbitrum sepolia', 'arbitrumsepolia', 'arbitrum-sepolia-testnet']
   },
   
@@ -89,6 +97,7 @@ export const CONTRACT_CONFIGS: Record<number, ContractConfig> = {
       'https://arbitrum.llamarpc.com',
       'https://arbitrum.publicnode.com'
     ],
+    version: '2.10',
     nameAliases: ['arbitrum-one', 'arbitrum one', 'arbitrumone', 'arbitrum', 'arbitrum-mainnet', 'arbitrum mainnet']
   },
   
@@ -103,11 +112,18 @@ export const CONTRACT_CONFIGS: Record<number, ContractConfig> = {
 }
 
 // Contract ABI (ethers.js human-readable format)
+// Minimal ABI that works with both v2.10 and v2.11 contracts
+// Only declares the fields we actually use - additional fields in v2.11 are ignored
 export const NZIP_CONTRACT_ABI = [
-  "function publicMintZipFile(string memory merkleRootHash, uint256 creationTimestamp, string memory ipfsHash, string memory metadataURI) public returns (uint256)",
+  // Minting function (v2.11 signature with encryptedHash for new mints)
+  "function publicMintZipFile(string memory merkleRootHash, string memory encryptedHash, uint256 creationTimestamp, string memory ipfsHash, string memory metadataURI) public returns (uint256)",
   "function totalSupply() external view returns (uint256)",
   "function getTokensByMerkleRoot(string memory merkleRoot) external view returns (uint256[])",
   "function getTokensByOwner(address owner) external view returns (uint256[])",
+  // Minimal getZipFileInfo - only declares fields we need (works for both v2.10 and v2.11)
+  // v2.10: returns (merkleRootHash, ipfsHash, creator, creationTimestamp, tokenizationTime, blockNumber)
+  // v2.11: returns (merkleRootHash, encryptedHash, ipfsHash, creator, creationTimestamp, tokenizationTime, blockNumber)
+  // By only declaring merkleRootHash and tokenizationTime, we can read both versions
   "function getZipFileInfo(uint256 tokenId) external view returns (tuple(string merkleRootHash, string ipfsHash, address creator, uint256 creationTimestamp, uint256 tokenizationTime, uint256 blockNumber))",
   "function ownerOf(uint256 tokenId) external view returns (address)",
   "function balanceOf(address owner) external view returns (uint256)",
@@ -115,14 +131,17 @@ export const NZIP_CONTRACT_ABI = [
   "function verifyZipFile(uint256 tokenId, string memory providedMerkleRoot) external view returns (bool isValid)",
   "function getVersion() external pure returns (string memory)",
   "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
-  "event ZipFileTokenized(uint256 indexed tokenId, address indexed creator, string merkleRootHash, uint256 creationTimestamp, string ipfsHash, uint256 tokenizationTime, uint256 blockNumber)"
+  // v2.11 event with encryptedHash (v2.10 doesn't emit this event during minting, only v2.11 does)
+  "event ZipFileTokenized(uint256 indexed tokenId, address indexed creator, string merkleRootHash, string encryptedHash, uint256 creationTimestamp, string ipfsHash, uint256 tokenizationTime, uint256 blockNumber)"
 ]
 
 // Contract ABI (Web3.js JSON format)
+// Supports both v2.10 (without encryptedHash) and v2.11 (with encryptedHash)
 export const NZIP_CONTRACT_ABI_WEB3 = [
   {
     inputs: [
       { name: "merkleRootHash", type: "string" },
+      { name: "encryptedHash", type: "string" },
       { name: "creationTimestamp", type: "uint256" },
       { name: "ipfsHash", type: "string" },
       { name: "metadataURI", type: "string" }
@@ -153,6 +172,7 @@ export const NZIP_CONTRACT_ABI_WEB3 = [
       {
         components: [
           { name: "merkleRootHash", type: "string" },
+          { name: "encryptedHash", type: "string" },
           { name: "ipfsHash", type: "string" },
           { name: "creator", type: "address" },
           { name: "creationTimestamp", type: "uint256" },
@@ -204,6 +224,16 @@ export const NZIP_CONTRACT_ABI_WEB3 = [
     type: "function"
   },
   {
+    inputs: [
+      { name: "tokenId", type: "uint256" },
+      { name: "providedEncryptedHash", type: "string" }
+    ],
+    name: "verifyEncryptedZipFile",
+    outputs: [{ name: "isValid", type: "bool" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
     inputs: [],
     name: "getVersion",
     outputs: [{ name: "", type: "string" }],
@@ -226,6 +256,7 @@ export const NZIP_CONTRACT_ABI_WEB3 = [
       { indexed: true, name: "tokenId", type: "uint256" },
       { indexed: true, name: "creator", type: "address" },
       { indexed: false, name: "merkleRootHash", type: "string" },
+      { indexed: false, name: "encryptedHash", type: "string" },
       { indexed: false, name: "creationTimestamp", type: "uint256" },
       { indexed: false, name: "ipfsHash", type: "string" },
       { indexed: false, name: "tokenizationTime", type: "uint256" },
@@ -319,6 +350,41 @@ export function getSupportedNetworkNames(): string[] {
   }
   
   return names
+}
+
+/**
+ * Get contract adapter for a given chain ID
+ * Uses the version from CONTRACT_CONFIGS to select the appropriate adapter
+ * @param chainId Chain ID
+ * @returns ContractVersionAdapter instance
+ * @throws Error if chainId not found or version not supported
+ */
+export function getContractAdapter(chainId: number): import('./adapters/ContractVersionAdapter').ContractVersionAdapter {
+  const config = getContractConfig(chainId);
+  
+  if (!config) {
+    throw new Error(`No contract config found for chainId: ${chainId}`);
+  }
+  
+  if (!config.version) {
+    throw new Error(`Contract version not specified for chainId: ${chainId}`);
+  }
+  
+  // Import here to avoid circular dependency
+  const { getAdapter } = require('./adapters/AdapterFactory');
+  return getAdapter(config.version);
+}
+
+/**
+ * Get contract adapter by version string
+ * @param version Contract version (e.g., "2.11", "2.10")
+ * @returns ContractVersionAdapter instance
+ * @throws Error if version not supported
+ */
+export function getContractAdapterByVersion(version: string): import('./adapters/ContractVersionAdapter').ContractVersionAdapter {
+  // Import here to avoid circular dependency
+  const { getAdapter } = require('./adapters/AdapterFactory');
+  return getAdapter(version);
 }
 
 /**

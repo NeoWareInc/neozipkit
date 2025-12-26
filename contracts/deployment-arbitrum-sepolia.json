@@ -2,11 +2,11 @@
   "network": "Arbitrum Sepolia",
   "networkKey": "Arbitrum Sepolia",
   "chainId": 421614,
-  "contractAddress": "0x2716c4609fD97DaEdF429BC4B4Ec2faa81e2cC60",
-  "version": "2.10.0",
-  "deployer": "0xab90062062A68576D9F2Be2fa3051e101f06AD93",
-  "transactionHash": "0x7b9de6873442b329468cbd5baf2a6d117596b2a5b7e705fbfede0136a8a57739",
-  "blockNumber": 216250759,
-  "timestamp": "2025-11-17T19:44:48.038Z",
-  "explorerUrl": "https://sepolia.arbiscan.io/address/0x2716c4609fD97DaEdF429BC4B4Ec2faa81e2cC60"
+  "contractAddress": "0x3b99a72cCAc108037741cacb0D60d5571CF6412C",
+  "version": "2.11.0",
+  "deployer": "0xc6Bfa9051f17B9860b51370B72792CE66ddB17F9",
+  "transactionHash": "0x70e4ebcf58ab85bc550934169fbbc316a85f87de2986a3926dfc78f4d6aca512",
+  "blockNumber": 223843635,
+  "timestamp": "2025-12-12T01:11:42.056Z",
+  "explorerUrl": "https://sepolia.arbiscan.io/address/0x3b99a72cCAc108037741cacb0D60d5571CF6412C"
 }

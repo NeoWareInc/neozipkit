@@ -14,7 +14,7 @@
 //
 
 const pako = require('pako');
-import { ZstdInit, ZstdSimple } from '@oneidentity/zstd-js';
+import { ZstdManager } from './ZstdManager';
 import Zipkit from './Zipkit';
 import { Logger } from './components/Logger';
 import ZipEntry from './ZipEntry';
@@ -33,17 +33,6 @@ export interface DecompressionOptions {
   debug?: boolean; // Enable debug logging
 }
 
-// Module-level singleton for ZSTD (shared across all instances)
-let zstdCodec: { ZstdSimple: typeof ZstdSimple } | null = null;
-
-// Async initialization function for zstd
-async function initZstd(): Promise<{ ZstdSimple: typeof ZstdSimple }> {
-  if (!zstdCodec) {
-    zstdCodec = await ZstdInit();
-  }
-  return zstdCodec;
-}
-
 /**
  * ZipDecompress - Unified Decompression Module (Internal to Zipkit)
  * Consolidates decompression functionality from ZipCompress
@@ -55,7 +44,6 @@ async function initZstd(): Promise<{ ZstdSimple: typeof ZstdSimple }> {
 class ZipDecompress {
   private zipkit: Zipkit;
   private debug: boolean;
-  private zstdCodec: { ZstdSimple: typeof ZstdSimple } | null = null;
 
   // Class-level logging control - set to true to enable logging
   private static loggingEnabled: boolean = false;
@@ -94,11 +82,6 @@ class ZipDecompress {
     }
     
     this.log(`extract() called for entry: ${entry.filename}, method: ${entry.cmpMethod}, skipHashCheck: ${skipHashCheck}`);
-    
-    // Lazy ZSTD initialization
-    if (entry.cmpMethod === CMP_METHOD.ZSTD && !this.zstdCodec) {
-      this.zstdCodec = await initZstd();
-    }
     
     const buffer = this.zipkit.ensureBuffer();
     
@@ -141,20 +124,17 @@ class ZipDecompress {
    * ZSTD codec is guaranteed to be initialized via factory method
    * Internal method only
    */
-  private zstdDecompressSync(data: Buffer): Buffer {
+  private async zstdDecompressSync(data: Buffer): Promise<Buffer> {
     this.log(`zstdDecompressSync() called with ${data.length} bytes`);
     
     try {
-      // Ensure ZSTD is initialized
-      if (!this.zstdCodec) {
-        throw new Error('ZSTD codec not initialized.');
-      }
-      const decompressed = this.zstdCodec.ZstdSimple.decompress(data);
-      this.log(`ZSTD synchronous decompression successful: ${data.length} bytes -> ${decompressed.length} bytes`);
+      // Use global ZstdManager for decompression (handles queuing and initialization)
+      const decompressed = await ZstdManager.decompress(data);
+      this.log(`ZSTD decompression successful: ${data.length} bytes -> ${decompressed.length} bytes`);
       return Buffer.from(decompressed);
     } catch (error) {
-      this.log(`ZSTD synchronous decompression failed: ${error}`);
-      throw new Error(`ZSTD synchronous decompression failed: ${error instanceof Error ? error.message : String(error)}`);
+      this.log(`ZSTD decompression failed: ${error}`);
+      throw new Error(`ZSTD decompression failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -163,11 +143,11 @@ class ZipDecompress {
    * Handles decompression and hash verification
    * Internal method only
    */
-  private unCompress(
+  private async unCompress(
     compressedData: Buffer,
     entry: ZipEntry,
     skipHashCheck?: boolean
-  ): Buffer {
+  ): Promise<Buffer> {
     this.log(`unCompress() called for entry: ${entry.filename}, method: ${entry.cmpMethod}, data length: ${compressedData.length}`);
     
     if (compressedData.length === 0) {
@@ -181,8 +161,8 @@ class ZipDecompress {
       // Use synchronous inflate for deflate
       outBuf = this.inflate(compressedData);
     } else if (entry.cmpMethod === CMP_METHOD.ZSTD) {
-      // Use synchronous ZSTD decompression for in-memory mode
-      outBuf = this.zstdDecompressSync(compressedData);
+      // Use ZSTD decompression (now async with ZstdManager)
+      outBuf = await this.zstdDecompressSync(compressedData);
     } else {
       throw new Error(`Unsupported compression method: ${entry.cmpMethod}`);
     }
@@ -204,7 +184,6 @@ class ZipDecompress {
 
     return outBuf;
   }
-
 
 }
 

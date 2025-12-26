@@ -66,6 +66,19 @@ ts-node examples/extract-zip.ts
 - Loads a ZIP file from disk
 - Extracts all entries to a destination directory
 - Preserves directory structure
+- **Automatically validates CRC-32 and SHA-256 checksums** during extraction
+- If extraction completes without errors, all files have been validated
+
+**Test Mode:**
+You can also test ZIP integrity without extracting files by using the `testOnly` option:
+```typescript
+await zip.extractZipFile(archivePath, destination, {
+  testOnly: true,          // Validate without extracting
+  skipHashCheck: false     // Verify file integrity (CRC-32/SHA-256 checks)
+});
+```
+
+**Note:** CRC-32 and SHA-256 validation happens automatically during extraction. If `skipHashCheck: false` (the default), the library will validate each file's checksum and throw an error if validation fails. You don't need to manually calculate checksums - the library handles this for you.
 
 ### 3. List ZIP (`list-zip.ts`)
 

@@ -14,7 +14,7 @@
 //
 
 const pako = require('pako');
-import { ZstdInit, ZstdSimple } from '@oneidentity/zstd-js';
+import { ZstdManager } from '../core/ZstdManager';
 import ZipkitNode from './ZipkitNode';
 import { Logger } from '../core/components/Logger';
 import ZipEntry from '../core/ZipEntry';
@@ -25,17 +25,6 @@ import { DecryptionStream, ZipCrypto } from '../core/encryption/ZipCrypto';
 import { EncryptionMethod } from '../core/encryption/types';
 import { StreamingFileHandle } from '../core';
 import * as fs from 'fs';
-
-// Module-level singleton for ZSTD (shared across all instances)
-let zstdCodec: { ZstdSimple: typeof ZstdSimple } | null = null;
-
-// Async initialization function for zstd
-async function initZstd(): Promise<{ ZstdSimple: typeof ZstdSimple }> {
-  if (!zstdCodec) {
-    zstdCodec = await ZstdInit();
-  }
-  return zstdCodec;
-}
 
 /**
  * ZipDecompressNode - Node.js file-based decompression operations
@@ -52,7 +41,6 @@ async function initZstd(): Promise<{ ZstdSimple: typeof ZstdSimple }> {
  */
 export class ZipDecompressNode {
   private zipkitNode: ZipkitNode;
-  private zstdCodec: { ZstdSimple: typeof ZstdSimple } | null = null;
 
   // Class-level logging control - set to true to enable logging
   private static loggingEnabled: boolean = false;
@@ -103,17 +91,64 @@ export class ZipDecompressNode {
       onProgress?: (bytes: number) => void;
     }
   ): Promise<void> {
-    // Lazy ZSTD initialization
-    // Note: ZSTD codec is lazily initialized on first use (module-level singleton)
-    if (entry.cmpMethod === CMP_METHOD.ZSTD && !this.zstdCodec) {
-      this.zstdCodec = await initZstd();
-    }
-    
     // Get fileHandle from zipkitNode (merged from ZipLoadEntriesServer)
     const fileHandle = (this.zipkitNode as any).getFileHandle();
     
     // Call internal method with fileHandle
     await this.extractToFileInternal(fileHandle, entry, outputPath, options);
+  }
+
+  /**
+   * Extract file to Buffer (in-memory) for file-based ZIP
+   * 
+   * This method extracts a ZIP entry directly to a Buffer without writing to disk.
+   * This is ideal for reading metadata files (like NZIP.TOKEN) that don't need
+   * to be written to temporary files.
+   * 
+   * @param entry ZIP entry to extract
+   * @param options Optional extraction options including progress callback
+   * @returns Promise that resolves to Buffer containing the extracted file data
+   * @throws Error if not a File-based ZIP or if extraction fails
+   */
+  async extractToBuffer(
+    entry: ZipEntry,
+    options?: {
+      skipHashCheck?: boolean;
+      onProgress?: (bytes: number) => void;
+    }
+  ): Promise<Buffer> {
+    // Get fileHandle from zipkitNode
+    const fileHandle = (this.zipkitNode as any).getFileHandle();
+    
+    // Call internal extract to buffer method
+    return await this.extractToBufferInternal(fileHandle, entry, options);
+  }
+
+  /**
+   * Test entry integrity without extracting to disk
+   * Validates CRC-32 or SHA-256 hash without writing decompressed data
+   * 
+   * This method processes chunks as they are decompressed and validates them,
+   * but discards the decompressed data instead of writing to disk. This is useful
+   * for verifying ZIP file integrity without extracting files.
+   * 
+   * @param entry ZIP entry to test
+   * @param options Optional test options including progress callback
+   * @returns Promise that resolves to an object containing the verified hash (if SHA-256) or undefined
+   * @throws Error if validation fails (INVALID_CRC or INVALID_SHA256) or if not a File-based ZIP
+   */
+  async testEntry(
+    entry: ZipEntry,
+    options?: {
+      skipHashCheck?: boolean;
+      onProgress?: (bytes: number) => void;
+    }
+  ): Promise<{ verifiedHash?: string }> {
+    // Get fileHandle from zipkitNode
+    const fileHandle = (this.zipkitNode as any).getFileHandle();
+    
+    // Call internal test method with fileHandle
+    return await this.testEntryInternal(fileHandle, entry, options);
   }
 
   // ============================================================================
@@ -231,6 +266,117 @@ export class ZipDecompressNode {
   }
 
   /**
+   * Extract file to Buffer (in-memory) for file-based ZIP
+   * Internal method that takes fileHandle as parameter
+   * 
+   * MEMORY EFFICIENCY: Accumulates decompressed chunks into a Buffer.
+   * For small files (like metadata), this is acceptable. For large files,
+   * consider using extractToFile() instead.
+   */
+  private async extractToBufferInternal(
+    fileHandle: any,
+    entry: ZipEntry,
+    options?: {
+      skipHashCheck?: boolean;
+      onProgress?: (bytes: number) => void;
+    }
+  ): Promise<Buffer> {
+    this.log(`extractToBufferInternal called for entry: ${entry.filename}`);
+    this.log(`Entry isEncrypted: ${(entry as any).isEncrypted}, has password: ${!!(this.zipkitNode as any)?.password}`);
+    
+    try {
+      // Build compressed data stream - yields one block at a time
+      let dataStream = this.readCompressedDataStream(fileHandle, entry);
+
+      // Decrypt if needed using password on zipkitNode instance
+      const isEncrypted = (entry as any).isEncrypted && (this.zipkitNode as any)?.password;
+    
+      if (isEncrypted) {
+        this.log(`Starting decryption for entry: ${entry.filename}`);
+        
+        // Prepare entry for decryption by parsing local header
+        await DecryptionStream.prepareEntryForDecryption(fileHandle, entry);
+        
+        const encryptionMethod = (entry as any).encryptionMethod || EncryptionMethod.ZIP_CRYPTO;
+        
+        this.log(`Creating DecryptionStream with method: ${encryptionMethod}`);
+        
+        const decryptor = new DecryptionStream({
+          password: (this.zipkitNode as any).password,
+          method: encryptionMethod,
+          entry: entry
+        });
+        
+        this.log(`DecryptionStream created, calling decrypt()...`);
+        dataStream = decryptor.decrypt(dataStream);
+        this.log(`decrypt() returned, dataStream is now a generator that yields one decrypted block at a time`);
+      }
+
+      // Pipeline: readCompressedDataStream() → DecryptionStream.decrypt() → decompressStream() → accumulate to Buffer
+      return await this.unCompressToBuffer(dataStream, entry, {
+        skipHashCheck: options?.skipHashCheck,
+        onProgress: options?.onProgress
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Test entry integrity without writing to disk
+   * Internal method that takes fileHandle as parameter
+   */
+  private async testEntryInternal(
+    fileHandle: any,
+    entry: ZipEntry,
+    options?: {
+      skipHashCheck?: boolean;
+      onProgress?: (bytes: number) => void;
+    }
+  ): Promise<{ verifiedHash?: string }> {
+    this.log(`testEntryInternal called for entry: ${entry.filename}`);
+    this.log(`Entry isEncrypted: ${(entry as any).isEncrypted}, has password: ${!!(this.zipkitNode as any)?.password}`);
+    
+    try {
+      // Build compressed data stream - yields one block at a time
+      let dataStream = this.readCompressedDataStream(fileHandle, entry);
+
+      // Decrypt if needed using password on zipkitNode instance
+      const isEncrypted = (entry as any).isEncrypted && (this.zipkitNode as any)?.password;
+    
+      if (isEncrypted) {
+        this.log(`Starting decryption for entry: ${entry.filename}`);
+        
+        // Prepare entry for decryption by parsing local header
+        await DecryptionStream.prepareEntryForDecryption(fileHandle, entry);
+        
+        const encryptionMethod = (entry as any).encryptionMethod || EncryptionMethod.ZIP_CRYPTO;
+        
+        this.log(`Creating DecryptionStream with method: ${encryptionMethod}`);
+        
+        const decryptor = new DecryptionStream({
+          password: (this.zipkitNode as any).password,
+          method: encryptionMethod,
+          entry: entry
+        });
+        
+        this.log(`DecryptionStream created, calling decrypt()...`);
+        dataStream = decryptor.decrypt(dataStream);
+        this.log(`decrypt() returned, dataStream is now a generator that yields one decrypted block at a time`);
+      }
+
+      // Pipeline: readCompressedDataStream() → DecryptionStream.decrypt() → decompressStream() → hash validation
+      // Data is discarded after validation, no file writing
+      return await this.unCompressToTest(dataStream, entry, {
+        skipHashCheck: options?.skipHashCheck,
+        onProgress: options?.onProgress
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
    * Decompress data stream and write to file
    * 
    * MEMORY EFFICIENCY: Processes decompressed chunks one at a time.
@@ -321,6 +467,151 @@ export class ZipDecompressNode {
   // ============================================================================
 
   /**
+   * Decompress data stream and accumulate to Buffer
+   * 
+   * MEMORY EFFICIENCY: Accumulates decompressed chunks into a Buffer.
+   * For small files (like metadata), this is acceptable. For large files,
+   * consider using unCompressToFile() instead.
+   * 
+   * Pipeline: compressedStream → decompressStream() → hashCalc → Buffer accumulation
+   * - Each decompressed chunk is accumulated into a Buffer
+   * - Hash calculation is incremental (HashCalculator)
+   * - Progress callbacks are invoked per chunk
+   * 
+   * Handles decompression, hash calculation, and Buffer accumulation.
+   * Internal method only
+   */
+  private async unCompressToBuffer(
+    compressedStream: AsyncGenerator<Buffer>,
+    entry: ZipEntry,
+    options?: {
+      skipHashCheck?: boolean;
+      onProgress?: (bytes: number) => void;
+    }
+  ): Promise<Buffer> {
+    this.log(`unCompressToBuffer() called for entry: ${entry.filename}, method: ${entry.cmpMethod}`);
+    
+    // Decompress stream - processes one block at a time
+    const decompressedStream = this.decompressStream(compressedStream, entry.cmpMethod);
+    
+    // Accumulate chunks into Buffer
+    const hashCalc = new HashCalculator({ useSHA256: !!entry.sha256 });
+    const chunks: Buffer[] = [];
+    let totalBytes = 0;
+    
+    try {
+      for await (const chunk of decompressedStream) {
+        this.log(`unCompressToBuffer: Processing decompressed chunk: ${chunk.length} bytes`);
+        hashCalc.update(chunk);
+        chunks.push(chunk);
+        totalBytes += chunk.length;
+        
+        if (options?.onProgress) {
+          options.onProgress(totalBytes);
+        }
+      }
+      
+      // Concatenate all chunks into a single Buffer
+      const result = Buffer.concat(chunks);
+      
+      // Verify hash
+      if (!options?.skipHashCheck) {
+        if (entry.sha256) {
+          const calculatedHash = hashCalc.finalizeSHA256();
+          this.log(`SHA-256 comparison: calculated=${calculatedHash}, stored=${entry.sha256}`);
+          if (calculatedHash !== entry.sha256) {
+            throw new Error(Errors.INVALID_SHA256);
+          }
+          this.log(`SHA-256 verification passed`);
+        } else {
+          const calculatedCRC = hashCalc.finalizeCRC32();
+          this.log(`CRC-32 comparison: calculated=${calculatedCRC}, stored=${entry.crc}`);
+          if (calculatedCRC !== entry.crc) {
+            throw new Error(Errors.INVALID_CRC);
+          }
+          this.log(`CRC-32 verification passed`);
+        }
+      }
+      
+      return result;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Decompress data stream and validate hash without writing to disk
+   * 
+   * MEMORY EFFICIENCY: Processes decompressed chunks one at a time.
+   * Pipeline: compressedStream → decompressStream() → hashCalc → validation
+   * - Each decompressed chunk is validated immediately without accumulation
+   * - Hash calculation is incremental (HashCalculator)
+   * - Progress callbacks are invoked per chunk
+   * - No file writing - data is discarded after validation
+   * 
+   * Handles decompression, hash calculation, and verification.
+   * Internal method only
+   */
+  private async unCompressToTest(
+    compressedStream: AsyncGenerator<Buffer>,
+    entry: ZipEntry,
+    options?: {
+      skipHashCheck?: boolean;
+      onProgress?: (bytes: number) => void;
+    }
+  ): Promise<{ verifiedHash?: string }> {
+    this.log(`unCompressToTest() called for entry: ${entry.filename}, method: ${entry.cmpMethod}`);
+    
+    // Decompress stream - processes one block at a time
+    const decompressedStream = this.decompressStream(compressedStream, entry.cmpMethod);
+    
+    // Process and validate chunks - one block at a time
+    const hashCalc = new HashCalculator({ useSHA256: !!entry.sha256 });
+    let totalBytes = 0;
+    
+    try {
+      for await (const chunk of decompressedStream) {
+        this.log(`unCompressToTest: Processing decompressed chunk: ${chunk.length} bytes`);
+        hashCalc.update(chunk);
+        // Discard chunk - don't write to disk
+        totalBytes += chunk.length;
+        
+        if (options?.onProgress) {
+          options.onProgress(totalBytes);
+        }
+      }
+      
+      // Verify hash and return verified hash if SHA-256
+      if (!options?.skipHashCheck) {
+        if (entry.sha256) {
+          const calculatedHash = hashCalc.finalizeSHA256();
+          this.log(`SHA-256 comparison: calculated=${calculatedHash}, stored=${entry.sha256}`);
+          if (calculatedHash !== entry.sha256) {
+            throw new Error(Errors.INVALID_SHA256);
+          }
+          this.log(`SHA-256 comparison: calculated=${calculatedHash}, stored=${entry.sha256}`);
+          // Return the verified hash
+          return { verifiedHash: calculatedHash };
+        } else {
+          const calculatedCRC = hashCalc.finalizeCRC32();
+          this.log(`CRC-32 comparison: calculated=${calculatedCRC}, stored=${entry.crc}`);
+          if (calculatedCRC !== entry.crc) {
+            throw new Error(Errors.INVALID_CRC);
+          }
+          this.log(`CRC-32 comparison: calculated=${calculatedCRC}, stored=${entry.crc}`);
+          // No hash to return for CRC-32 only entries
+          return { verifiedHash: undefined };
+        }
+      } else {
+        // Hash check skipped - return undefined
+        return { verifiedHash: undefined };
+      }
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
    * Decompress data stream chunk by chunk
    * 
    * MEMORY EFFICIENCY: Processes compressed data one block at a time.
@@ -408,10 +699,8 @@ export class ZipDecompressNode {
     const compressedData = Buffer.concat(compressedChunks);
     
     try {
-      if (!this.zstdCodec) {
-        throw new Error('ZSTD codec not initialized.');
-      }
-      const decompressed = this.zstdCodec.ZstdSimple.decompress(compressedData);
+      // Use global ZstdManager for decompression
+      const decompressed = await ZstdManager.decompress(compressedData);
       const decompressedBuffer = Buffer.from(decompressed);
       
       // Yield decompressed data in chunks using ZipkitServer's bufferSize
@@ -437,37 +726,33 @@ export class ZipDecompressNode {
   }
 
   /**
-   * Synchronous zstd decompress method for in-memory mode
-   * ZSTD codec is guaranteed to be initialized via factory method
+   * Zstd decompress method (now async with ZstdManager)
    * Internal method only
    */
-  private zstdDecompressSync(data: Buffer): Buffer {
+  private async zstdDecompressSync(data: Buffer): Promise<Buffer> {
     this.log(`zstdDecompressSync() called with ${data.length} bytes`);
     
     try {
-      // Ensure ZSTD is initialized
-      if (!this.zstdCodec) {
-        throw new Error('ZSTD codec not initialized.');
-      }
-      const decompressed = this.zstdCodec.ZstdSimple.decompress(data);
-      this.log(`ZSTD synchronous decompression successful: ${data.length} bytes -> ${decompressed.length} bytes`);
+      // Use global ZstdManager for decompression
+      const decompressed = await ZstdManager.decompress(data);
+      this.log(`ZSTD decompression successful: ${data.length} bytes -> ${decompressed.length} bytes`);
       return Buffer.from(decompressed);
     } catch (error) {
-      this.log(`ZSTD synchronous decompression failed: ${error}`);
-      throw new Error(`ZSTD synchronous decompression failed: ${error instanceof Error ? error.message : String(error)}`);
+      this.log(`ZSTD decompression failed: ${error}`);
+      throw new Error(`ZSTD decompression failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   /**
-   * Uncompress compressed data buffer (synchronous for in-memory mode)
+   * Uncompress compressed data buffer (now async for Zstd)
    * Handles decompression and hash verification
    * Internal method only
    */
-  private unCompress(
+  private async unCompress(
     compressedData: Buffer,
     entry: ZipEntry,
     skipHashCheck?: boolean
-  ): Buffer {
+  ): Promise<Buffer> {
     this.log(`unCompress() called for entry: ${entry.filename}, method: ${entry.cmpMethod}, data length: ${compressedData.length}`);
     
     if (compressedData.length === 0) {
@@ -481,8 +766,8 @@ export class ZipDecompressNode {
       // Use synchronous inflate for deflate
       outBuf = this.inflate(compressedData);
     } else if (entry.cmpMethod === CMP_METHOD.ZSTD) {
-      // Use synchronous ZSTD decompression for in-memory mode
-      outBuf = this.zstdDecompressSync(compressedData);
+      // Use ZSTD decompression (now async with ZstdManager)
+      outBuf = await this.zstdDecompressSync(compressedData);
     } else {
       throw new Error(`Unsupported compression method: ${entry.cmpMethod}`);
     }
