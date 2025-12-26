@@ -1,5 +1,5 @@
 {
-  "name": "@neozip/neozipkit",
+  "name": "neozipkit",
   "version": "0.3.1",
   "description": "NeoZipKit - Advanced ZIP file creation and verification with blockchain timestamping",
   "main": "index.js",
