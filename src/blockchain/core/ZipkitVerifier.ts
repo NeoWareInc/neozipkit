@@ -230,12 +230,18 @@ export class ZipkitVerifier {
       const contract = new ethers.Contract(contractAddress, NZIP_CONTRACT_ABI, provider);
 
       // Query getVersion() function with timeout
+      let timeoutId: NodeJS.Timeout | null = null;
       const version = await Promise.race([
         contract.getVersion(),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('getVersion timeout after 10 seconds')), 10000)
-        )
-      ]);
+        new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error('getVersion timeout after 10 seconds')), 10000);
+        })
+      ]).finally(() => {
+        // Clear the timeout if it's still pending
+        if (timeoutId !== null) {
+          clearTimeout(timeoutId);
+        }
+      });
 
       if (this.debug) {
         console.log(`[DEBUG] Contract version queried from blockchain: ${version}`);

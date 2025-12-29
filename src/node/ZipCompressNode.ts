@@ -28,7 +28,7 @@ import * as path from 'path';
 const pako = require('pako');
 
 // Re-export types from ZipCompress (from core module)
-export { CompressOptions } from '../core/ZipCompress';
+export type { CompressOptions } from '../core/ZipCompress';
 
 /**
  * ZipCompressNode - Node.js file-based compression operations

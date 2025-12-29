@@ -640,6 +640,16 @@ export default class ZipkitNode extends Zipkit {
       fs.writeSync(writer.outputFd, crcBuffer, 0, 4, crcOffset);
     }
 
+    // Update bitFlags in local header if encryption was applied
+    // This is necessary because the local header is written before compression/encryption,
+    // but encryption flags are set during compression. We need to update the header afterward.
+    if (entry.isEncrypted || (entry.bitFlags & GP_FLAG.ENCRYPTED)) {
+      const bitFlagsOffset = entry.localHdrOffset + LOCAL_HDR.FLAGS;
+      const bitFlagsBuffer = Buffer.alloc(2);
+      bitFlagsBuffer.writeUInt16LE(entry.bitFlags >>> 0, 0);
+      fs.writeSync(writer.outputFd, bitFlagsBuffer, 0, 2, bitFlagsOffset);
+    }
+
     // Call hash callback if provided
     if (callbacks?.onHashCalculated && entry.sha256) {
       const hashBuffer = Buffer.from(entry.sha256, 'hex');
