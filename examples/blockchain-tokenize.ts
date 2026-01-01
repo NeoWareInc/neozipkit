@@ -99,15 +99,13 @@ async function main() {
     console.log('Step 1: Creating ZIP archive with SHA-256 hashes...');
     
     // Create ZIP file from files
+    // After compression, entries have SHA-256 values populated - no reload needed
     await zip.createZipFromFiles(testFiles, outputZip, options);
 
     console.log(`✅ ZIP archive created: ${outputZip}\n`);
 
-    // Load the ZIP to get entries and calculate merkle root
+    // Get merkle root immediately (entries already have SHA-256 values from compression)
     console.log('Step 2: Calculating merkle root...');
-    await zip.loadZipFile(outputZip);
-    
-    // Get merkle root (this requires SHA-256 hashes to be calculated)
     const merkleRoot = (zip as any).getMerkleRoot?.();
     
     if (!merkleRoot) {
@@ -119,7 +117,7 @@ async function main() {
 
     console.log(`✅ Merkle root calculated: ${merkleRoot}\n`);
 
-    // Close file handle to prevent warnings
+    // Close file handle
     await zip.closeFile();
 
     // Initialize blockchain minter
