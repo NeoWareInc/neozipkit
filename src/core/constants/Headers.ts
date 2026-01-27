@@ -203,3 +203,64 @@ export const DOS_FILE_ATTR = {
   ARCHIVE:         0x20
 };
 
+// ============================================================================
+// Type Definitions for ZIP Structures
+// ============================================================================
+
+/**
+ * Local file header structure (30 bytes)
+ * Standard ZIP format structure as defined in PKZIP specification
+ */
+export interface LocalFileHeader {
+  signature: number;        // 4 bytes: 0x04034b50 ("PK\03\04")
+  version: number;          // 2 bytes: version needed to extract
+  flags: number;            // 2 bytes: general purpose bit flag
+  compression: number;      // 2 bytes: compression method
+  modTime: number;          // 2 bytes: modification time (DOS format)
+  modDate: number;          // 2 bytes: modification date (DOS format)
+  crc32: number;            // 4 bytes: uncompressed file CRC-32 value
+  compressedSize: number;   // 4 bytes: compressed size
+  uncompressedSize: number; // 4 bytes: uncompressed size
+  filenameLength: number;   // 2 bytes: filename length
+  extraFieldLength: number; // 2 bytes: extra field length
+}
+
+/**
+ * Central directory entry structure (46 bytes)
+ * Standard ZIP format structure as defined in PKZIP specification
+ */
+export interface CentralDirEntry {
+  signature: number;        // 4 bytes: 0x02014b50 ("PK\01\02")
+  versionMadeBy: number;    // 2 bytes: version made by
+  versionNeeded: number;    // 2 bytes: version needed to extract
+  flags: number;            // 2 bytes: general purpose bit flag
+  compression: number;      // 2 bytes: compression method
+  modTime: number;          // 2 bytes: modification time (DOS format)
+  modDate: number;          // 2 bytes: modification date (DOS format)
+  crc32: number;            // 4 bytes: uncompressed file CRC-32 value
+  compressedSize: number;   // 4 bytes: compressed size
+  uncompressedSize: number; // 4 bytes: uncompressed size
+  filenameLength: number;   // 2 bytes: filename length
+  extraFieldLength: number; // 2 bytes: extra field length
+  commentLength: number;    // 2 bytes: file comment length
+  diskNumber: number;       // 2 bytes: volume number start
+  internalAttrs: number;    // 2 bytes: internal file attributes
+  externalAttrs: number;    // 4 bytes: external file attributes (host system dependent)
+  localHeaderOffset: number; // 4 bytes: offset of local file header
+}
+
+/**
+ * End of central directory record structure (22 bytes)
+ * Standard ZIP format structure as defined in PKZIP specification
+ */
+export interface EndOfCentralDir {
+  signature: number;        // 4 bytes: 0x06054b50 ("PK\05\06")
+  diskNumber: number;      // 2 bytes: number of this disk
+  centralDirDisk: number;  // 2 bytes: number of the disk with start of central directory
+  centralDirRecords: number; // 2 bytes: number of entries on this disk
+  totalRecords: number;     // 2 bytes: total number of entries
+  centralDirSize: number;   // 4 bytes: central directory size in bytes
+  centralDirOffset: number; // 4 bytes: offset of first central directory entry
+  commentLength: number;    // 2 bytes: ZIP file comment length
+}
+
