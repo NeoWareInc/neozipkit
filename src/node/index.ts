@@ -22,6 +22,19 @@ export type { ZipFileWriter } from './ZipkitNode';
 export { ZipCompressNode } from './ZipCompressNode';
 export { ZipDecompressNode } from './ZipDecompressNode';
 
+// ZIP copy utilities for efficient entry copying
+export {
+  copyZipEntry,
+  copyCentralDirEntry,
+  copyZipEntriesDirect,
+  appendEntryToZip,
+} from './zipCopyUtils';
+export type {
+  LocalFileHeader,
+  CentralDirEntry,
+  EndOfCentralDir,
+} from './zipCopyUtils';
+
 // Blockchain Node.js functionality
 export { 
   WalletManagerNode, 
