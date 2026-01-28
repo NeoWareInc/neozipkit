@@ -94,23 +94,7 @@ ts-node examples/list-zip.ts
 - Lists all entries with basic metadata
 - Displays file sizes and compression information
 
-### 4. Copy ZIP and Append (`copy-zip-append.ts`)
-
-Copies entry data from `example.zip` into `copied.zip` and appends `append-data.json` in a single pass using `ZipCopyNode`: `copyZipEntriesOnly`, append the new file, then `writeCentralDirectoryAndEOCD`.
-
-**Usage:**
-```bash
-ts-node examples/create-zip.ts   # optional: create example.zip
-ts-node examples/copy-zip-append.ts
-```
-
-**What it does:**
-- Copies only entry data from source ZIP (no central directory yet)
-- Appends `append-data.json` as a stored entry at the end of the entry data
-- Writes central directory and EOCD for all entries (copied + appended)
-- Single-pass flow: copy entries → append file → finalize
-
-### 5. Blockchain Tokenization (`blockchain-tokenize.ts`)
+### 4. Blockchain Tokenization (`blockchain-tokenize.ts`)
 
 Demonstrates creating a tokenized ZIP file with blockchain NFT minting.
 
