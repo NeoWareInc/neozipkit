@@ -41,24 +41,53 @@ export interface CopyResult {
 }
 
 /**
+ * Result of copying only ZIP entry data (no central directory or EOCD).
+ * Use with writeCentralDirectoryAndEOCD after optionally adding more entries
+ * to allow building a ZIP that includes both copied and new entries.
+ */
+export interface CopyEntriesOnlyResult {
+  /** Path to the destination file (entry data only; not yet a valid ZIP) */
+  destPath: string;
+  /** Offset at which entry data ends; central directory should start here after any new entries are appended */
+  dataEndOffset: number;
+  /** Copied entries with localHdrOffset set for the destination file */
+  copiedEntries: ZipEntry[];
+}
+
+/**
+ * Options for finalizing a ZIP file (writing central directory and EOCD)
+ */
+export interface FinalizeZipOptions {
+  /** ZIP file comment (default: empty) */
+  zipComment?: string;
+}
+
+/**
  * Efficient ZIP file copying class
- * 
+ *
  * Uses ZipEntry instances directly to copy entries without decompression/recompression.
  * Supports filtering and reordering entries while maintaining ZIP file validity.
- * 
- * @example
+ *
+ * Entry data and the central directory / EOCD are separated so you can add files
+ * to the copy before finalizing: use copyZipEntriesOnly, append new entries at
+ * dataEndOffset, then call writeCentralDirectoryAndEOCD with all entries.
+ *
+ * @example Full copy (one shot)
  * ```typescript
- * const zipkitNode = new ZipkitNode();
- * const zipCopy = new ZipCopyNode(zipkitNode);
- * 
- * const result = await zipCopy.copyZipFile(
- *   'source.zip',
- *   'dest.zip',
- *   {
- *     entryFilter: (entry) => !entry.filename.startsWith('.'),
- *     entrySorter: (a, b) => a.filename.localeCompare(b.filename)
- *   }
- * );
+ * const zipCopy = new ZipCopyNode(new ZipkitNode());
+ * const result = await zipCopy.copyZipFile('source.zip', 'dest.zip', {
+ *   entryFilter: (entry) => !entry.filename.startsWith('.'),
+ *   entrySorter: (a, b) => a.filename.localeCompare(b.filename)
+ * });
+ * ```
+ *
+ * @example Copy then add files before finalizing
+ * ```typescript
+ * const zipCopy = new ZipCopyNode(new ZipkitNode());
+ * const { destPath, dataEndOffset, copiedEntries } = await zipCopy.copyZipEntriesOnly('source.zip', 'dest.zip');
+ * // ... append new entries to destPath at dataEndOffset, collect new ZipEntry[] with localHdrOffset set ...
+ * const allEntries = [...copiedEntries, ...newEntries];
+ * zipCopy.writeCentralDirectoryAndEOCD(destPath, allEntries, { zipComment: '' });
  * ```
  */
 export class ZipCopyNode {
@@ -233,6 +262,139 @@ export class ZipCopyNode {
   }
 
   /**
+   * Write central directory and End of Central Directory record to an open file descriptor.
+   * Used internally by copyZipFile and by writeCentralDirectoryAndEOCD.
+   */
+  private writeCentralDirectoryAndEOCDToFd(
+    destFd: number,
+    entries: ZipEntry[],
+    zipComment: string
+  ): { centralDirOffset: number; centralDirSize: number } {
+    const centralDirStartOffset = fs.fstatSync(destFd).size;
+
+    for (const entry of entries) {
+      const centralDirBuffer = entry.centralDirEntry();
+      fs.writeSync(destFd, centralDirBuffer, 0, centralDirBuffer.length);
+    }
+
+    const centralDirEndOffset = fs.fstatSync(destFd).size;
+    const centralDirSize = centralDirEndOffset - centralDirStartOffset;
+
+    const commentBytes = Buffer.from(zipComment, 'utf8');
+    const commentLength = Math.min(commentBytes.length, 0xFFFF);
+
+    const eocdBuffer = Buffer.alloc(22 + commentLength);
+    let pos = 0;
+
+    eocdBuffer.writeUInt32LE(CENTRAL_END.SIGNATURE, pos);
+    pos += 4;
+    eocdBuffer.writeUInt16LE(0, pos);
+    pos += 2;
+    eocdBuffer.writeUInt16LE(0, pos);
+    pos += 2;
+    eocdBuffer.writeUInt16LE(entries.length, pos);
+    pos += 2;
+    eocdBuffer.writeUInt16LE(entries.length, pos);
+    pos += 2;
+    eocdBuffer.writeUInt32LE(centralDirSize, pos);
+    pos += 4;
+    eocdBuffer.writeUInt32LE(centralDirStartOffset, pos);
+    pos += 4;
+    eocdBuffer.writeUInt16LE(commentLength, pos);
+    pos += 2;
+    if (commentLength > 0) {
+      commentBytes.copy(eocdBuffer, pos, 0, commentLength);
+    }
+
+    fs.writeSync(destFd, eocdBuffer, 0, eocdBuffer.length);
+
+    return { centralDirOffset: centralDirStartOffset, centralDirSize };
+  }
+
+  /**
+   * Copy only ZIP entry data to the destination file (no central directory or EOCD).
+   * Use this when you want to add more entries before finalizing. Then call
+   * writeCentralDirectoryAndEOCD with all entries (copied + new) to produce a valid ZIP.
+   *
+   * @param sourceZipPath - Path to source ZIP file
+   * @param destZipPath - Path to destination file (will contain only entry data until finalized)
+   * @param options - Optional copy options (filtering, sorting)
+   * @returns Result with dataEndOffset and copiedEntries for use when adding files and finalizing
+   */
+  async copyZipEntriesOnly(
+    sourceZipPath: string,
+    destZipPath: string,
+    options?: CopyOptions
+  ): Promise<CopyEntriesOnlyResult> {
+    const sourceEntries = await this.zipkitNode.loadZipFile(sourceZipPath);
+
+    let entriesToCopy = options?.entryFilter
+      ? sourceEntries.filter(options.entryFilter)
+      : sourceEntries;
+
+    if (options?.entrySorter) {
+      entriesToCopy = [...entriesToCopy].sort(options.entrySorter);
+    }
+
+    if (entriesToCopy.length === 0) {
+      throw new Error('No entries to copy after filtering');
+    }
+
+    const sourceFd = fs.openSync(sourceZipPath, 'r');
+    const destFd = fs.openSync(destZipPath, 'w');
+
+    try {
+      let destOffset = 0;
+      const copiedEntries: ZipEntry[] = [];
+
+      for (const sourceEntry of entriesToCopy) {
+        const newLocalHdrOffset = destOffset;
+        const bytesWritten = this.copyEntryBytes(sourceFd, destFd, sourceEntry);
+        destOffset += bytesWritten;
+        const clonedEntry = this.cloneEntryWithOffset(sourceEntry, newLocalHdrOffset);
+        copiedEntries.push(clonedEntry);
+      }
+
+      return {
+        destPath: destZipPath,
+        dataEndOffset: destOffset,
+        copiedEntries,
+      };
+    } finally {
+      fs.closeSync(sourceFd);
+      fs.closeSync(destFd);
+    }
+  }
+
+  /**
+   * Append central directory and End of Central Directory to a file that already
+   * contains ZIP entry data (e.g. from copyZipEntriesOnly plus any newly added entries).
+   * Call this after adding files to produce a valid ZIP.
+   *
+   * @param destZipPath - Path to the partial ZIP file (entry data only)
+   * @param entries - All entries in order (copied + any new), each with localHdrOffset set
+   * @param options - Optional finalize options (e.g. zipComment)
+   */
+  writeCentralDirectoryAndEOCD(
+    destZipPath: string,
+    entries: ZipEntry[],
+    options?: FinalizeZipOptions
+  ): void {
+    if (entries.length === 0) {
+      throw new Error('At least one entry is required to finalize');
+    }
+
+    const zipComment = options?.zipComment ?? '';
+    const destFd = fs.openSync(destZipPath, 'a');
+
+    try {
+      this.writeCentralDirectoryAndEOCDToFd(destFd, entries, zipComment);
+    } finally {
+      fs.closeSync(destFd);
+    }
+  }
+
+  /**
    * Copy ZIP file entries efficiently
    * 
    * Main method that copies entries from source ZIP to destination ZIP.
@@ -248,119 +410,28 @@ export class ZipCopyNode {
     destZipPath: string,
     options?: CopyOptions
   ): Promise<CopyResult> {
-    // Load source ZIP entries
-    const sourceEntries = await this.zipkitNode.loadZipFile(sourceZipPath);
-    const zipComment = this.zipkitNode.getZipComment();
+    // Copy only entry data, then write central directory and EOCD (no added entries)
+    const { dataEndOffset, copiedEntries } = await this.copyZipEntriesOnly(
+      sourceZipPath,
+      destZipPath,
+      options
+    );
 
-    // Apply filter if provided
-    let entriesToCopy = options?.entryFilter
-      ? sourceEntries.filter(options.entryFilter)
-      : sourceEntries;
+    const zipComment =
+      options?.preserveComments !== false && this.zipkitNode.getZipComment()
+        ? this.zipkitNode.getZipComment()!
+        : '';
 
-    // Apply sort if provided
-    if (options?.entrySorter) {
-      entriesToCopy = [...entriesToCopy].sort(options.entrySorter);
-    }
+    this.writeCentralDirectoryAndEOCD(destZipPath, copiedEntries, { zipComment });
 
-    if (entriesToCopy.length === 0) {
-      throw new Error('No entries to copy after filtering');
-    }
-
-    // Open source and destination files
-    const sourceFd = fs.openSync(sourceZipPath, 'r');
-    const destFd = fs.openSync(destZipPath, 'w');
-
-    try {
-      let destOffset = 0;
-      const copiedEntries: ZipEntry[] = [];
-
-      // Copy each entry
-      for (const sourceEntry of entriesToCopy) {
-        const newLocalHdrOffset = destOffset;
-
-        // Copy entry bytes (local header + compressed data)
-        const bytesWritten = this.copyEntryBytes(sourceFd, destFd, sourceEntry);
-        destOffset += bytesWritten;
-
-        // Create cloned entry with new offset
-        const clonedEntry = this.cloneEntryWithOffset(sourceEntry, newLocalHdrOffset);
-        copiedEntries.push(clonedEntry);
-      }
-
-      // Write central directory
-      const centralDirStartOffset = destOffset;
-      for (const entry of copiedEntries) {
-        // Generate central directory entry
-        const centralDirBuffer = entry.centralDirEntry();
-        
-        // Write to destination
-        const bytesWritten = fs.writeSync(destFd, centralDirBuffer, 0, centralDirBuffer.length);
-        destOffset += bytesWritten;
-      }
-
-      const centralDirSize = destOffset - centralDirStartOffset;
-
-      // Write End of Central Directory record
-      const comment = (options?.preserveComments !== false && zipComment) ? zipComment : '';
-      const commentBytes = Buffer.from(comment, 'utf8');
-      const commentLength = Math.min(commentBytes.length, 0xFFFF); // Max 65535 bytes
-
-      const eocdBuffer = Buffer.alloc(22 + commentLength);
-      let pos = 0;
-
-      // End of central directory signature
-      eocdBuffer.writeUInt32LE(CENTRAL_END.SIGNATURE, pos);
-      pos += 4;
-
-      // Number of this disk
-      eocdBuffer.writeUInt16LE(0, pos);
-      pos += 2;
-
-      // Number of the disk with the start of the central directory
-      eocdBuffer.writeUInt16LE(0, pos);
-      pos += 2;
-
-      // Total number of entries in the central directory on this disk
-      eocdBuffer.writeUInt16LE(copiedEntries.length, pos);
-      pos += 2;
-
-      // Total number of entries in the central directory
-      eocdBuffer.writeUInt16LE(copiedEntries.length, pos);
-      pos += 2;
-
-      // Size of the central directory
-      eocdBuffer.writeUInt32LE(centralDirSize, pos);
-      pos += 4;
-
-      // Offset of start of central directory
-      eocdBuffer.writeUInt32LE(centralDirStartOffset, pos);
-      pos += 4;
-
-      // ZIP file comment length
-      eocdBuffer.writeUInt16LE(commentLength, pos);
-      pos += 2;
-
-      // ZIP file comment
-      if (commentLength > 0) {
-        commentBytes.copy(eocdBuffer, pos, 0, commentLength);
-      }
-
-      fs.writeSync(destFd, eocdBuffer, 0, eocdBuffer.length);
-
-      // Return result
-      return {
-        entries: copiedEntries.map(entry => ({
-          filename: entry.filename,
-          localHeaderOffset: entry.localHdrOffset,
-          compressedSize: entry.compressedSize,
-        })),
-        centralDirOffset: centralDirStartOffset,
-        totalEntries: copiedEntries.length,
-      };
-    } finally {
-      // Close file descriptors
-      fs.closeSync(sourceFd);
-      fs.closeSync(destFd);
-    }
+    return {
+      entries: copiedEntries.map(entry => ({
+        filename: entry.filename,
+        localHeaderOffset: entry.localHdrOffset,
+        compressedSize: entry.compressedSize,
+      })),
+      centralDirOffset: dataEndOffset,
+      totalEntries: copiedEntries.length,
+    };
   }
 }

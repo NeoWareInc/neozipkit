@@ -24,7 +24,12 @@ export { ZipDecompressNode } from './ZipDecompressNode';
 
 // Efficient ZIP copying using ZipEntry directly
 export { ZipCopyNode } from './ZipCopyNode';
-export type { CopyOptions, CopyResult } from './ZipCopyNode';
+export type {
+  CopyOptions,
+  CopyResult,
+  CopyEntriesOnlyResult,
+  FinalizeZipOptions,
+} from './ZipCopyNode';
 
 // Blockchain Node.js functionality
 export { 

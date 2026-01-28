@@ -11,7 +11,12 @@ export { ZipCompress } from './ZipCompress';
 export type { CompressOptions, CreateZipOptions } from './ZipCompress';
 export type { DecompressionResult, DecompressionOptions } from './ZipDecompress';
 export { ZipCopy } from './ZipCopy';
-export type { CopyOptions, CopyResult } from './ZipCopy';
+export type {
+  CopyOptions,
+  CopyResult,
+  CopyEntriesOnlyResult,
+  FinalizeZipOptions,
+} from './ZipCopy';
 export default Zipkit;
 
 // Shared components
