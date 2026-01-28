@@ -1,14 +1,20 @@
 #!/usr/bin/env node
 
 /**
- * Copy ZIP Example
+ * Copy ZIP Example using ZipCopyNode
  * 
  * Demonstrates copying entries from an existing ZIP file to a new ZIP file
  * using the ZipCopyNode class. This preserves all original properties
  * (compression, timestamps, etc.) without decompression/recompression.
+ * 
+ * The ZipCopyNode class provides additional features:
+ * - Entry filtering based on ZipEntry properties
+ * - Entry sorting/reordering
+ * - Better integration with ZipkitNode and ZipEntry
  */
 
 import { ZipCopyNode, ZipkitNode } from '../src/node';
+import ZipEntry from '../src/core/ZipEntry';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -38,7 +44,7 @@ function padLeft(str: string, length: number): string {
 }
 
 async function main() {
-  console.log('Copy ZIP file example...\n');
+  console.log('Copy ZIP file example using ZipCopyNode...\n');
 
   // Source ZIP file (use the example.zip created by create-zip.ts if it exists)
   const sourceZip = path.join(__dirname, 'output', 'example.zip');
@@ -69,8 +75,12 @@ async function main() {
   console.log(`  Size: ${formatBytes(sourceStats.size)}`);
   console.log();
 
+    // Create ZipCopyNode instance
+    const zipkitNode = new ZipkitNode();
+    const zipCopy = new ZipCopyNode(zipkitNode);
+
   // Destination ZIP file
-  const destZip = path.join(__dirname, 'output', 'copied.zip');
+  const destZip = path.join(__dirname, 'output', 'copied-zipcopy.zip');
 
   // Ensure output directory exists
   const outputDir = path.dirname(destZip);
@@ -79,14 +89,10 @@ async function main() {
   }
 
   try {
-    console.log('Copying ZIP entries...');
-    
-    // Create ZipCopyNode instance
-    const zipkitNode = new ZipkitNode();
-    const zipCopy = new ZipCopyNode(zipkitNode);
+    console.log('Copying ZIP entries using ZipCopyNode...\n');
     
     // Option 1: Copy all entries
-    console.log('  Copying all entries from source to destination...');
+    console.log('Option 1: Copying all entries from source to destination...');
     const result = await zipCopy.copyZipFile(actualSourceZip, destZip);
 
     console.log(`✅ ZIP file copied successfully: ${destZip}\n`);
@@ -128,11 +134,69 @@ async function main() {
       }
     }
 
-    console.log('\n💡 Tip: You can also filter entries during copy:');
-    console.log('   const zipCopy = new ZipCopyNode(new ZipkitNode());');
-    console.log('   await zipCopy.copyZipFile(sourceZip, destZip, {');
-    console.log('     entryFilter: (entry) => entry.filename.endsWith(".txt")');
-    console.log('   });');
+    // Option 2: Copy with filtering (exclude hidden files and directories)
+    console.log('\n' + '='.repeat(80));
+    console.log('Option 2: Copying with entry filtering (excluding hidden files and directories)...');
+    
+    const filteredZip = path.join(__dirname, 'output', 'copied-filtered.zip');
+    const filteredResult = await zipCopy.copyZipFile(actualSourceZip, filteredZip, {
+      entryFilter: (entry: ZipEntry) => {
+        // Exclude hidden files (starting with .) and directories
+        return !entry.filename.startsWith('.') && !entry.isDirectory;
+      }
+    });
+
+    console.log(`✅ Filtered ZIP file created: ${filteredZip}`);
+    console.log(`   Original entries: ${result.totalEntries}`);
+    console.log(`   Filtered entries: ${filteredResult.totalEntries}`);
+    console.log(`   Excluded: ${result.totalEntries - filteredResult.totalEntries} entries`);
+
+    // Option 3: Copy with sorting (alphabetical by filename)
+    console.log('\n' + '='.repeat(80));
+    console.log('Option 3: Copying with entry sorting (alphabetical by filename)...');
+    
+    const sortedZip = path.join(__dirname, 'output', 'copied-sorted.zip');
+    const sortedResult = await zipCopy.copyZipFile(actualSourceZip, sortedZip, {
+      entrySorter: (a: ZipEntry, b: ZipEntry) => {
+        return a.filename.localeCompare(b.filename);
+      }
+    });
+
+    console.log(`✅ Sorted ZIP file created: ${sortedZip}`);
+    console.log(`   Entries sorted alphabetically by filename`);
+    if (sortedResult.entries.length > 0) {
+      console.log(`   First entry: ${sortedResult.entries[0].filename}`);
+      console.log(`   Last entry: ${sortedResult.entries[sortedResult.entries.length - 1].filename}`);
+    }
+
+    // Option 4: Copy with both filtering and sorting
+    console.log('\n' + '='.repeat(80));
+    console.log('Option 4: Copying with filtering and sorting (only .txt files, sorted)...');
+    
+    const filteredSortedZip = path.join(__dirname, 'output', 'copied-filtered-sorted.zip');
+    const filteredSortedResult = await zipCopy.copyZipFile(actualSourceZip, filteredSortedZip, {
+      entryFilter: (entry: ZipEntry) => {
+        return entry.filename.endsWith('.txt') && !entry.isDirectory;
+      },
+      entrySorter: (a: ZipEntry, b: ZipEntry) => {
+        return a.filename.localeCompare(b.filename);
+      }
+    });
+
+    console.log(`✅ Filtered and sorted ZIP file created: ${filteredSortedZip}`);
+    console.log(`   Filtered to .txt files only: ${filteredSortedResult.totalEntries} entries`);
+
+    console.log('\n' + '='.repeat(80));
+    console.log('💡 Tips:');
+    console.log('   - Use entryFilter to selectively copy entries based on ZipEntry properties');
+    console.log('   - Use entrySorter to reorder entries in the output ZIP');
+    console.log('   - Combine both for powerful entry manipulation');
+    console.log('   - All operations preserve compression, encryption, and metadata');
+    console.log('   - Example:');
+    console.log('     await zipCopyNode.copyZipFile(source, dest, {');
+    console.log('       entryFilter: (entry) => !entry.isDirectory,');
+    console.log('       entrySorter: (a, b) => a.filename.localeCompare(b.filename)');
+    console.log('     });');
 
   } catch (error) {
     console.error('❌ Error copying ZIP file:');

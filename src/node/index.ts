@@ -22,18 +22,9 @@ export type { ZipFileWriter } from './ZipkitNode';
 export { ZipCompressNode } from './ZipCompressNode';
 export { ZipDecompressNode } from './ZipDecompressNode';
 
-// ZIP copy utilities for efficient entry copying
-export {
-  copyZipEntry,
-  copyCentralDirEntry,
-  copyZipEntriesDirect,
-  appendEntryToZip,
-} from './zipCopyUtils';
-export type {
-  LocalFileHeader,
-  CentralDirEntry,
-  EndOfCentralDir,
-} from './zipCopyUtils';
+// Efficient ZIP copying using ZipEntry directly
+export { ZipCopyNode } from './ZipCopyNode';
+export type { CopyOptions, CopyResult } from './ZipCopyNode';
 
 // Blockchain Node.js functionality
 export { 

@@ -1,6 +1,6 @@
 {
   "name": "@neozip/neozipkit",
-  "version": "0.3.1",
+  "version": "0.5.0",
   "description": "NeoZipKit - Advanced ZIP file creation and verification with blockchain timestamping",
   "main": "index.js",
   "types": "index.d.ts",
@@ -141,9 +141,8 @@
     "example:create-zip": "npx ts-node examples/create-zip.ts",
     "example:extract-zip": "npx ts-node examples/extract-zip.ts",
     "example:list-zip": "npx ts-node examples/list-zip.ts",
-    "example:blockchain-tokenize": "yarn exec ts-node examples/blockchain-tokenize.ts",
-    "example:verify-tokenized-zip": "npx ts-node examples/verify-tokenized-zip.ts",
     "example:test-zstd-memory-issue": "npx ts-node examples/test-zstd-memory-issue.ts",
+    "example:copy-zip": "npx ts-node examples/copy-zip.ts",
     "check:nft": "npx ts-node scripts/check-nft.ts",
     "deploy:base": "node contracts/deploy-bytecode.mjs",
     "deploy:base:sepolia": "NETWORK=base-sepolia node contracts/deploy-bytecode.mjs",
