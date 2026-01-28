@@ -141,7 +141,6 @@
     "example:create-zip": "npx ts-node examples/create-zip.ts",
     "example:extract-zip": "npx ts-node examples/extract-zip.ts",
     "example:list-zip": "npx ts-node examples/list-zip.ts",
-    "example:test-zstd-memory-issue": "npx ts-node examples/test-zstd-memory-issue.ts",
     "example:copy-zip": "npx ts-node examples/copy-zip.ts",
     "check:nft": "npx ts-node scripts/check-nft.ts",
     "deploy:base": "node contracts/deploy-bytecode.mjs",
