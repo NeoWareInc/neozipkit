@@ -1,7 +1,7 @@
 /**
  * Node Module Exports
- * Node.js functionality for ZIP file processing and blockchain operations
- * 
+ * Node.js functionality for ZIP file processing
+ *
  * This is the entry point for Node.js-only imports:
  * import ZipkitNode from '@neozip/neozipkit/node';
  * // or
@@ -31,48 +31,10 @@ export type {
   FinalizeZipOptions,
 } from './ZipCopyNode';
 
-// Blockchain Node.js functionality
-export { 
-  WalletManagerNode, 
-  ZipkitWallet,
-  ZipkitMinter,
-  ZipkitVerifier,
-  CoreWalletManager,
-  WalletAnalyzer,
-  createTimestamp,
-  verifyOts,
-  verifyOtsZip
-} from '../blockchain';
-export type { 
-  EnhancedVerificationResult, 
-  BatchVerificationResult, 
-  VerificationJob,
-  MintingOptions,
-  MintingResult,
-  VerificationOptions,
-  VerificationResult,
-  WalletInfo,
-  NetworkConfig,
-  TokenMetadata,
-  WalletSetupResult,
-  CommonTokenConfig,
-  TokenInfo,
-  WalletBasicInfo,
-  TokenScanResult,
-  NZipTokenDetails,
-  TimestampResult,
-  TimestampInfo,
-  DeserializeOtsResult,
-  OtsVerifyResult
-} from '../blockchain';
-
-// Timestamp verification
-export { verifyOts as verifyTimestamp } from '../blockchain/core/ZipkitOTS';
-
 // Platform detection
 export const PlatformUtils = {
   // Browser detection
   isBrowser: typeof window !== 'undefined' && typeof document !== 'undefined',
-  // Node.js detection  
+  // Node.js detection
   isNode: typeof process !== 'undefined' && process.versions && process.versions.node,
 };

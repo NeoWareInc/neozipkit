@@ -82,7 +82,7 @@ export function getTypeOf(input: string|Buffer|Blob|Array<any>|ArrayBuffer|Uint8
 /**
  * Check if a filename is a metadata file
  * @param filename The filename to check
- * @returns True if the file is a metadata file (timestamp or tokenized metadata)
+ * @returns True if the file is a metadata file (META-INF)
  */
 export const isMetadataFile = (filename: string): boolean => {
   return filename === TIMESTAMP_SUBMITTED || 

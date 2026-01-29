@@ -40,8 +40,6 @@ const commonOptions = {
   sourcemap: true,
   target: 'es2020',
   platform: 'browser',
-  // Externalize peer dependencies
-  external: ['ethers', 'web3'],
   // Define global for browser
   define: {
     'process.env.NODE_ENV': '"production"',
@@ -128,7 +126,6 @@ function copyTypeDefinitions() {
       // This is a simplified approach - in production, you'd want to regenerate types
       dtsContent = dtsContent.replace(/from ['"]\.\.\/core/g, "from '../core");
       dtsContent = dtsContent.replace(/from ['"]\.\.\/types/g, "from '../types");
-      dtsContent = dtsContent.replace(/from ['"]\.\.\/blockchain/g, "from '../blockchain");
       
       writeFileSync(resolve(BROWSER_ESM_DIR, 'index.d.ts'), dtsContent);
       writeFileSync(resolve(BROWSER_UMD_DIR, 'index.d.ts'), dtsContent);

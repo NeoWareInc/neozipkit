@@ -41,10 +41,6 @@
       "@/browser/*": ["browser/*"],
       "@/server/*": ["server/*"],
       "@/shared/*": ["shared/*"],
-      "@/blockchain/*": ["blockchain/*"],
-      "@/blockchain/browser/*": ["blockchain/browser/*"],
-      "@/blockchain/core/*": ["blockchain/core/*"],
-      "@/blockchain/server/*": ["blockchain/server/*"],
       "@/types/*": ["types/*"]
     }
   },
