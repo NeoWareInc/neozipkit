@@ -578,7 +578,11 @@ export default class ZipkitNode extends Zipkit {
     // Step 3: Compress file and write data
     const bufferSize = options?.bufferSize || this.getBufferSize();
     const useZstd = options?.useZstd !== false;
-    const shouldUseChunked = !useZstd && entry.uncompressedSize && entry.uncompressedSize > bufferSize;
+    // Never use the chunked/streaming path when encrypting: the streaming path writes
+    // compressed data to the writer via onOutputBuffer BEFORE encryption can be applied.
+    // Encryption requires the full compressed buffer to create the 12-byte header and
+    // encrypt all data in one pass, so we must use the buffer path (compressFile).
+    const shouldUseChunked = !useZstd && !options?.password && entry.uncompressedSize && entry.uncompressedSize > bufferSize;
 
     if (shouldUseChunked) {
       // Use streaming compression for large files
