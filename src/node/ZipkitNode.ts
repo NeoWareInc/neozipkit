@@ -1235,17 +1235,11 @@ export default class ZipkitNode extends Zipkit {
       if (ext.ctime) ctime = new Date(ext.ctime);
     }
 
-    // Fall back to standard timestamps if extended not available
-    if (!mtime) {
-      if ((entry as any).parseDateTime && entry.lastModTimeDate) {
-        // Use the parseDateTime method if available
-        const parsedDate = (entry as any).parseDateTime(entry.lastModTimeDate);
-        mtime = parsedDate ? new Date(parsedDate) : null;
-      } else if (entry.lastModTimeDate) {
-        mtime = new Date(entry.lastModTimeDate);
-      } else if (entry.timeDateDOS) {
-        // timeDateDOS is in seconds since 1970, convert to milliseconds
-        mtime = new Date(entry.timeDateDOS * 1000);
+    // Fall back to standard DOS timestamps (ZIP stores packed 32-bit time+date, not Unix time)
+    if (!mtime && (entry as any).parseDateTime) {
+      const dosTimestamp = entry.lastModTimeDate || entry.timeDateDOS || 0;
+      if (dosTimestamp) {
+        mtime = (entry as any).parseDateTime(dosTimestamp);
       }
     }
 
