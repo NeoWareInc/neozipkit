@@ -418,7 +418,7 @@ yarn version:set 1.2.3
 
 ```json
 {
-  "name": "@neozip/neozipkit",
+  "name": "neozipkit",
   "version": "0.3.1",  // ← This controls ALL version information
   ...
 }
@@ -665,7 +665,7 @@ Monitor the publication process:
    - Verify it completes successfully
 
 2. **Verify npm Publication:**
-   - Visit: https://www.npmjs.com/package/@neozip/neozipkit
+   - Visit: https://www.npmjs.com/package/neozipkit
    - Confirm new version appears
    - Check version number matches
 
@@ -1584,7 +1584,7 @@ cat package.json | grep version
 yarn version:patch  # or :minor, :major
 
 # Verify version doesn't exist
-npm view @neozip/neozipkit versions
+npm view neozipkit versions
 ```
 
 #### npm Authentication Failed

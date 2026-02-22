@@ -3,9 +3,9 @@
  * Node.js functionality for ZIP file processing
  *
  * This is the entry point for Node.js-only imports:
- * import ZipkitNode from '@neozip/neozipkit/node';
+ * import ZipkitNode from 'neozipkit/node';
  * // or
- * import { Zipkit, ZipkitNode, ... } from '@neozip/neozipkit/node';
+ * import { Zipkit, ZipkitNode, ... } from 'neozipkit/node';
  */
 
 // Core ZIP functionality (re-exported from core module, but NOT the default)

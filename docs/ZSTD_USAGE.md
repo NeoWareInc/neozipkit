@@ -15,7 +15,7 @@ Zipkit [[memory:8771859]] supports Zstandard (Zstd) compression as an alternativ
 ### Basic Usage
 
 ```typescript
-import ZipkitNode from '@neozip/neozipkit/node';
+import ZipkitNode from 'neozipkit/node';
 
 const zip = new ZipkitNode();
 
@@ -34,7 +34,7 @@ await zip.createZipFromFiles(
 ### Extracting Zstd-Compressed Files
 
 ```typescript
-import ZipkitNode from '@neozip/neozipkit/node';
+import ZipkitNode from 'neozipkit/node';
 
 const zip = new ZipkitNode();
 
@@ -215,7 +215,7 @@ For maximum compatibility, use Deflate compression (default when `useZstd: false
 ### Example 1: Basic Zstd Compression
 
 ```typescript
-import ZipkitNode from '@neozip/neozipkit/node';
+import ZipkitNode from 'neozipkit/node';
 
 async function compressWithZstd() {
   const zip = new ZipkitNode();
@@ -239,7 +239,7 @@ compressWithZstd();
 ### Example 2: Multiple Instances
 
 ```typescript
-import ZipkitNode from '@neozip/neozipkit/node';
+import ZipkitNode from 'neozipkit/node';
 
 async function multipleInstances() {
   // Instance 1: Compress
@@ -263,7 +263,7 @@ multipleInstances();
 ### Example 3: Concurrent Operations
 
 ```typescript
-import ZipkitNode from '@neozip/neozipkit/node';
+import ZipkitNode from 'neozipkit/node';
 
 async function concurrentOperations() {
   const tasks = [

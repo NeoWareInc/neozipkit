@@ -25,13 +25,13 @@ Advanced ZIP file creation, compression, and encryption library for Node.js and 
 ## Installation
 
 ```bash
-yarn add @neozip/neozipkit
+yarn add neozipkit
 ```
 
 Or with npm:
 
 ```bash
-npm install @neozip/neozipkit
+npm install neozipkit
 ```
 
 ## Quick Start
@@ -39,7 +39,7 @@ npm install @neozip/neozipkit
 ### Node.js
 
 ```typescript
-import { ZipkitNode } from '@neozip/neozipkit/node';
+import { ZipkitNode } from 'neozipkit/node';
 
 const zip = new ZipkitNode();
 
@@ -53,7 +53,7 @@ await zip.extractZipFile('archive.zip', './output');
 ### Browser
 
 ```typescript
-import { ZipkitBrowser } from '@neozip/neozipkit/browser-esm';
+import { ZipkitBrowser } from 'neozipkit/browser-esm';
 
 const zip = new ZipkitBrowser();
 await zip.addFile(file, { level: 6 });
@@ -83,10 +83,10 @@ All blockchain code has been moved to a separate package. For timestamping, NFT 
 
 ## Package layout
 
-- **`@neozip/neozipkit`** – Main entry (core + platform detection)
-- **`@neozip/neozipkit/node`** – Node.js-only (ZipkitNode, file I/O, streaming)
-- **`@neozip/neozipkit/browser`** – Browser-only (ZipkitBrowser, Blob API)
-- **`@neozip/neozipkit/browser-esm`** – Browser ESM bundle (tree-shaking)
+- **`neozipkit`** – Main entry (core + platform detection)
+- **`neozipkit/node`** – Node.js-only (ZipkitNode, file I/O, streaming)
+- **`neozipkit/browser`** – Browser-only (ZipkitBrowser, Blob API)
+- **`neozipkit/browser-esm`** – Browser ESM bundle (tree-shaking)
 
 ## Development
 

@@ -8,7 +8,7 @@ NeoZipKit now uses a **single source of truth** for version information. All ver
 
 ```json
 {
-  "name": "@neozip/neozipkit",
+  "name": "neozipkit",
   "version": "0.2.1",  // ← This controls ALL version information
   ...
 }
