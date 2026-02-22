@@ -2,6 +2,8 @@
 
 Advanced ZIP file creation, compression, and encryption library for Node.js and the browser.
 
+**Scope of this package:** NeoZipKit focuses solely on creating and manipulating ZIP files (compression, encryption, extraction). All blockchain-related functionality—timestamping, NFT tokenization, verification, wallet integration, and smart contracts—has been moved to **[neozip-blockchain](https://github.com/NeoWareInc/neozip-blockchain)**. Use that package when you need to link ZIPs to the blockchain.
+
 > **⚠️ Alpha Version Warning**: NeoZipKit is currently in **alpha** status. This means:
 > - The API may change in future releases
 > - Some features may be incomplete or experimental
@@ -77,7 +79,7 @@ See [`examples/README.md`](examples/README.md) for details.
 
 ## Blockchain integration
 
-For linking ZIP files to the blockchain (timestamping, tokenization, verification), use the **[neozip-blockchain](https://github.com/NeoWareInc/neozip-blockchain)** open source project. NeoZipKit focuses on creating ZIPs and compression/encryption only; neozip-blockchain builds on NeoZipKit to add blockchain features.
+All blockchain code has been moved to a separate package. For timestamping, NFT tokenization, on-chain verification, wallet management, and OpenTimestamps, use **[neozip-blockchain](https://github.com/NeoWareInc/neozip-blockchain)**. It depends on NeoZipKit for ZIP handling and adds all blockchain features on top. NeoZipKit itself contains no blockchain, contract, or wallet code.
 
 ## Package layout
 
