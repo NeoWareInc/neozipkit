@@ -21,17 +21,12 @@ export { default as ZipEntry } from '../core/ZipEntry';
 
 // Re-export commonly used types and constants
 export type { CompressOptions, CreateZipOptions } from '../core/ZipCompress';
-export type { FileData, TokenMetadata } from '../types';
+export type { FileData } from '../types';
 export * from '../core/constants/Headers';
 export * from '../core/constants/Errors';
-
-// Blockchain exports for browser (if needed)
-export * from '../blockchain/browser';
-export { createTokenVerifier } from '../blockchain/browser';
 
 // Platform utilities
 export const PlatformUtils = {
   isBrowser: typeof window !== 'undefined' && typeof document !== 'undefined',
   isNode: typeof process !== 'undefined' && process.versions && process.versions.node,
 };
-

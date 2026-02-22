@@ -146,12 +146,7 @@ The Jest configuration is now fully functional. Future considerations:
 
 1. **Yarn Version**: Consider aligning the system Yarn version with `package.json` specification, or update the `packageManager` field to match the system version.
 
-2. **Additional Tests**: The Zstd memory fix (`ZstdManager`) has been validated through the `test-zstd-memory-issue.ts` example, which successfully demonstrates:
-   - Multiple instance creation and usage
-   - Sequential Zstd operations without memory corruption
-   - CRC-32 validation across multiple compress/decompress cycles
-
-3. **Watchman Warning**: Consider running the suggested watchman command if developing with watch mode:
+2. **Watchman Warning**: Consider running the suggested watchman command if developing with watch mode:
    ```bash
    watchman watch-del '/Users/stevenburg/Projects/NeoWare/neozipkit'
    watchman watch-project '/Users/stevenburg/Projects/NeoWare/neozipkit'
@@ -163,8 +158,6 @@ The Jest configuration is now fully functional. Future considerations:
 
 - **Zstd Fix**: See `docs/ZSTD_USAGE.md` for details on the Zstd memory corruption fix
 - **Unit Testing**: See `docs/UNIT_TESTING.md` for general testing guidelines
-- **Test Example**: See `examples/test-zstd-memory-issue.ts` for Zstd validation
-
 ---
 
 *This fix is separate from the Zstd memory corruption fix and addresses pre-existing Jest configuration issues.*

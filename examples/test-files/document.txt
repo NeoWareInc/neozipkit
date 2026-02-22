@@ -1,2 +1,6 @@
 This is a sample document.
 It will be tokenized on the blockchain.
+
+- Feature 1: Description of the first feature
+- Feature 2: Description of the second feature
+- Feature 3: Description of the third feature

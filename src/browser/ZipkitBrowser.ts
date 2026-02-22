@@ -171,7 +171,7 @@ export default class ZipkitBrowser extends Zipkit {
 
     for (const entry of zipEntries) {
       if (!entry.isUpdated) {
-        // CRITICAL FIX: Check for token files even in copy mode
+        // Check for META-INF metadata files even in copy mode
         if (entry.filename === TOKENIZED_METADATA || entry.filename === TIMESTAMP_SUBMITTED || entry.filename === TIMESTAMP_METADATA) {
           // Force this entry to be processed with special handling instead of copied
           entry.isUpdated = true;
@@ -206,12 +206,12 @@ export default class ZipkitBrowser extends Zipkit {
         continue;
       }
       
-      // Special handling for token metadata files - store uncompressed with CRC-32
+      // Special handling for META-INF metadata files - store uncompressed with CRC-32
       if (entry.filename === TOKENIZED_METADATA || entry.filename === TIMESTAMP_SUBMITTED || entry.filename === TIMESTAMP_METADATA) {
-        // For token metadata, use STORED compression (no compression)
+        // For metadata files, use STORED compression (no compression)
         const buffer = Buffer.from(fileBuffer);
         
-        // Calculate CRC-32 for the token file (not SHA-256 to avoid Merkle Root interference)
+        // Calculate CRC-32 for the metadata file (not SHA-256 to avoid Merkle Root interference)
         entry.crc = crc32(buffer);
         
         // Set up entry for STORED compression
@@ -219,7 +219,7 @@ export default class ZipkitBrowser extends Zipkit {
         entry.compressedSize = buffer.length;
         entry.uncompressedSize = buffer.length;
         
-        // Do NOT set SHA-256 hash for token metadata to avoid Merkle Root calculation
+        // Do NOT set SHA-256 hash for metadata files to avoid Merkle Root calculation
         // entry.sha256 should remain undefined for metadata files
         
         const localHdr = entry.createLocalHdr();
@@ -261,7 +261,7 @@ export default class ZipkitBrowser extends Zipkit {
   }
 
   /**
-   * Checks if a filename is a blockchain metadata file that should be excluded from Merkle Root calculation
+   * Checks if a filename is a metadata file (META-INF) that should be excluded from Merkle Root calculation
    * @param filename - The filename to check
    * @returns boolean - True if the file is a metadata file
    */

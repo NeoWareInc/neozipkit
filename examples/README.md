@@ -118,7 +118,7 @@ ts-node examples/blockchain-tokenize.ts
 - Network configuration (defaults to Base Sepolia testnet)
 - Gas fees for minting
 
-### `verify-tokenized-zip.ts`
+### 6. Verify Tokenized ZIP (`verify-tokenized-zip.ts`)
 
 Demonstrates verifying a tokenized ZIP file:
 - Loads a tokenized ZIP file

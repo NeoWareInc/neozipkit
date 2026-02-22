@@ -7,8 +7,16 @@
 import Zipkit from './Zipkit';
 export * from './Zipkit';
 export * from './ZipEntry';
-export { ZipCompress, CompressOptions, CreateZipOptions } from './ZipCompress';
+export { ZipCompress } from './ZipCompress';
+export type { CompressOptions, CreateZipOptions } from './ZipCompress';
 export type { DecompressionResult, DecompressionOptions } from './ZipDecompress';
+export { ZipCopy } from './ZipCopy';
+export type {
+  CopyOptions,
+  CopyResult,
+  CopyEntriesOnlyResult,
+  FinalizeZipOptions,
+} from './ZipCopy';
 export default Zipkit;
 
 // Shared components

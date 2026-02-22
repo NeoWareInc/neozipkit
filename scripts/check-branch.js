@@ -24,8 +24,17 @@ function isMainBranch(branch) {
 }
 
 function main() {
+  const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
+  const refType = process.env.GITHUB_REF_TYPE; // 'branch' or 'tag' in GitHub Actions
+
+  // When building from a tag (release publish workflow), allow build (detached HEAD has no branch)
+  if (isCI && refType === 'tag') {
+    console.log('✅ Tag build detected - branch protection skipped (release publish)');
+    return;
+  }
+
   const currentBranch = getCurrentBranch();
-  
+
   if (!currentBranch) {
     console.error('❌ Could not determine current branch');
     process.exit(1);
@@ -33,10 +42,6 @@ function main() {
 
   console.log(`🌿 Current branch: ${currentBranch}`);
 
-  // Check if we're in CI environment
-  const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
-
-  // Only enforce branch protection in CI environments
   if (!isCI) {
     console.log('✅ Local build detected - branch protection skipped');
     console.log('💡 In CI, only main/master branches can build to /dist');

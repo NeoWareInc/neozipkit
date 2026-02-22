@@ -9,6 +9,8 @@ module.exports = {
       tsconfig: 'tsconfig.test.json'
     }]
   },
-  testTimeout: 30000
+  testTimeout: 30000,
+  // Global teardown to ensure cleanup
+  globalTeardown: '<rootDir>/tests/teardown.ts'
 };
 

@@ -2,16 +2,15 @@
   "compilerOptions": {
     /* Language and Environment */
     "target": "es2020",
-    "lib": ["es2020", "dom", "dom.iterable"],
+    "lib": ["es2020", "dom"],
     
     /* Modules */
     "module": "Node16",
-    "rootDir": "./src",
+    "rootDir": "./",
     "moduleResolution": "node16",
     
     /* Emit */
-    "declaration": true,
-    "declarationMap": true,
+    "declaration": false,
     "sourceMap": true,
     "outDir": "./dist",
     "removeComments": false,
@@ -32,25 +31,14 @@
     "allowJs": false,
     
     /* Node.js types */
-    "types": ["node"],
-    "typeRoots": ["./node_modules/@types", "./src/types"],
-    
-    /* Path Mapping */
-    "baseUrl": "./src",
-    "paths": {
-      "@/browser/*": ["browser/*"],
-      "@/server/*": ["server/*"],
-      "@/shared/*": ["shared/*"],
-      "@/types/*": ["types/*"]
-    }
+    "types": ["node"]
   },
   "include": [
-    "src/**/*"
+    "*.ts"
   ],
   "exclude": [
     "node_modules",
-    "dist",
-    "**/*.test.ts",
-    "contracts/**/*"
+    "dist"
   ]
 }
+

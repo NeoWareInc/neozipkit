@@ -685,7 +685,7 @@ export default class Zipkit {
   /**
    * Calculate Merkle Root of the ZIP file
    * 
-   * Excludes blockchain metadata files to ensure consistent calculation.
+   * Excludes metadata files (META-INF) to ensure consistent calculation.
    * Simply calls getDirectory() and returns null if empty.
    * 
    * @returns Merkle root string or null if calculation fails
@@ -709,7 +709,7 @@ export default class Zipkit {
   
     const hashAccumulator = new HashCalculator({ enableAccumulation: true });
     
-    // Filter out blockchain metadata files to ensure consistent Merkle Root calculation
+    // Filter out metadata files (META-INF) to ensure consistent Merkle Root calculation
     // Inline check to avoid conflict with ZipkitBrowser's isMetadataFile() method
     const contentEntries = zipEntries.filter(entry => {
       const filename = entry.filename || '';
@@ -737,7 +737,7 @@ export default class Zipkit {
   /**
    * Calculate Merkle Root of the ZIP file asynchronously
    * 
-   * Excludes blockchain metadata files to ensure consistent calculation.
+   * Excludes metadata files (META-INF) to ensure consistent calculation.
    * Works with both buffer-based and file-based ZIPs.
    * 
    * @returns Promise resolving to Merkle root string or null if calculation fails
@@ -766,7 +766,7 @@ export default class Zipkit {
   
     const hashAccumulator = new HashCalculator({ enableAccumulation: true });
     
-    // Filter out blockchain metadata files to ensure consistent Merkle Root calculation
+    // Filter out metadata files (META-INF) to ensure consistent Merkle Root calculation
     // Inline check to avoid conflict with ZipkitBrowser's isMetadataFile() method
     const contentEntries = zipEntries.filter(entry => {
       const filename = entry.filename || '';

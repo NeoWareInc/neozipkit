@@ -17,8 +17,7 @@ const dirsToRemove = [
   'components',
   'constants',
   'platform',
-  'types',
-  'blockchain'
+  'types'
 ];
 
 // Remove directory recursively

@@ -578,7 +578,11 @@ export default class ZipkitNode extends Zipkit {
     // Step 3: Compress file and write data
     const bufferSize = options?.bufferSize || this.getBufferSize();
     const useZstd = options?.useZstd !== false;
-    const shouldUseChunked = !useZstd && entry.uncompressedSize && entry.uncompressedSize > bufferSize;
+    // Never use the chunked/streaming path when encrypting: the streaming path writes
+    // compressed data to the writer via onOutputBuffer BEFORE encryption can be applied.
+    // Encryption requires the full compressed buffer to create the 12-byte header and
+    // encrypt all data in one pass, so we must use the buffer path (compressFile).
+    const shouldUseChunked = !useZstd && !options?.password && entry.uncompressedSize && entry.uncompressedSize > bufferSize;
 
     if (shouldUseChunked) {
       // Use streaming compression for large files
@@ -638,6 +642,16 @@ export default class ZipkitNode extends Zipkit {
       const crcBuffer = Buffer.alloc(4);
       crcBuffer.writeUInt32LE(entry.crc, 0);
       fs.writeSync(writer.outputFd, crcBuffer, 0, 4, crcOffset);
+    }
+
+    // Update bitFlags in local header if encryption was applied
+    // This is necessary because the local header is written before compression/encryption,
+    // but encryption flags are set during compression. We need to update the header afterward.
+    if (entry.isEncrypted || (entry.bitFlags & GP_FLAG.ENCRYPTED)) {
+      const bitFlagsOffset = entry.localHdrOffset + LOCAL_HDR.FLAGS;
+      const bitFlagsBuffer = Buffer.alloc(2);
+      bitFlagsBuffer.writeUInt16LE(entry.bitFlags >>> 0, 0);
+      fs.writeSync(writer.outputFd, bitFlagsBuffer, 0, 2, bitFlagsOffset);
     }
 
     // Call hash callback if provided
@@ -1221,17 +1235,11 @@ export default class ZipkitNode extends Zipkit {
       if (ext.ctime) ctime = new Date(ext.ctime);
     }
 
-    // Fall back to standard timestamps if extended not available
-    if (!mtime) {
-      if ((entry as any).parseDateTime && entry.lastModTimeDate) {
-        // Use the parseDateTime method if available
-        const parsedDate = (entry as any).parseDateTime(entry.lastModTimeDate);
-        mtime = parsedDate ? new Date(parsedDate) : null;
-      } else if (entry.lastModTimeDate) {
-        mtime = new Date(entry.lastModTimeDate);
-      } else if (entry.timeDateDOS) {
-        // timeDateDOS is in seconds since 1970, convert to milliseconds
-        mtime = new Date(entry.timeDateDOS * 1000);
+    // Fall back to standard DOS timestamps (ZIP stores packed 32-bit time+date, not Unix time)
+    if (!mtime && (entry as any).parseDateTime) {
+      const dosTimestamp = entry.lastModTimeDate || entry.timeDateDOS || 0;
+      if (dosTimestamp) {
+        mtime = (entry as any).parseDateTime(dosTimestamp);
       }
     }
 
