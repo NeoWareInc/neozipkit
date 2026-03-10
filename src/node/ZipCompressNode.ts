@@ -20,6 +20,7 @@ import { Logger } from '../core/components/Logger';
 import { CMP_METHOD, GP_FLAG, ENCRYPT_HDR_SIZE } from '../core/constants/Headers';
 import { HashCalculator } from '../core/components/HashCalculator';
 import { ZipCrypto } from '../core/encryption/ZipCrypto';
+import { AesCrypto } from '../core/encryption/AesCrypto';
 import { ZstdManager } from '../core/ZstdManager';
 import Errors from '../core/constants/Errors';
 import * as fs from 'fs';
@@ -143,7 +144,12 @@ export class ZipCompressNode {
 
     // Apply encryption if password is provided
     if (options?.password && buffer.length > 0) {
-      buffer = this.encryptCompressedData(buffer, entry, options.password);
+      const useAes = options.encryptionMethod !== 'zipcrypto';
+      if (useAes) {
+        buffer = this.encryptCompressedDataAes(buffer, entry, options.password);
+      } else {
+        buffer = this.encryptCompressedData(buffer, entry, options.password);
+      }
     }
 
     return buffer;
@@ -436,6 +442,24 @@ export class ZipCompressNode {
     // Update compressed size to include encryption header (12 bytes)
     entry.compressedSize = encryptedData.length;
     
+    return encryptedData;
+  }
+
+  /**
+   * Encrypt compressed data using WinZip AES-256
+   * Sets compression method to 99, stores real method in entry for the 0x9901 extra field
+   */
+  private encryptCompressedDataAes(compressedData: Buffer, entry: ZipEntry, password: string): Buffer {
+    const encryptedData = AesCrypto.encryptBuffer(entry, compressedData, password);
+
+    entry.realCmpMethod = entry.cmpMethod;
+    entry.cmpMethod = CMP_METHOD.AES_ENCRYPT;
+    entry.aesVersion = 1; // AE-1: CRC is stored
+    entry.aesStrength = 3; // AES-256
+    entry.isEncrypted = true;
+    entry.bitFlags |= GP_FLAG.ENCRYPTED;
+    entry.compressedSize = encryptedData.length;
+
     return encryptedData;
   }
 

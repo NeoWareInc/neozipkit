@@ -22,6 +22,7 @@ import Errors from './constants/Errors';
 import { CMP_METHOD, GP_FLAG, ENCRYPT_HDR_SIZE } from './constants/Headers';
 import { HashCalculator } from './components/HashCalculator';
 import { ZipCrypto } from './encryption/ZipCrypto';
+import { AesCrypto } from './encryption/AesCrypto';
 
 /**
  * Options for compressing files in a ZIP archive
@@ -29,6 +30,7 @@ import { ZipCrypto } from './encryption/ZipCrypto';
 export interface CompressOptions {
   level?: number;             // Compression level (1-9, 0=store)
   password?: string | null;   // Password for encryption
+  encryptionMethod?: 'aes256' | 'zipcrypto'; // Encryption method (default: 'aes256')
   useSHA256?: boolean;        // Whether to calculate SHA256 hash default is false
   useZstd?: boolean;          // Whether to use Zstandard compression default is true
   bufferSize?: number;        // Override default buffer size
@@ -139,10 +141,11 @@ export class ZipCompress {
     }
     
     // Encrypt if password provided
+    const useAes = options?.password && options.encryptionMethod !== 'zipcrypto';
     if (options?.password) {
-      this.log(`Encrypting compressed data for entry: ${entry.filename}`);
-      (entry as any).gpFlag = ((entry as any).gpFlag || 0) | GP_FLAG.ENCRYPTED;
-      (entry as any).isEncrypted = true;
+      this.log(`Encrypting compressed data for entry: ${entry.filename} (method: ${useAes ? 'AES-256' : 'ZipCrypto'})`);
+      entry.bitFlags = (entry.bitFlags || 0) | GP_FLAG.ENCRYPTED;
+      entry.isEncrypted = true;
     }
     
     // Compress data based on method
@@ -165,7 +168,11 @@ export class ZipCompress {
     
     // Encrypt compressed data if password provided
     if (options?.password) {
-      compressedData = this.encryptCompressedData(entry, compressedData, options.password);
+      if (useAes) {
+        compressedData = this.encryptCompressedDataAes(entry, compressedData, options.password);
+      } else {
+        compressedData = this.encryptCompressedData(entry, compressedData, options.password);
+      }
     }
     
     entry.compressedSize = compressedData.length;
@@ -325,6 +332,26 @@ export class ZipCompress {
   }
 
   /**
+   * Encrypt compressed data using WinZip AES-256
+   * Sets compression method to 99, stores real method in entry for the 0x9901 extra field
+   */
+  encryptCompressedDataAes(entry: ZipEntry, compressedData: Buffer, password: string): Buffer {
+    this.log(`encryptCompressedDataAes() called for entry: ${entry.filename}, compressed size: ${compressedData.length}`);
+
+    const encryptedData = AesCrypto.encryptBuffer(entry, compressedData, password);
+
+    // Store the real compression method and switch to method 99
+    entry.realCmpMethod = entry.cmpMethod;
+    entry.cmpMethod = CMP_METHOD.AES_ENCRYPT;
+    entry.aesVersion = 1; // AE-1: CRC is stored
+    entry.aesStrength = 3; // AES-256
+
+    this.log(`AES-256 encryption complete: ${compressedData.length} bytes -> ${encryptedData.length} bytes (salt+verifier+data+hmac)`);
+
+    return encryptedData;
+  }
+
+  /**
    * Compress file data in memory and return ZIP entry information as Buffer
    * @param entry - ZIP entry to compress
    * @param fileData - File data buffer to compress
@@ -352,19 +379,7 @@ export class ZipCompress {
       this.log(`SHA-256 calculated: ${entry.sha256}`);
     }
     
-    // Compress data
-    const compressedData = await this.compressData(entry, fileData, cmpOptions);
-    
-    // Encrypt if password provided
-    if (cmpOptions?.password) {
-      this.log(`Encrypting compressed data for entry: ${entry.filename}`);
-      (entry as any).gpFlag = ((entry as any).gpFlag || 0) | GP_FLAG.ENCRYPTED;
-      (entry as any).isEncrypted = true;
-      const zipCrypto = new ZipCrypto();
-      const encryptedData = zipCrypto.encryptBuffer(entry, compressedData, cmpOptions.password);
-      return encryptedData;
-    }
-    
-    return compressedData;
+    // compressData already handles encryption when password is provided
+    return await this.compressData(entry, fileData, cmpOptions);
   }
 }

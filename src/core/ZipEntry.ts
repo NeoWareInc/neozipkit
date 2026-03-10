@@ -13,6 +13,7 @@ import {
   FILE_SYSTEM, 
   HDR_ID,
   DOS_FILE_ATTR,
+  AES_EXTRA_FIELD_SIZE,
  } from './constants/Headers';
 import { ZipFileEntry, FileData } from '../types';
 import { Logger } from './components/Logger';
@@ -54,6 +55,11 @@ export default class ZipEntry implements ZipFileEntry {
   encryptHdr: Buffer | null = null;        // Encrypted Header (12 bytes)
   lastModTimeDate: number = 0;      // Data Descriptor File Time & Date
   decrypt: Function | null = null;  // Decrypt Class Function
+
+  // WinZip AES encryption fields (from extra field 0x9901)
+  aesVersion: number = 0;          // 1=AE-1 (CRC stored), 2=AE-2 (CRC=0)
+  aesStrength: number = 0;         // 1=AES-128, 2=AES-192, 3=AES-256
+  realCmpMethod: number = -1;      // Actual compression method when cmpMethod=99
 
   isUpdated: boolean = true;        // Entry has been updated
   isDirectory: boolean = false;     // Entry is a directory
@@ -260,6 +266,14 @@ export default class ZipEntry implements ZipFileEntry {
               this.originalEntry = _data.subarray(7, 7 + originalLength).toString('utf8');
             }
           }
+        } else if (_id === HDR_ID.AES) {
+          // WinZip AES extra field (0x9901)
+          if (_len >= 7) {
+            this.aesVersion = _data.readUInt16LE(0);
+            // vendorId at bytes 2-3 ("AE")
+            this.aesStrength = _data.readUInt8(4);
+            this.realCmpMethod = _data.readUInt16LE(5);
+          }
         }
         // Skip Unicode Path here as we already processed it
         i += 4 + _len;
@@ -332,6 +346,12 @@ export default class ZipEntry implements ZipFileEntry {
       const unicodeNameLen = Buffer.from(this.filename, 'utf8').length;
       extraFieldLen = 5 + unicodeNameLen + 4;
     }
+
+    // Add AES extra field if using WinZip AES encryption
+    const isAes = this.cmpMethod === CMP_METHOD.AES_ENCRYPT && this.aesVersion > 0;
+    if (isAes) {
+      extraFieldLen += AES_EXTRA_FIELD_SIZE;
+    }
     
     const data = Buffer.alloc(LOCAL_HDR.SIZE + this.filename.length + extraFieldLen);
     
@@ -345,8 +365,8 @@ export default class ZipEntry implements ZipFileEntry {
     data.writeUInt16LE(this.cmpMethod, LOCAL_HDR.COMPRESSION);
     // modification time (2 bytes time, 2 bytes date)
     data.writeUInt32LE(this.timeDateDOS >>> 0, LOCAL_HDR.TIMEDATE_DOS);
-    // uncompressed file crc-32 value
-    data.writeUInt32LE(this.crc, LOCAL_HDR.CRC);
+    // uncompressed file crc-32 value (AE-2 stores 0)
+    data.writeUInt32LE(this.aesVersion === 2 ? 0 : this.crc, LOCAL_HDR.CRC);
     // compressed size
     data.writeUInt32LE(this.compressedSize, LOCAL_HDR.CMP_SIZE);
     // uncompressed size
@@ -369,8 +389,16 @@ export default class ZipEntry implements ZipFileEntry {
       extraOffset = this.addUnicodePathField(data, extraOffset);
     }
 
-    // File comments are NOT stored in local headers (ZIP specification)
-    // They are only stored in the central directory
+    // Add AES extra field
+    if (isAes) {
+      data.writeUInt16LE(HDR_ID.AES, extraOffset);
+      data.writeUInt16LE(7, extraOffset + 2);
+      data.writeUInt16LE(this.aesVersion, extraOffset + 4);
+      data.writeUInt16LE(0x4541, extraOffset + 6); // "AE"
+      data.writeUInt8(this.aesStrength, extraOffset + 8);
+      data.writeUInt16LE(this.realCmpMethod, extraOffset + 9);
+      extraOffset += AES_EXTRA_FIELD_SIZE;
+    }
 
     return data;
   }
@@ -405,7 +433,11 @@ export default class ZipEntry implements ZipFileEntry {
       unicodePathLen = 5 + unicodeNameLen + 4;
     }
     
-    const extraLen = utfLen + sha256Len + uidgidLen + symlinkLen + hardlinkLen + (needsUnicode ? unicodePathLen : 0);
+    // Add AES extra field if using WinZip AES encryption
+    const isAes = this.cmpMethod === CMP_METHOD.AES_ENCRYPT && this.aesVersion > 0;
+    const aesLen = isAes ? AES_EXTRA_FIELD_SIZE : 0;
+
+    const extraLen = utfLen + sha256Len + uidgidLen + symlinkLen + hardlinkLen + (needsUnicode ? unicodePathLen : 0) + aesLen;
 
     // Calculate actual filename length (ASCII conversion may change length)
     const asciiName = this.filename.replace(/[^\x00-\x7E]/g, '?');
@@ -426,8 +458,8 @@ export default class ZipEntry implements ZipFileEntry {
     data.writeInt16LE(this.cmpMethod, CENTRAL_DIR.CMP_METHOD);
     // Modification time (2 bytes time, 2 bytes date)
     data.writeUInt32LE(this.timeDateDOS >>> 0, CENTRAL_DIR.TIMEDATE_DOS);
-    // Uncompressed file CRC-32 value
-    data.writeUInt32LE(this.crc, CENTRAL_DIR.CRC);
+    // Uncompressed file CRC-32 value (AE-2 stores 0)
+    data.writeUInt32LE(this.aesVersion === 2 ? 0 : this.crc, CENTRAL_DIR.CRC);
     // Compressed Size
     data.writeUInt32LE(this.compressedSize, CENTRAL_DIR.CMP_SIZE);
     // Uncompressed Size
@@ -524,7 +556,16 @@ export default class ZipEntry implements ZipFileEntry {
       extraOffset = this.addUnicodePathField(data, extraOffset);
     }
 
-    // File comment is already written immediately after filename
+    // Add AES extra field
+    if (isAes) {
+      data.writeUInt16LE(HDR_ID.AES, extraOffset);
+      data.writeUInt16LE(7, extraOffset + 2);
+      data.writeUInt16LE(this.aesVersion, extraOffset + 4);
+      data.writeUInt16LE(0x4541, extraOffset + 6); // "AE"
+      data.writeUInt8(this.aesStrength, extraOffset + 8);
+      data.writeUInt16LE(this.realCmpMethod, extraOffset + 9);
+      extraOffset += AES_EXTRA_FIELD_SIZE;
+    }
 
     return data;
   }
@@ -687,6 +728,10 @@ export default class ZipEntry implements ZipFileEntry {
       case CMP_METHOD.ENHANCED_DEFLATE: return 'Deflate-Enh';
       case CMP_METHOD.IBM_TERSE: return 'PKDCL-LZ77';
       case CMP_METHOD.ZSTD: return 'Zstandard';
+      case CMP_METHOD.AES_ENCRYPT:
+        return this.aesStrength === 3 ? 'AES-256' :
+               this.aesStrength === 2 ? 'AES-192' :
+               this.aesStrength === 1 ? 'AES-128' : 'AES';
       
       default: return 'Unknown';
     }
@@ -857,6 +902,17 @@ export default class ZipEntry implements ZipFileEntry {
                 Logger.log(`                      Path: "${unicodeName}"`);
               } else {
                 Logger.log(`   ID[0x${_idStr}] Unicode Path: (invalid length ${_len})`);
+              }
+            } else if (_id === HDR_ID.AES) {
+              if (_len >= 7) {
+                const vendorVersion = _data.readUInt16LE(0);
+                const vendorId = String.fromCharCode(_data[3], _data[2]);
+                const strength = _data.readUInt8(4);
+                const realMethod = _data.readUInt16LE(5);
+                const strengthStr = strength === 3 ? '256-bit' : strength === 2 ? '192-bit' : strength === 1 ? '128-bit' : 'Unknown';
+                Logger.log(`   ID[0x${_idStr}] WinZip AES: AE-${vendorVersion}, vendor="${vendorId}", strength=${strengthStr}, realMethod=${realMethod}`);
+              } else {
+                Logger.log(`   ID[0x${_idStr}] WinZip AES: (invalid length ${_len})`);
               }
             } else if (_id === HDR_ID.ZIP64) {
               // ZIP64 Extended Information (0x0001)

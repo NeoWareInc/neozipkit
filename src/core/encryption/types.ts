@@ -4,7 +4,8 @@
 
 export enum EncryptionMethod {
   NONE = 0,
-  ZIP_CRYPTO = 1
+  ZIP_CRYPTO = 1,
+  AES_256 = 2
 }
 
 export interface EncryptionOptions {

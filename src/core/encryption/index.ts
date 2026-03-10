@@ -5,6 +5,7 @@
  */
 
 export { ZipCrypto, crc32, crc32update } from './ZipCrypto';
+export { AesCrypto } from './AesCrypto';
 export { EncryptionManager } from './Manager';
 export { 
   EncryptionMethod, 

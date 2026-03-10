@@ -21,6 +21,7 @@ import ZipEntry from './ZipEntry';
 import Errors from './constants/Errors';
 import { CMP_METHOD } from './constants/Headers';
 import { ZipCrypto } from './encryption/ZipCrypto';
+import { AesCrypto } from './encryption/AesCrypto';
 
 export interface DecompressionResult {
   success: boolean;
@@ -87,14 +88,18 @@ class ZipDecompress {
     
     // Decrypt if needed using password on zipkit instance
     let fdata = this.zipkit.parseLocalHeader(entry, buffer);
+    const password = (this.zipkit as any)?.password;
+    const isAes = entry.aesVersion > 0 || entry.cmpMethod === CMP_METHOD.AES_ENCRYPT;
     
-    if ((entry as any).isEncrypted && (this.zipkit as any)?.password) {
-      this.log(`Starting in-memory decryption for entry: ${entry.filename}`);
-      
-      // Use ZipCrypto's decryptBuffer method which handles all the header parsing and decryption
-      const zipCrypto = new ZipCrypto();
-      
-      fdata = zipCrypto.decryptBuffer(entry, buffer, fdata, (this.zipkit as any).password);
+    if ((entry as any).isEncrypted && password) {
+      this.log(`Starting in-memory decryption for entry: ${entry.filename} (${isAes ? 'AES-256' : 'ZipCrypto'})`);
+
+      if (isAes) {
+        fdata = AesCrypto.decryptBuffer(entry, fdata, password);
+      } else {
+        const zipCrypto = new ZipCrypto();
+        fdata = zipCrypto.decryptBuffer(entry, buffer, fdata, password);
+      }
       
       this.log(`Decryption successful, decrypted compressed data length: ${fdata.length}`);
     }
@@ -103,8 +108,10 @@ class ZipDecompress {
       return null;
     }
 
-    // Use the unCompress method
-    return this.unCompress(fdata, entry, skipHashCheck);
+    // For AES entries, use the real compression method for decompression
+    // For AE-2 (aesVersion=2), skip CRC check since CRC is stored as 0
+    const skipHash = isAes && entry.aesVersion === 2 ? true : skipHashCheck;
+    return this.unCompress(fdata, entry, skipHash);
   }
 
 
@@ -148,23 +155,26 @@ class ZipDecompress {
     entry: ZipEntry,
     skipHashCheck?: boolean
   ): Promise<Buffer> {
-    this.log(`unCompress() called for entry: ${entry.filename}, method: ${entry.cmpMethod}, data length: ${compressedData.length}`);
+    // For AES entries (method 99), use the real compression method
+    const method = entry.cmpMethod === CMP_METHOD.AES_ENCRYPT && entry.realCmpMethod >= 0
+      ? entry.realCmpMethod
+      : entry.cmpMethod;
+
+    this.log(`unCompress() called for entry: ${entry.filename}, method: ${method}, data length: ${compressedData.length}`);
     
     if (compressedData.length === 0) {
       return Buffer.alloc(0);
     }
 
     let outBuf: Buffer;
-    if (entry.cmpMethod === CMP_METHOD.STORED) {
+    if (method === CMP_METHOD.STORED) {
       outBuf = compressedData;
-    } else if (entry.cmpMethod === CMP_METHOD.DEFLATED) {
-      // Use synchronous inflate for deflate
+    } else if (method === CMP_METHOD.DEFLATED) {
       outBuf = this.inflate(compressedData);
-    } else if (entry.cmpMethod === CMP_METHOD.ZSTD) {
-      // Use ZSTD decompression (now async with ZstdManager)
+    } else if (method === CMP_METHOD.ZSTD) {
       outBuf = await this.zstdDecompressSync(compressedData);
     } else {
-      throw new Error(`Unsupported compression method: ${entry.cmpMethod}`);
+      throw new Error(`Unsupported compression method: ${method}`);
     }
 
     // Verify hash

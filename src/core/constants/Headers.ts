@@ -31,6 +31,14 @@ export const LOCAL_HDR = {
 };
 export const ENCRYPT_HDR_SIZE = 12;
 
+// WinZip AES encryption constants
+export const AES256_SALT_SIZE = 16;
+export const AES256_KEY_SIZE = 32;
+export const AES256_PWD_VERIFY_SIZE = 2;
+export const AES_AUTH_CODE_SIZE = 10;
+export const AES_EXTRA_FIELD_SIZE = 11;
+export const AES_OVERHEAD = AES256_SALT_SIZE + AES256_PWD_VERIFY_SIZE + AES_AUTH_CODE_SIZE; // 28 bytes
+
 // Data descriptor
 export const DATA_DESC = {
   SIGNATURE:  0x08074b50,  // "PK\007\008"
@@ -157,6 +165,7 @@ export const HDR_ID = {
   x509CERT_IDF:    0x0015,    // X.509 Certificate ID and Fingerprint
   x509CERT_IDC:    0x0016,    // X.509 Certificate ID and Certificate
   STRONG_ENC:      0x0017,    // Strong Encryption Header
+  AES:             0x9901,    // WinZip AES Extra Data Field
   RECORD_MGT:      0x0018,    // Record Management Controls
   x509PKCS7RL:     0x0019,    // X.509 Certificate Revocation List (PKCS#7)
   IBM1:            0x0065,    // IBM S/390 (Z390) - Attribute

@@ -405,27 +405,29 @@ export default class Zipkit {
       throw new Error(Errors.INVALID_CEN);
     }
     
-    let _encryptLen = 0;
     const _bitFlags = localData.readUInt16LE(LOCAL_HDR.FLAGS);
-    if (_bitFlags & GP_FLAG.ENCRYPTED) {
-      _encryptLen = ENCRYPT_HDR_SIZE;
-    }
-    
     let _fnameLen = localData.readUInt16LE(LOCAL_HDR.FNAME_LEN);
     let _extraLen = localData.readUInt16LE(LOCAL_HDR.EXTRA_LEN);
     let _localSize = LOCAL_HDR.SIZE + _fnameLen + _extraLen;
-    
-    // For encrypted files: entry.compressedSize from central directory includes the 12-byte encryption header
-    // parseLocalHeader should return encrypted data WITHOUT the header (decryptBuffer will extract and prepend it)
-    // Structure: [local header][filename][extra][12-byte encryption header][encrypted compressed data]
-    // We need to read: encrypted compressed data (without the 12-byte header)
-    // Start: _localSize + _encryptLen (after the header)
-    // End: _localSize + entry.compressedSize (total includes header, so this gives us data without header)
+
+    const isAes = entry.aesVersion > 0 || entry.cmpMethod === CMP_METHOD.AES_ENCRYPT;
+
+    if (isAes) {
+      // AES: compressedSize includes salt + verifier + encrypted + hmac
+      // Return the full payload; AesCrypto.decryptBuffer() handles parsing
+      const dataStart = _localSize;
+      const dataEnd = _localSize + entry.compressedSize;
+      return localData.subarray(dataStart, dataEnd);
+    }
+
+    // ZipCrypto: skip the 12-byte encryption header
+    let _encryptLen = 0;
+    if (_bitFlags & GP_FLAG.ENCRYPTED) {
+      _encryptLen = ENCRYPT_HDR_SIZE;
+    }
+
     const dataStart = _localSize + _encryptLen;
     const dataEnd = _localSize + entry.compressedSize;
-    
-    // Return encrypted data WITHOUT the encryption header
-    // decryptBuffer will extract the header from localSize to localSize+12 and prepend it
     return localData.subarray(dataStart, dataEnd);
   }
 

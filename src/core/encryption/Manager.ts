@@ -5,6 +5,7 @@
 
 import { EncryptionProvider, EncryptionOptions, EncryptionResult, DecryptionResult, EncryptionMethod } from './types';
 import { ZipCrypto } from './ZipCrypto';
+import { AesCrypto } from './AesCrypto';
 
 export class EncryptionManager {
   private providers: Map<EncryptionMethod, EncryptionProvider> = new Map();
@@ -20,6 +21,9 @@ export class EncryptionManager {
   registerProvider(provider: EncryptionProvider): void {
     if (provider.canHandle(EncryptionMethod.ZIP_CRYPTO)) {
       this.providers.set(EncryptionMethod.ZIP_CRYPTO, provider);
+    }
+    if (provider.canHandle(EncryptionMethod.AES_256)) {
+      this.providers.set(EncryptionMethod.AES_256, provider);
     }
   }
 
@@ -71,7 +75,7 @@ export class EncryptionManager {
    * Get recommended encryption method (ZIP_CRYPTO)
    */
   getRecommendedMethod(): EncryptionMethod {
-    return EncryptionMethod.ZIP_CRYPTO;
+    return EncryptionMethod.AES_256;
   }
 
   /**
@@ -110,7 +114,7 @@ export class EncryptionManager {
     return {
       name: provider.getMethodName(),
       keyLength: provider.getKeyLength(),
-      secure: false
+      secure: method === EncryptionMethod.AES_256
     };
   }
 
@@ -125,7 +129,7 @@ export class EncryptionManager {
         method: method,
         name: provider.getMethodName(),
         keyLength: provider.getKeyLength(),
-        secure: false
+        secure: method === EncryptionMethod.AES_256
       });
     }
 
