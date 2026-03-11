@@ -15,6 +15,7 @@ import {
   ZIP64_CENTRAL_DIR,
   LOCAL_HDR,
   GP_FLAG,
+  CMP_METHOD,
   ENCRYPT_HDR_SIZE
 } from '../core/constants/Headers';
 import * as fs from 'fs';
@@ -549,12 +550,26 @@ export default class ZipkitNode extends Zipkit {
   ): Promise<void> {
     // Set compression method based on options
     const level = options?.level ?? 6;
+    let realCmpMethod: number;
     if (level === 0) {
-      entry.cmpMethod = 0; // STORED
+      realCmpMethod = 0; // STORED
     } else if (options?.useZstd !== false) {
-      entry.cmpMethod = 93; // ZSTD
+      realCmpMethod = 93; // ZSTD
     } else {
-      entry.cmpMethod = 8; // DEFLATED
+      realCmpMethod = 8; // DEFLATED
+    }
+
+    // For AES encryption, pre-configure the entry so the initial local header
+    // includes the 0x9901 extra field and method 99. The actual compression
+    // method is preserved in realCmpMethod for the AES extra field.
+    const isAesRequested = options?.password && options?.encryptionMethod === 'aes256';
+    if (isAesRequested) {
+      entry.cmpMethod = CMP_METHOD.AES_ENCRYPT;
+      entry.aesVersion = 1;
+      entry.aesStrength = 3;
+      entry.realCmpMethod = realCmpMethod;
+    } else {
+      entry.cmpMethod = realCmpMethod;
     }
 
     // Step 1: Create local header with placeholder compressed size (0)
@@ -626,32 +641,25 @@ export default class ZipkitNode extends Zipkit {
       });
     }
 
-    // Step 4: Update compressed size and CRC in local header
-    // entry.compressedSize and entry.crc are set by compression methods
+    // Step 4: Patch local header in-place with final compressed size, CRC, and flags
     if (entry.compressedSize === undefined) {
       throw new Error(`Compressed size not set for entry: ${entry.filename}`);
     }
 
-    const compressedSizeOffset = entry.localHdrOffset + 18;
     const sizeBuffer = Buffer.alloc(4);
     sizeBuffer.writeUInt32LE(entry.compressedSize, 0);
-    fs.writeSync(writer.outputFd, sizeBuffer, 0, 4, compressedSizeOffset);
+    fs.writeSync(writer.outputFd, sizeBuffer, 0, 4, entry.localHdrOffset + 18);
 
     if (entry.crc !== undefined) {
-      const crcOffset = entry.localHdrOffset + 14;
       const crcBuffer = Buffer.alloc(4);
       crcBuffer.writeUInt32LE(entry.crc, 0);
-      fs.writeSync(writer.outputFd, crcBuffer, 0, 4, crcOffset);
+      fs.writeSync(writer.outputFd, crcBuffer, 0, 4, entry.localHdrOffset + 14);
     }
 
-    // Update bitFlags in local header if encryption was applied
-    // This is necessary because the local header is written before compression/encryption,
-    // but encryption flags are set during compression. We need to update the header afterward.
     if (entry.isEncrypted || (entry.bitFlags & GP_FLAG.ENCRYPTED)) {
-      const bitFlagsOffset = entry.localHdrOffset + LOCAL_HDR.FLAGS;
       const bitFlagsBuffer = Buffer.alloc(2);
       bitFlagsBuffer.writeUInt16LE(entry.bitFlags >>> 0, 0);
-      fs.writeSync(writer.outputFd, bitFlagsBuffer, 0, 2, bitFlagsOffset);
+      fs.writeSync(writer.outputFd, bitFlagsBuffer, 0, 2, entry.localHdrOffset + LOCAL_HDR.FLAGS);
     }
 
     // Call hash callback if provided

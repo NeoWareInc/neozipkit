@@ -21,6 +21,7 @@ import { crc32 } from './encryption/ZipCrypto';
 
 const VER_ENCODING = 30;
 const VER_EXTRACT = 10;                             // Version needed to extract (1.0)
+const VER_AES_EXTRACT = 51;                         // Version needed for AES extraction (5.1)
 
 /**
  * Class representing a single entry (file or directory) within a ZIP archive
@@ -358,7 +359,8 @@ export default class ZipEntry implements ZipFileEntry {
     // "PK\003\004"
     data.writeUInt32LE(LOCAL_HDR.SIGNATURE, 0);
     // version needed to extract
-    data.writeUInt16LE(VER_EXTRACT, LOCAL_HDR.VER_EXTRACT);
+    const verExtract = this.cmpMethod === CMP_METHOD.AES_ENCRYPT ? VER_AES_EXTRACT : VER_EXTRACT;
+    data.writeUInt16LE(verExtract, LOCAL_HDR.VER_EXTRACT);
     // general purpose bit flag
     data.writeUInt16LE(this.bitFlags >>> 0, LOCAL_HDR.FLAGS);
     // compression method
@@ -451,7 +453,8 @@ export default class ZipEntry implements ZipFileEntry {
     // Version made by - Needs to be set for NeoZip 
     data.writeUInt16LE(this.isUpdated ? this.VER_MADE_BY : this.verMadeBy, CENTRAL_DIR.VER_MADE);
     // Version needed to extract
-    data.writeInt16LE(this.isUpdated ? VER_EXTRACT : this.verMadeBy, CENTRAL_DIR.VER_EXT);
+    const centralVerExtract = this.cmpMethod === CMP_METHOD.AES_ENCRYPT ? VER_AES_EXTRACT : VER_EXTRACT;
+    data.writeInt16LE(this.isUpdated ? centralVerExtract : this.verMadeBy, CENTRAL_DIR.VER_EXT);
     // Encrypt, Decrypt Flags
     data.writeInt16LE(this.bitFlags >>> 0, CENTRAL_DIR.FLAGS);
     // Compression method

@@ -94,7 +94,27 @@ ts-node examples/list-zip.ts
 - Lists all entries with basic metadata
 - Displays file sizes and compression information
 
-### 4. Blockchain Tokenization (`blockchain-tokenize.ts`)
+### 4. Create AES-256 ZIP (`create-aes-zip.ts`)
+
+Creates a WinZip-compatible AES-256 encrypted ZIP from the files in `examples/test-files/`.
+
+**Usage:**
+```bash
+yarn example:create-aes-zip
+```
+
+Output: `examples/output/aes-example.zip`
+
+### 5. Test AES-256 ZIP (`extract-aes-zip.ts`)
+
+Verifies an AES-256 encrypted ZIP by decrypting and checking HMAC-SHA1 and CRC-32 (no files written to disk). Expects the archive from the create-aes-zip example.
+
+**Usage:**
+```bash
+yarn example:extract-aes-zip
+```
+
+### 6. Blockchain Tokenization (`blockchain-tokenize.ts`)
 
 Demonstrates creating a tokenized ZIP file with blockchain NFT minting.
 
@@ -118,7 +138,7 @@ ts-node examples/blockchain-tokenize.ts
 - Network configuration (defaults to Base Sepolia testnet)
 - Gas fees for minting
 
-### 6. Verify Tokenized ZIP (`verify-tokenized-zip.ts`)
+### 7. Verify Tokenized ZIP (`verify-tokenized-zip.ts`)
 
 Demonstrates verifying a tokenized ZIP file:
 - Loads a tokenized ZIP file

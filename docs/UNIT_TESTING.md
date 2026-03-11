@@ -315,3 +315,84 @@ describe('CRC-32 Functions', () => {
 
 The current integration tests are valuable and should be kept - they serve a different purpose (end-to-end verification) than unit tests (individual function verification).
 
+## Testing AES-256 Encryption
+
+### Unit Tests
+
+Run the AES-256 cryptographic unit tests (PBKDF2, AES-CTR, HMAC-SHA1, extra field parsing):
+
+```bash
+yarn test:aes
+```
+
+### Integration Tests
+
+#### Create an AES-256 encrypted ZIP
+
+```bash
+yarn example:create-aes-zip
+```
+
+This creates `examples/output/aes-example.zip` with WinZip-compatible AES-256 (AE-1) encryption.
+
+#### Verify integrity with neozipkit
+
+```bash
+yarn example:extract-aes-zip
+```
+
+Decrypts each entry and verifies HMAC-SHA1 authentication and CRC-32 integrity without extracting files to disk.
+
+### External Tool Verification
+
+#### lsar (recommended for integrity testing)
+
+`lsar` (from [The Unarchiver](https://theunarchiver.com/command-line)) can verify AES-256 encrypted archives without extracting:
+
+```bash
+lsar -t -l -p <password> <archive.zip>
+```
+
+Example:
+
+```bash
+lsar -t -l -p NeoZipTest2025! examples/output/aes-example.zip
+```
+
+Expected output:
+
+```
+examples/output/aes-example.zip: Zip
+     Flags  File size   Ratio  Mode  Date       Time   Name
+     =====  ==========  =====  ====  ========== =====  ====
+  0. ---E-        2272  93.0%  ----  2025-12-03 15:16  file1.txt... OK.
+  1. ---E-        3264  94.2%  ----  2025-12-03 15:16  file2.txt... OK.
+  2. ---E-        1592  79.6%  ----  2025-12-03 15:16  document.md... OK.
+  3. ---E-        3200  87.6%  ----  2025-12-03 15:16  data.json... OK.
+(Flags: D=Directory, R=Resource fork, L=Link, E=Encrypted, @=Extended attributes)
+4 passed, 0 failed.
+```
+
+The `-t` flag tests integrity (decryption + checksum), `-l` shows file details, and the `E` flag confirms each entry is encrypted.
+
+#### unar (extract and verify)
+
+```bash
+unar -p <password> <archive.zip> -o <output-dir>
+```
+
+#### 7z (extract and verify)
+
+```bash
+7z x <archive.zip> -p<password>
+```
+
+### Installing External Tools (macOS)
+
+```bash
+brew install unar     # provides lsar and unar
+brew install p7zip    # provides 7z
+```
+
+> **Note:** The default macOS `unzip` (Info-ZIP 6.0) does not support WinZip AES-256 and will fail with "unsupported compression method 99". Use `lsar`/`unar` or `7z` instead.
+

@@ -132,9 +132,8 @@ async function main() {
       console.log(`\nArchive file size: ${formatBytes(zipStats.size)}`);
     }
 
-    console.log('\nTo verify compatibility, extract with:');
-    console.log(`  7z x ${outputZip} -p${password}`);
-    console.log(`  unzip -P ${password} ${outputZip}`);
+    console.log('\nTo verify, run the extract test:');
+    console.log('  yarn example:extract-aes-zip');
 
   } catch (error) {
     console.error('Error creating AES-encrypted ZIP archive:');
