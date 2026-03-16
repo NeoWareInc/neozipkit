@@ -27,7 +27,7 @@ const cryptoPlugin = {
   setup(build) {
     // Replace crypto imports with a browser-compatible shim
     build.onResolve({ filter: /^crypto$/ }, () => {
-      return { path: resolve(ROOT_DIR, 'scripts/crypto-browser-shim.js') };
+      return { path: resolve(ROOT_DIR, 'src/browser/crypto-browser-shim.js') };
     });
   },
 };
