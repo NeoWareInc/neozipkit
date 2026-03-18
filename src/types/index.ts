@@ -8,8 +8,8 @@ export interface NeoZipKitInfo {
 }
 
 export const NEOZIPKIT_INFO: NeoZipKitInfo = {
-  version: '0.70.0-alpha',
-  releaseDate: '2024-10-04'
+  version: '0.6.0',
+  releaseDate: '2025-01-27'
 };
 
 // ============================================================================

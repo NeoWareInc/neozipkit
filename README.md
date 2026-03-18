@@ -16,7 +16,7 @@ Advanced ZIP file creation, compression, and encryption library for Node.js and 
 
 - **Advanced ZIP compression** with support for multiple compression methods (Deflate, ZStandard, Stored)
 - **Streaming compression** for memory-efficient processing of large files
-- **Encryption** with ZIP crypto and AES support
+- **Encryption** with ZIP (Legacy) and **AES-256** (WinZip-compatible AE-1/AE-2); create and extract in Node and browser
 - **Hash-based verification** with Merkle tree support (CRC-32, SHA-256)
 - **Real-time progress tracking** for long-running operations
 - **Browser and Node.js compatibility** with clean platform separation
@@ -68,6 +68,8 @@ Runnable examples are in the `examples/` directory:
 - **`examples/extract-zip.ts`** – Extract ZIP files to directories
 - **`examples/list-zip.ts`** – List ZIP archive contents
 - **`examples/copy-zip.ts`** – Copy and modify ZIP archives
+- **`examples/create-aes-zip.ts`** – Create AES-256 encrypted ZIPs (WinZip-compatible)
+- **`examples/extract-aes-zip.ts`** – Extract and verify AES-256 encrypted ZIPs
 
 Run an example:
 
@@ -117,13 +119,23 @@ See [`docs/DEV_BUILD.md`](docs/DEV_BUILD.md) for the development build system.
 - **ZipEntry** – ZIP entry representation
 - **ZipCompress** / **ZipDecompress** – Compression and decompression
 - **HashCalculator** – CRC-32, SHA-256, Merkle root
-- **EncryptionManager** / **ZipCrypto** – Encryption support
+- **EncryptionManager** / **ZipCrypto** – Legacy ZIP encryption
+- **AesCrypto** / **EncryptionMethod.AES_256** – AES-256 encryption (WinZip AE-1/AE-2)
 
 ### Compression methods
 
 - **STORED (0)** – No compression
 - **DEFLATED (8)** – Deflate (default)
 - **ZSTD (93)** – Zstandard
+
+### Encryption
+
+- **ZIP (Legacy)** – Classic ZIP encryption; use `password` in options (no `encryptionMethod`).
+- **AES-256** – WinZip-compatible (AE-1/AE-2); use `password` and `encryptionMethod: 'aes256'` in compress options. Create and extract supported in Node and browser. See [WHATS_NEW.md](WHATS_NEW.md#060-2025-01-27) for details.
+
+## What’s new
+
+See [WHATS_NEW.md](WHATS_NEW.md) for release notes. **v0.6.0** adds full **AES-256 encryption** (create and extract, Node and browser, WinZip-compatible).
 
 ## Security
 
