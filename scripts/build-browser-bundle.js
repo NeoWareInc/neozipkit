@@ -142,25 +142,9 @@ function copyTypeDefinitions() {
   }
 }
 
-// Create Buffer shim for injection
-function createBufferShim() {
-  const shimPath = resolve(ROOT_DIR, 'scripts/buffer-shim.js');
-  if (!existsSync(shimPath)) {
-    const shimContent = `// Buffer polyfill injection point
-// This file is injected by esbuild to provide Buffer support in browser
-import { Buffer } from 'buffer';
-globalThis.Buffer = Buffer;
-`;
-    writeFileSync(shimPath, shimContent);
-  }
-}
-
 // Main build function
 async function build() {
   console.log('Starting browser bundle build...\n');
-  
-  // Create Buffer shim
-  createBufferShim();
   
   // Check command line arguments
   const args = process.argv.slice(2);
