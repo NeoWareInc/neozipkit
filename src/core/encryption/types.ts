@@ -5,7 +5,9 @@
 export enum EncryptionMethod {
   NONE = 0,
   ZIP_CRYPTO = 1,
-  AES_256 = 2
+  AES_256 = 2,
+  /** NeoEncrypt: extra 0x024E + standard compression method */
+  NEO_AES_256 = 3,
 }
 
 export interface EncryptionOptions {

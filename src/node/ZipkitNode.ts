@@ -18,6 +18,7 @@ import {
   CMP_METHOD,
   ENCRYPT_HDR_SIZE
 } from '../core/constants/Headers';
+import { NEO_CRYPTO_ALGORITHM_AES256_V1 } from '../core/encryption/NeoCrypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import { minimatch } from 'minimatch';
@@ -563,11 +564,20 @@ export default class ZipkitNode extends Zipkit {
     // includes the 0x9901 extra field and method 99. The actual compression
     // method is preserved in realCmpMethod for the AES extra field.
     const isAesRequested = options?.password && options?.encryptionMethod === 'aes256';
+    const isNeoRequested = options?.password && options?.encryptionMethod === 'neo-aes256';
     if (isAesRequested) {
       entry.cmpMethod = CMP_METHOD.AES_ENCRYPT;
       entry.aesVersion = 1;
       entry.aesStrength = 3;
       entry.realCmpMethod = realCmpMethod;
+    } else if (isNeoRequested) {
+      entry.cmpMethod = realCmpMethod;
+      entry.aesVersion = 0;
+      entry.aesStrength = 0;
+      entry.realCmpMethod = -1;
+      entry.neoCryptoPayloadVersion = 1;
+      entry.neoCryptoAlgorithm = NEO_CRYPTO_ALGORITHM_AES256_V1;
+      entry.neoCryptoFlags = 0;
     } else {
       entry.cmpMethod = realCmpMethod;
     }

@@ -23,6 +23,7 @@ import { CMP_METHOD, GP_FLAG, ENCRYPT_HDR_SIZE } from './constants/Headers';
 import { HashCalculator } from './components/HashCalculator';
 import { ZipCrypto } from './encryption/ZipCrypto';
 import { AesCrypto } from './encryption/AesCrypto';
+import { NeoCrypto, NEO_CRYPTO_ALGORITHM_AES256_V1 } from './encryption/NeoCrypto';
 
 /**
  * Options for compressing files in a ZIP archive
@@ -30,7 +31,7 @@ import { AesCrypto } from './encryption/AesCrypto';
 export interface CompressOptions {
   level?: number;             // Compression level (1-9, 0=store)
   password?: string | null;   // Password for encryption
-  encryptionMethod?: 'aes256' | 'zipcrypto'; // Encryption method (default: 'aes256')
+  encryptionMethod?: 'aes256' | 'zipcrypto' | 'neo-aes256'; // default WinZip AES when password set; 'neo-aes256' = NeoEncrypt extra 0x024E
   useSHA256?: boolean;        // Whether to calculate SHA256 hash default is false
   useZstd?: boolean;          // Whether to use Zstandard compression default is true
   bufferSize?: number;        // Override default buffer size
@@ -141,9 +142,13 @@ export class ZipCompress {
     }
     
     // Encrypt if password provided
-    const useAes = options?.password && options.encryptionMethod !== 'zipcrypto';
+    const enc = options?.encryptionMethod;
+    const useZipCrypto = enc === 'zipcrypto';
+    const useNeo = enc === 'neo-aes256';
+    const useAes = options?.password && !useZipCrypto && !useNeo;
     if (options?.password) {
-      this.log(`Encrypting compressed data for entry: ${entry.filename} (method: ${useAes ? 'AES-256' : 'ZipCrypto'})`);
+      const label = useZipCrypto ? 'ZipCrypto' : useNeo ? 'NeoEncrypt (AES-256)' : 'WinZip AES-256';
+      this.log(`Encrypting compressed data for entry: ${entry.filename} (method: ${label})`);
       entry.bitFlags = (entry.bitFlags || 0) | GP_FLAG.ENCRYPTED;
       entry.isEncrypted = true;
     }
@@ -168,7 +173,9 @@ export class ZipCompress {
     
     // Encrypt compressed data if password provided
     if (options?.password) {
-      if (useAes) {
+      if (useNeo) {
+        compressedData = this.encryptCompressedDataNeo(entry, compressedData, options.password);
+      } else if (useAes) {
         compressedData = this.encryptCompressedDataAes(entry, compressedData, options.password);
       } else {
         compressedData = this.encryptCompressedData(entry, compressedData, options.password);
@@ -328,6 +335,23 @@ export class ZipCompress {
     
     this.log(`Encryption complete: ${compressedData.length} bytes compressed -> ${encryptedData.length} bytes encrypted (includes ${ENCRYPT_HDR_SIZE}-byte header)`);
     
+    return encryptedData;
+  }
+
+  /**
+   * NeoEncrypt: same ciphertext as WinZip AES stream; standard cmpMethod + NEO extra (0x024E).
+   */
+  encryptCompressedDataNeo(entry: ZipEntry, compressedData: Buffer, password: string): Buffer {
+    this.log(`encryptCompressedDataNeo() called for entry: ${entry.filename}, compressed size: ${compressedData.length}`);
+
+    const encryptedData = NeoCrypto.encryptBuffer(entry, compressedData, password);
+
+    entry.neoCryptoPayloadVersion = 1;
+    entry.neoCryptoAlgorithm = NEO_CRYPTO_ALGORITHM_AES256_V1;
+    entry.neoCryptoFlags = 0;
+
+    this.log(`NeoEncrypt encryption complete: ${compressedData.length} bytes -> ${encryptedData.length} bytes`);
+
     return encryptedData;
   }
 

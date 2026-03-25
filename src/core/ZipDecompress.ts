@@ -90,11 +90,12 @@ class ZipDecompress {
     let fdata = this.zipkit.parseLocalHeader(entry, buffer);
     const password = (this.zipkit as any)?.password;
     const isAes = entry.aesVersion > 0 || entry.cmpMethod === CMP_METHOD.AES_ENCRYPT;
+    const isNeo = entry.neoCryptoAlgorithm > 0;
     
     if ((entry as any).isEncrypted && password) {
-      this.log(`Starting in-memory decryption for entry: ${entry.filename} (${isAes ? 'AES-256' : 'ZipCrypto'})`);
+      this.log(`Starting in-memory decryption for entry: ${entry.filename} (${isAes || isNeo ? 'AES-256 stream (WinZip or Neo)' : 'ZipCrypto'})`);
 
-      if (isAes) {
+      if (isAes || isNeo) {
         fdata = AesCrypto.decryptBuffer(entry, fdata, password);
       } else {
         const zipCrypto = new ZipCrypto();
@@ -108,7 +109,7 @@ class ZipDecompress {
       return null;
     }
 
-    // For AES entries, use the real compression method for decompression
+    // For WinZip AES method 99, use realCmpMethod; NeoEncrypt already uses standard cmpMethod in header
     // For AE-2 (aesVersion=2), skip CRC check since CRC is stored as 0
     const skipHash = isAes && entry.aesVersion === 2 ? true : skipHashCheck;
     return this.unCompress(fdata, entry, skipHash);

@@ -5,7 +5,8 @@
 
 import Zipkit from '../../../src/core/Zipkit';
 import ZipEntry from '../../../src/core/ZipEntry';
-import { CMP_METHOD } from '../../../src/core/constants/Headers';
+import { CMP_METHOD, HDR_ID, NEO_CRYPTO_EXTRA_FIELD_SIZE } from '../../../src/core/constants/Headers';
+import { NEO_CRYPTO_ALGORITHM_AES256_V1 } from '../../../src/core/encryption/NeoCrypto';
 import { CompressOptions } from '../../../src/core/ZipCompress';
 
 describe('Compression and Decompression', () => {
@@ -363,6 +364,43 @@ describe('Compression and Decompression', () => {
       
       expect(decompressedDeflate).toEqual(testData);
       expect(decompressedZstd).toEqual(testData);
+    });
+  });
+
+  describe('NeoEncrypt (neo-aes256)', () => {
+    it('should keep standard cmpMethod, emit NEO extra, and round-trip with password', async () => {
+      const testData = Buffer.from('NeoEncrypt in-buffer round trip.');
+      const pw = 'neo-test-password';
+      const entry = await createZipWithEntry(zipkit, 'neo.txt', testData, {
+        level: 6,
+        useZstd: false,
+        password: pw,
+        encryptionMethod: 'neo-aes256',
+      });
+
+      expect(entry.cmpMethod).toBe(CMP_METHOD.DEFLATED);
+      expect(entry.neoCryptoAlgorithm).toBe(NEO_CRYPTO_ALGORITHM_AES256_V1);
+      expect(entry.cmpMethod).not.toBe(CMP_METHOD.AES_ENCRYPT);
+
+      const hdr = entry.createLocalHdr();
+      const extraStart = 30 + entry.filename.length;
+      const extraLen = hdr.readUInt16LE(28);
+      const extra = hdr.subarray(extraStart, extraStart + extraLen);
+      let foundNeo = false;
+      for (let i = 0; i + 4 <= extra.length; ) {
+        const id = extra.readUInt16LE(i);
+        const len = extra.readUInt16LE(i + 2);
+        if (id === HDR_ID.NEO_CRYPTO) {
+          foundNeo = true;
+          expect(len + 4).toBe(NEO_CRYPTO_EXTRA_FIELD_SIZE);
+        }
+        i += 4 + len;
+      }
+      expect(foundNeo).toBe(true);
+
+      (zipkit as any).password = pw;
+      const out = await zipkit.extract(entry, false);
+      expect(out).toEqual(testData);
     });
   });
 

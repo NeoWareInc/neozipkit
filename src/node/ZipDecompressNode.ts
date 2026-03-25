@@ -224,10 +224,11 @@ export class ZipDecompressNode {
     try {
       const writeStream = fs.createWriteStream(outputPath, { flags: 'w' });
       const isEncrypted = (entry as any).isEncrypted && (this.zipkitNode as any)?.password;
-      const isAes = entry.aesVersion > 0 || entry.cmpMethod === CMP_METHOD.AES_ENCRYPT;
+      const isFullPayloadCrypto =
+        entry.aesVersion > 0 || entry.cmpMethod === CMP_METHOD.AES_ENCRYPT || entry.neoCryptoAlgorithm > 0;
 
-      if (isEncrypted && isAes) {
-        // AES: read full payload, decrypt in one shot (HMAC must be verified first)
+      if (isEncrypted && isFullPayloadCrypto) {
+        // WinZip AES or NeoEncrypt: read full payload, decrypt in one shot (HMAC must be verified first)
         const dataStream = this.readCompressedDataStream(fileHandle, entry);
         const chunks: Buffer[] = [];
         for await (const chunk of dataStream) {
@@ -291,9 +292,10 @@ export class ZipDecompressNode {
     
     try {
       const isEncrypted = (entry as any).isEncrypted && (this.zipkitNode as any)?.password;
-      const isAes = entry.aesVersion > 0 || entry.cmpMethod === CMP_METHOD.AES_ENCRYPT;
+      const isFullPayloadCrypto =
+        entry.aesVersion > 0 || entry.cmpMethod === CMP_METHOD.AES_ENCRYPT || entry.neoCryptoAlgorithm > 0;
 
-      if (isEncrypted && isAes) {
+      if (isEncrypted && isFullPayloadCrypto) {
         const dataStream = this.readCompressedDataStream(fileHandle, entry);
         const chunks: Buffer[] = [];
         for await (const chunk of dataStream) {
@@ -350,9 +352,10 @@ export class ZipDecompressNode {
     
     try {
       const isEncrypted = (entry as any).isEncrypted && (this.zipkitNode as any)?.password;
-      const isAes = entry.aesVersion > 0 || entry.cmpMethod === CMP_METHOD.AES_ENCRYPT;
+      const isFullPayloadCrypto =
+        entry.aesVersion > 0 || entry.cmpMethod === CMP_METHOD.AES_ENCRYPT || entry.neoCryptoAlgorithm > 0;
 
-      if (isEncrypted && isAes) {
+      if (isEncrypted && isFullPayloadCrypto) {
         const dataStream = this.readCompressedDataStream(fileHandle, entry);
         const chunks: Buffer[] = [];
         for await (const chunk of dataStream) {

@@ -21,6 +21,7 @@ import { CMP_METHOD, GP_FLAG, ENCRYPT_HDR_SIZE } from '../core/constants/Headers
 import { HashCalculator } from '../core/components/HashCalculator';
 import { ZipCrypto } from '../core/encryption/ZipCrypto';
 import { AesCrypto } from '../core/encryption/AesCrypto';
+import { NeoCrypto, NEO_CRYPTO_ALGORITHM_AES256_V1 } from '../core/encryption/NeoCrypto';
 import { ZstdManager } from '../core/ZstdManager';
 import Errors from '../core/constants/Errors';
 import * as fs from 'fs';
@@ -144,11 +145,13 @@ export class ZipCompressNode {
 
     // Apply encryption if password is provided
     if (options?.password && buffer.length > 0) {
-      const useAes = options.encryptionMethod !== 'zipcrypto';
-      if (useAes) {
-        buffer = this.encryptCompressedDataAes(buffer, entry, options.password);
-      } else {
+      const enc = options.encryptionMethod;
+      if (enc === 'zipcrypto') {
         buffer = this.encryptCompressedData(buffer, entry, options.password);
+      } else if (enc === 'neo-aes256') {
+        buffer = this.encryptCompressedDataNeo(buffer, entry, options.password);
+      } else {
+        buffer = this.encryptCompressedDataAes(buffer, entry, options.password);
       }
     }
 
@@ -449,6 +452,17 @@ export class ZipCompressNode {
    * Encrypt compressed data using WinZip AES-256
    * Sets compression method to 99, stores real method in entry for the 0x9901 extra field
    */
+  private encryptCompressedDataNeo(compressedData: Buffer, entry: ZipEntry, password: string): Buffer {
+    const encryptedData = NeoCrypto.encryptBuffer(entry, compressedData, password);
+    entry.neoCryptoPayloadVersion = 1;
+    entry.neoCryptoAlgorithm = NEO_CRYPTO_ALGORITHM_AES256_V1;
+    entry.neoCryptoFlags = 0;
+    entry.isEncrypted = true;
+    entry.bitFlags |= GP_FLAG.ENCRYPTED;
+    entry.compressedSize = encryptedData.length;
+    return encryptedData;
+  }
+
   private encryptCompressedDataAes(compressedData: Buffer, entry: ZipEntry, password: string): Buffer {
     const encryptedData = AesCrypto.encryptBuffer(entry, compressedData, password);
 

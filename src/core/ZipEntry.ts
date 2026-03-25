@@ -17,6 +17,9 @@ import {
   AES256_SALT_SIZE,
   AES256_PWD_VERIFY_SIZE,
   AES_AUTH_CODE_SIZE,
+  NEO_CRYPTO_EXTRA_FIELD_SIZE,
+  NEO_CRYPTO_PAYLOAD_V1,
+  NEO_CRYPTO_MAGIC_BYTES,
  } from './constants/Headers';
 import { ZipFileEntry, FileData } from '../types';
 import { Logger } from './components/Logger';
@@ -64,6 +67,11 @@ export default class ZipEntry implements ZipFileEntry {
   aesVersion: number = 0;          // 1=AE-1 (CRC stored), 2=AE-2 (CRC=0)
   aesStrength: number = 0;         // 1=AES-128, 2=AES-192, 3=AES-256
   realCmpMethod: number = -1;      // Actual compression method when cmpMethod=99
+
+  // NeoEncrypt (extra 0x024E) — encryption metadata only; cmpMethod stays standard ZIP code
+  neoCryptoPayloadVersion: number = 0;
+  neoCryptoAlgorithm: number = 0;
+  neoCryptoFlags: number = 0;
 
   isUpdated: boolean = true;        // Entry has been updated
   isDirectory: boolean = false;     // Entry is a directory
@@ -278,6 +286,19 @@ export default class ZipEntry implements ZipFileEntry {
             this.aesStrength = _data.readUInt8(4);
             this.realCmpMethod = _data.readUInt16LE(5);
           }
+        } else if (_id === HDR_ID.NEO_CRYPTO) {
+          if (_len >= NEO_CRYPTO_PAYLOAD_V1) {
+            if (
+              _data[0] === NEO_CRYPTO_MAGIC_BYTES[0] &&
+              _data[1] === NEO_CRYPTO_MAGIC_BYTES[1] &&
+              _data[2] === NEO_CRYPTO_MAGIC_BYTES[2] &&
+              _data[3] === NEO_CRYPTO_MAGIC_BYTES[3]
+            ) {
+              this.neoCryptoPayloadVersion = _data.readUInt8(4);
+              this.neoCryptoAlgorithm = _data.readUInt16LE(5);
+              this.neoCryptoFlags = _data.readUInt16LE(7);
+            }
+          }
         }
         // Skip Unicode Path here as we already processed it
         i += 4 + _len;
@@ -356,12 +377,17 @@ export default class ZipEntry implements ZipFileEntry {
     if (isAes) {
       extraFieldLen += AES_EXTRA_FIELD_SIZE;
     }
+
+    const isNeoEncrypt = this.neoCryptoAlgorithm > 0;
+    if (isNeoEncrypt) {
+      extraFieldLen += NEO_CRYPTO_EXTRA_FIELD_SIZE;
+    }
     
     const data = Buffer.alloc(LOCAL_HDR.SIZE + this.filename.length + extraFieldLen);
     
     // "PK\003\004"
     data.writeUInt32LE(LOCAL_HDR.SIGNATURE, 0);
-    // version needed to extract
+    // version needed to extract (NeoEncrypt keeps standard ZIP method — use normal extract version)
     const verExtract = this.cmpMethod === CMP_METHOD.AES_ENCRYPT ? VER_AES_EXTRACT : VER_EXTRACT;
     data.writeUInt16LE(verExtract, LOCAL_HDR.VER_EXTRACT);
     // general purpose bit flag
@@ -405,6 +431,20 @@ export default class ZipEntry implements ZipFileEntry {
       extraOffset += AES_EXTRA_FIELD_SIZE;
     }
 
+    if (isNeoEncrypt) {
+      data.writeUInt16LE(HDR_ID.NEO_CRYPTO, extraOffset);
+      data.writeUInt16LE(NEO_CRYPTO_PAYLOAD_V1, extraOffset + 2);
+      const p = extraOffset + 4;
+      for (let i = 0; i < 4; i++) {
+        data.writeUInt8(NEO_CRYPTO_MAGIC_BYTES[i], p + i);
+      }
+      data.writeUInt8(this.neoCryptoPayloadVersion, p + 4);
+      data.writeUInt16LE(this.neoCryptoAlgorithm, p + 5);
+      data.writeUInt16LE(this.neoCryptoFlags, p + 7);
+      data.writeUInt16LE(0, p + 9);
+      extraOffset += NEO_CRYPTO_EXTRA_FIELD_SIZE;
+    }
+
     return data;
   }
 
@@ -442,7 +482,10 @@ export default class ZipEntry implements ZipFileEntry {
     const isAes = this.cmpMethod === CMP_METHOD.AES_ENCRYPT && this.aesVersion > 0;
     const aesLen = isAes ? AES_EXTRA_FIELD_SIZE : 0;
 
-    const extraLen = utfLen + sha256Len + uidgidLen + symlinkLen + hardlinkLen + (needsUnicode ? unicodePathLen : 0) + aesLen;
+    const isNeoEncrypt = this.neoCryptoAlgorithm > 0;
+    const neoLen = isNeoEncrypt ? NEO_CRYPTO_EXTRA_FIELD_SIZE : 0;
+
+    const extraLen = utfLen + sha256Len + uidgidLen + symlinkLen + hardlinkLen + (needsUnicode ? unicodePathLen : 0) + aesLen + neoLen;
 
     // Calculate actual filename length (ASCII conversion may change length)
     const asciiName = this.filename.replace(/[^\x00-\x7E]/g, '?');
@@ -571,6 +614,20 @@ export default class ZipEntry implements ZipFileEntry {
       data.writeUInt8(this.aesStrength, extraOffset + 8);
       data.writeUInt16LE(this.realCmpMethod, extraOffset + 9);
       extraOffset += AES_EXTRA_FIELD_SIZE;
+    }
+
+    if (isNeoEncrypt) {
+      data.writeUInt16LE(HDR_ID.NEO_CRYPTO, extraOffset);
+      data.writeUInt16LE(NEO_CRYPTO_PAYLOAD_V1, extraOffset + 2);
+      const p = extraOffset + 4;
+      for (let i = 0; i < 4; i++) {
+        data.writeUInt8(NEO_CRYPTO_MAGIC_BYTES[i], p + i);
+      }
+      data.writeUInt8(this.neoCryptoPayloadVersion, p + 4);
+      data.writeUInt16LE(this.neoCryptoAlgorithm, p + 5);
+      data.writeUInt16LE(this.neoCryptoFlags, p + 7);
+      data.writeUInt16LE(0, p + 9);
+      extraOffset += NEO_CRYPTO_EXTRA_FIELD_SIZE;
     }
 
     return data;
@@ -803,6 +860,7 @@ export default class ZipEntry implements ZipFileEntry {
       `bit0 encrypted=${encrypted}, bit6 strong_encrypt=${strong}`);
 
     const winZipAes = this.cmpMethod === CMP_METHOD.AES_ENCRYPT && this.aesVersion > 0;
+    const neoEncrypt = !winZipAes && this.neoCryptoAlgorithm > 0;
 
     if (winZipAes) {
       Logger.log('  Scheme:                                    ', 'WinZip AES (ZIP compression method 99 + extra 0x9901, vendor "AE")');
@@ -829,6 +887,14 @@ export default class ZipEntry implements ZipFileEntry {
       } else {
         Logger.log('  Note:                                       ', 'Strong-encrypt bit set — unusual for pure WinZip AES; confirm with extra fields.');
       }
+    } else if (neoEncrypt) {
+      Logger.log('  Scheme:                                    ', 'NeoEncrypt (GP encrypted + NEO extra 0x024E; standard ZIP compression method in header)');
+      Logger.log('  NEO payload version / algorithm / flags: ',
+        `${this.neoCryptoPayloadVersion} / ${this.neoCryptoAlgorithm} / ${this.neoCryptoFlags}`);
+      Logger.log('  Compression after decrypt:                 ', this.compressionMethodCodeToString(this.cmpMethod));
+      Logger.log('  Ciphertext layout:                         ',
+        `Same as WinZip AES-256 stream: ${AES256_SALT_SIZE} byte salt + ${AES256_PWD_VERIFY_SIZE} byte verifier + encrypted(compressed) + ${AES_AUTH_CODE_SIZE} byte HMAC`);
+      Logger.log('  CRC in headers:                            ', 'Plaintext CRC (AE-1 style) for algorithm 1');
     } else if (encrypted) {
       if (strong) {
         Logger.log('  Scheme:                                    ', 'PKWARE strong encryption (GP bit 6) — not WinZip method 99; expect extras e.g. 0x0017');
@@ -991,6 +1057,24 @@ export default class ZipEntry implements ZipFileEntry {
                 Logger.log(`   ID[0x${_idStr}] WinZip AES: ${aeLabel}, vendor="${vendorId}", strength=${strengthStr}, realCompressionMethod=${realMethod}`);
               } else {
                 Logger.log(`   ID[0x${_idStr}] WinZip AES: (invalid length ${_len})`);
+              }
+            } else if (_id === HDR_ID.NEO_CRYPTO) {
+              if (_len >= NEO_CRYPTO_PAYLOAD_V1) {
+                if (
+                  _data[0] === NEO_CRYPTO_MAGIC_BYTES[0] &&
+                  _data[1] === NEO_CRYPTO_MAGIC_BYTES[1] &&
+                  _data[2] === NEO_CRYPTO_MAGIC_BYTES[2] &&
+                  _data[3] === NEO_CRYPTO_MAGIC_BYTES[3]
+                ) {
+                  const pv = _data.readUInt8(4);
+                  const alg = _data.readUInt16LE(5);
+                  const flg = _data.readUInt16LE(7);
+                  Logger.log(`   ID[0x${_idStr}] NeoEncrypt: payloadVer=${pv}, algorithm=${alg}, flags=${flg}`);
+                } else {
+                  Logger.log(`   ID[0x${_idStr}] NeoEncrypt: (invalid magic)`);
+                }
+              } else {
+                Logger.log(`   ID[0x${_idStr}] NeoEncrypt: (invalid length ${_len})`);
               }
             } else if (_id === HDR_ID.ZIP64) {
               // ZIP64 Extended Information (0x0001)

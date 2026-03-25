@@ -39,6 +39,12 @@ export const AES_AUTH_CODE_SIZE = 10;
 export const AES_EXTRA_FIELD_SIZE = 11;
 export const AES_OVERHEAD = AES256_SALT_SIZE + AES256_PWD_VERIFY_SIZE + AES_AUTH_CODE_SIZE; // 28 bytes
 
+// NeoEncrypt extra field (HDR_ID.NEO_CRYPTO): id(2) + TSize(2) + payload; v1 payload = 11 bytes
+export const NEO_CRYPTO_PAYLOAD_V1 = 11;
+export const NEO_CRYPTO_EXTRA_FIELD_SIZE = 4 + NEO_CRYPTO_PAYLOAD_V1; // 15 bytes total per record (matches AES-style LOC extra slot)
+/** Magic bytes for NEO payload v1: ASCII `NEZ` + NUL */
+export const NEO_CRYPTO_MAGIC_BYTES: readonly number[] = [0x4e, 0x45, 0x5a, 0x00];
+
 // Data descriptor
 export const DATA_DESC = {
   SIGNATURE:  0x08074b50,  // "PK\007\008"
@@ -171,6 +177,7 @@ export const HDR_ID = {
   IBM1:            0x0065,    // IBM S/390 (Z390) - Attribute
   IBM2:            0x0066,    // IBM S/390 (Z390) - Attribute
   SHA256:          0x014E,    // SHA256 "N\01" with 64 bytes (256 bit) of SHA256 hash data
+  NEO_CRYPTO:      0x024E,    // NeoEncrypt metadata (see docs/NEO_CRYPTO_FORMAT.md); LE on wire: 4E 02
   POSZIP:          0x4690,    // POSZIP 4690
   UNV_TIME:        0x5455,    // Universal Time (UT) (32-bit) 5 data bytes
   UID_GID:         0x7875,    // Unix UID/GID (any size)

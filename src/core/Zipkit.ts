@@ -411,8 +411,9 @@ export default class Zipkit {
     let _localSize = LOCAL_HDR.SIZE + _fnameLen + _extraLen;
 
     const isAes = entry.aesVersion > 0 || entry.cmpMethod === CMP_METHOD.AES_ENCRYPT;
+    const isNeo = entry.neoCryptoAlgorithm > 0;
 
-    if (isAes) {
+    if (isAes || isNeo) {
       // AES: compressedSize includes salt + verifier + encrypted + hmac
       // Return the full payload; AesCrypto.decryptBuffer() handles parsing
       const dataStart = _localSize;

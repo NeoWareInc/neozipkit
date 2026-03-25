@@ -16,7 +16,7 @@ Advanced ZIP file creation, compression, and encryption library for Node.js and 
 
 - **Advanced ZIP compression** with support for multiple compression methods (Deflate, ZStandard, Stored)
 - **Streaming compression** for memory-efficient processing of large files
-- **Encryption** with ZIP (Legacy) and **AES-256** (WinZip-compatible AE-1/AE-2); create and extract in Node and browser
+- **Encryption** with ZIP (Legacy), **AES-256** (WinZip-compatible AE-1/AE-2), and **NeoEncrypt** (NEO AES-256 via extra field `0x024E`, standard compression method in headers); create and extract in Node and browser
 - **Hash-based verification** with Merkle tree support (CRC-32, SHA-256)
 - **Real-time progress tracking** for long-running operations
 - **Browser and Node.js compatibility** with clean platform separation
@@ -70,6 +70,8 @@ Runnable examples are in the `examples/` directory:
 - **`examples/copy-zip.ts`** – Copy and modify ZIP archives
 - **`examples/create-aes-zip.ts`** – Create AES-256 encrypted ZIPs (WinZip-compatible)
 - **`examples/extract-aes-zip.ts`** – Extract and verify AES-256 encrypted ZIPs
+- **`examples/create-neo-aes-zip.ts`** / **`examples/extract-neo-aes-zip.ts`** – NeoEncrypt (NeoZip-only) AES-256 ZIPs
+- **`examples/list-encrypted-zip-verbose.ts`** – Verbose central-directory dump for encrypted entries (WinZip AES, NeoEncrypt, extras)
 
 Run an example:
 
@@ -132,6 +134,7 @@ See [`docs/DEV_BUILD.md`](docs/DEV_BUILD.md) for the development build system.
 
 - **ZIP (Legacy)** – Classic ZIP encryption; use `password` in options (no `encryptionMethod`).
 - **AES-256** – WinZip-compatible (AE-1/AE-2); use `password` and `encryptionMethod: 'aes256'` in compress options. Create and extract supported in Node and browser. See [WHATS_NEW.md](WHATS_NEW.md#060-2025-01-27) for details. For on-disk layout (headers, extra field 0x9901), AE-1 vs AE-2, and how this differs from ZipCrypto and PKWARE strong encryption, see [docs/WINZIP_AES_FORMAT.md](docs/WINZIP_AES_FORMAT.md).
+- **NeoEncrypt (NEO AES-256)** – NeoZip-specific: use `password` and `encryptionMethod: 'neo-aes256'`. The LO/CEN compression method stays a normal ZIP code (e.g. deflate, zstd); encryption is indicated by the encrypted flag plus extra field `0x024E`. Ciphertext layout matches the WinZip AES stream (PBKDF2, CTR, HMAC). Specification: [docs/NEO_CRYPTO_FORMAT.md](docs/NEO_CRYPTO_FORMAT.md).
 
 ## What’s new
 
