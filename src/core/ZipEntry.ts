@@ -14,6 +14,9 @@ import {
   HDR_ID,
   DOS_FILE_ATTR,
   AES_EXTRA_FIELD_SIZE,
+  AES256_SALT_SIZE,
+  AES256_PWD_VERIFY_SIZE,
+  AES_AUTH_CODE_SIZE,
  } from './constants/Headers';
 import { ZipFileEntry, FileData } from '../types';
 import { Logger } from './components/Logger';
@@ -769,6 +772,76 @@ export default class ZipEntry implements ZipFileEntry {
   }
 
   /**
+   * Compression method name for a raw code (e.g. 0x9901 "real" method).
+   */
+  private compressionMethodCodeToString(method: number): string {
+    if (method < 0) {
+      return 'Not set';
+    }
+    switch (method) {
+      case CMP_METHOD.STORED: return 'Stored (0)';
+      case CMP_METHOD.DEFLATED: return 'Deflated (8)';
+      case CMP_METHOD.ZSTD: return 'Zstandard (93)';
+      case CMP_METHOD.BZIP2: return 'BZIP2 (12)';
+      case CMP_METHOD.LZMA: return 'LZMA (14)';
+      case CMP_METHOD.AES_ENCRYPT: return 'AES wrapper (99)';
+      default:
+        return `code ${method}`;
+    }
+  }
+
+  /**
+   * Prints encryption scheme details (WinZip AES vs ZipCrypto vs PKWARE strong).
+   * See docs/WINZIP_AES_FORMAT.md.
+   */
+  private logEncryptionDetails(): void {
+    const encrypted = (this.bitFlags & GP_FLAG.ENCRYPTED) !== 0;
+    const strong = (this.bitFlags & GP_FLAG.STRONG_ENCRYPT) !== 0;
+
+    Logger.log('Encryption (detailed):                       ');
+    Logger.log('  GP flags:                                  ',
+      `bit0 encrypted=${encrypted}, bit6 strong_encrypt=${strong}`);
+
+    const winZipAes = this.cmpMethod === CMP_METHOD.AES_ENCRYPT && this.aesVersion > 0;
+
+    if (winZipAes) {
+      Logger.log('  Scheme:                                    ', 'WinZip AES (ZIP compression method 99 + extra 0x9901, vendor "AE")');
+      Logger.log('  AE variant:                                ',
+        this.aesVersion === 2
+          ? 'AE-2 — CRC-32 in local/CEN headers is 0; plaintext integrity from HMAC-SHA1'
+          : 'AE-1 — CRC-32 in headers is plaintext (uncompressed) CRC-32');
+      const strengthLabel =
+        this.aesStrength === 3 ? 'AES-256 (extra field strength byte 3)'
+        : this.aesStrength === 2 ? 'AES-192 (2)'
+        : this.aesStrength === 1 ? 'AES-128 (1)'
+        : `Unknown (${this.aesStrength})`;
+      Logger.log('  Key size:                                  ', strengthLabel);
+      Logger.log('  Real compression (inside ciphertext):    ',
+        this.compressionMethodCodeToString(this.realCmpMethod));
+      Logger.log('  "Compressed size" in headers:            ',
+        'Length of full AES file data: salt + password verifier + ciphertext + 10-byte HMAC');
+      Logger.log('  Payload layout:                            ',
+        `${AES256_SALT_SIZE} byte salt + ${AES256_PWD_VERIFY_SIZE} byte verifier + encrypted(compressed) data + ${AES_AUTH_CODE_SIZE} byte HMAC (PBKDF2-HMAC-SHA1, WinZip AES-CTR)`);
+      Logger.log('  Version needed to extract (from entry):  ',
+        `${this.verExtract}${this.verExtract === VER_AES_EXTRACT ? ' (5.1 — typical for AES)' : ''}`);
+      if (!strong) {
+        Logger.log('  Typical WinZip AES:                        ', 'bit 6 (strong) usually clear; bit 0 (encrypted) set.');
+      } else {
+        Logger.log('  Note:                                       ', 'Strong-encrypt bit set — unusual for pure WinZip AES; confirm with extra fields.');
+      }
+    } else if (encrypted) {
+      if (strong) {
+        Logger.log('  Scheme:                                    ', 'PKWARE strong encryption (GP bit 6) — not WinZip method 99; expect extras e.g. 0x0017');
+      } else {
+        Logger.log('  Scheme:                                    ', 'Encrypted (bit 0) — typically legacy ZipCrypto if method ≠ 99');
+      }
+      Logger.log('  Compression method in header:              ', `${this.cmpMethodToString()} (${this.cmpMethod})`);
+    } else {
+      Logger.log('  Scheme:                                    ', 'Not encrypted');
+    }
+  }
+
+  /**
    * Converts MS-DOS file attributes to string representation
    * @returns String like "----" where R=readonly, H=hidden, S=system, A=archive
    */
@@ -799,6 +872,7 @@ export default class ZipEntry implements ZipFileEntry {
       this.bitFlags & GP_FLAG.ENCRYPTED ? 
         this.bitFlags & GP_FLAG.STRONG_ENCRYPT ? 'Strong Encrypt' : 'Encrypted' :
         'Not Encrypted');
+    this.logEncryptionDetails();
     Logger.log('File Modified (DOS date/time)                 ', this.toFormattedDateString()); 
     Logger.log('File Modified (UTC)                           ', this.toFormattedUTCDateString());
     Logger.log('Compressed Size:                              ', this.compressedSize);
@@ -909,11 +983,12 @@ export default class ZipEntry implements ZipFileEntry {
             } else if (_id === HDR_ID.AES) {
               if (_len >= 7) {
                 const vendorVersion = _data.readUInt16LE(0);
-                const vendorId = String.fromCharCode(_data[3], _data[2]);
+                const vendorId = String.fromCharCode(_data[2], _data[3]);
                 const strength = _data.readUInt8(4);
                 const realMethod = _data.readUInt16LE(5);
                 const strengthStr = strength === 3 ? '256-bit' : strength === 2 ? '192-bit' : strength === 1 ? '128-bit' : 'Unknown';
-                Logger.log(`   ID[0x${_idStr}] WinZip AES: AE-${vendorVersion}, vendor="${vendorId}", strength=${strengthStr}, realMethod=${realMethod}`);
+                const aeLabel = vendorVersion === 2 ? 'AE-2 (CRC=0 in headers)' : vendorVersion === 1 ? 'AE-1 (plaintext CRC in headers)' : `vendorVer=${vendorVersion}`;
+                Logger.log(`   ID[0x${_idStr}] WinZip AES: ${aeLabel}, vendor="${vendorId}", strength=${strengthStr}, realCompressionMethod=${realMethod}`);
               } else {
                 Logger.log(`   ID[0x${_idStr}] WinZip AES: (invalid length ${_len})`);
               }

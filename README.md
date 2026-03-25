@@ -131,7 +131,7 @@ See [`docs/DEV_BUILD.md`](docs/DEV_BUILD.md) for the development build system.
 ### Encryption
 
 - **ZIP (Legacy)** – Classic ZIP encryption; use `password` in options (no `encryptionMethod`).
-- **AES-256** – WinZip-compatible (AE-1/AE-2); use `password` and `encryptionMethod: 'aes256'` in compress options. Create and extract supported in Node and browser. See [WHATS_NEW.md](WHATS_NEW.md#060-2025-01-27) for details.
+- **AES-256** – WinZip-compatible (AE-1/AE-2); use `password` and `encryptionMethod: 'aes256'` in compress options. Create and extract supported in Node and browser. See [WHATS_NEW.md](WHATS_NEW.md#060-2025-01-27) for details. For on-disk layout (headers, extra field 0x9901), AE-1 vs AE-2, and how this differs from ZipCrypto and PKWARE strong encryption, see [docs/WINZIP_AES_FORMAT.md](docs/WINZIP_AES_FORMAT.md).
 
 ## What’s new
 

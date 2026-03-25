@@ -317,6 +317,8 @@ The current integration tests are valuable and should be kept - they serve a dif
 
 ## Testing AES-256 Encryption
 
+For how WinZip AES is encoded in ZIP headers and how it differs from other encryption schemes, see [WINZIP_AES_FORMAT.md](./WINZIP_AES_FORMAT.md).
+
 ### Unit Tests
 
 Run the AES-256 cryptographic unit tests (PBKDF2, AES-CTR, HMAC-SHA1, extra field parsing):
