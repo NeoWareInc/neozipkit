@@ -115,10 +115,14 @@ export default class ZipkitNode extends Zipkit {
    * 
    * **Required**: You must call this method before calling `getDirectory()` or any other ZIP operations.
    * This method:
-   * 1. Resets all ZIP data
-   * 2. Opens the file handle
-   * 3. Loads EOCD and parses central directory
-   * 4. Populates this.zipEntries[] array
+   * 1. Closes any previously opened read handle (reuse-safe; avoids orphan `fs.promises` handles)
+   * 2. Resets all ZIP data
+   * 3. Opens the file handle
+   * 4. Loads EOCD and parses central directory
+   * 5. Populates this.zipEntries[] array
+   * 
+   * When you are done reading from the archive, call {@link closeFile} so the descriptor is released
+   * promptly (Node deprecates closing `FileHandle` during garbage collection — see Node DEP0137).
    * 
    * @param filePath - Path to the ZIP file to load
    * @returns Promise<ZipEntry[]> Array of all entries in the ZIP file
@@ -127,56 +131,67 @@ export default class ZipkitNode extends Zipkit {
   async loadZipFile(filePath: string): Promise<ZipEntry[]> {
     // Access private members via type assertion (ZipkitServer extends Zipkit)
     const zipkit = this as any;
+
+    // Close prior read handle before clearing state — resetFileData() used to drop the handle
+    // without closing, which leaked FileHandles when loadZipFile() was called again on the same instance.
+    await this.closeFile();
+
     zipkit.resetZipData();
-    
-    // Reset file-based data
+
+    // Reset file-based data (path/size/dir offsets; handle is already closed)
     this.resetFileData();
     this.filePath = filePath;
-    
-    // Open file handle
-    this.fileHandle = await this.openFileHandle(filePath);
-    const stats = await this.fileHandle.stat();
-    this.fileSize = stats.size;
-    
-    // Load EOCD to get central directory info (sets zipComment internally)
-    await this.loadEOCD();
-    
-    // Load central directory in chunks
-    const entries: ZipEntry[] = [];
-    let offset = zipkit.centralDirOffset;
-    let remaining = zipkit.centralDirSize;
-    const bufferSize = this.getBufferSize();
-    
-    while (remaining > 0) {
-      const currentBufferSize = Math.min(bufferSize, remaining);
-      const chunk = Buffer.alloc(currentBufferSize);
-      await this.fileHandle.read(chunk, 0, currentBufferSize, offset);
-      
-      // Parse entries from chunk
-      let chunkOffset = 0;
-      while (chunkOffset < chunk.length) {
-        if (chunk.readUInt32LE(chunkOffset) !== CENTRAL_DIR.SIGNATURE) {
-          break; // End of central directory
+
+    try {
+      this.fileHandle = await this.openFileHandle(filePath);
+      const stats = await this.fileHandle.stat();
+      this.fileSize = stats.size;
+
+      // Load EOCD to get central directory info (sets zipComment internally)
+      await this.loadEOCD();
+
+      // Load central directory in chunks
+      const entries: ZipEntry[] = [];
+      let offset = zipkit.centralDirOffset;
+      let remaining = zipkit.centralDirSize;
+      const bufferSize = this.getBufferSize();
+
+      while (remaining > 0) {
+        const currentBufferSize = Math.min(bufferSize, remaining);
+        const chunk = Buffer.alloc(currentBufferSize);
+        await this.fileHandle.read(chunk, 0, currentBufferSize, offset);
+
+        // Parse entries from chunk
+        let chunkOffset = 0;
+        while (chunkOffset < chunk.length) {
+          if (chunk.readUInt32LE(chunkOffset) !== CENTRAL_DIR.SIGNATURE) {
+            break; // End of central directory
+          }
+
+          // Parse central directory entry
+          const entry = new ZipEntry(null, null, false);
+          const entryData = chunk.subarray(chunkOffset);
+          const remainingData = entry.readZipEntry(entryData);
+
+          entries.push(entry);
+
+          // Move to next entry
+          chunkOffset += (entryData.length - remainingData.length);
         }
-        
-        // Parse central directory entry
-        const entry = new ZipEntry(null, null, false);
-        const entryData = chunk.subarray(chunkOffset);
-        const remainingData = entry.readZipEntry(entryData);
-        
-        entries.push(entry);
-        
-        // Move to next entry
-        chunkOffset += (entryData.length - remainingData.length);
+
+        offset += currentBufferSize;
+        remaining -= currentBufferSize;
       }
-      
-      offset += currentBufferSize;
-      remaining -= currentBufferSize;
+
+      // Store entries in zipEntries[] array (single source of truth)
+      this.zipEntries = entries;
+      return entries;
+    } catch (err) {
+      await this.closeFile();
+      zipkit.resetZipData();
+      this.resetFileData();
+      throw err;
     }
-    
-    // Store entries in zipEntries[] array (single source of truth)
-    this.zipEntries = entries;
-    return entries;
   }
 
 
@@ -915,8 +930,12 @@ export default class ZipkitNode extends Zipkit {
   }
 
   /**
-   * Close file handle explicitly
-   * 
+   * Close the read handle for the currently loaded archive and clear path/size metadata.
+   *
+   * Call this when you are finished with extraction so the OS `FileHandle` is not left open until
+   * garbage collection (Node DEP0137). {@link loadZipFile} also closes any prior handle before
+   * opening a new path on the same instance.
+   *
    * @returns Promise that resolves when file is closed
    */
   async closeFile(): Promise<void> {
@@ -924,6 +943,8 @@ export default class ZipkitNode extends Zipkit {
       await this.fileHandle.close();
       this.fileHandle = null;
     }
+    this.filePath = null;
+    this.fileSize = 0;
   }
 
   /**
@@ -1115,7 +1136,9 @@ export default class ZipkitNode extends Zipkit {
   }
 
   /**
-   * Reset file-based ZIP data to initial state
+   * Reset file-based ZIP path/size state.
+   * The read handle must already be closed (e.g. via {@link closeFile}); {@link loadZipFile}
+   * ensures that before calling this.
    */
   private resetFileData(): void {
     this.fileHandle = null;

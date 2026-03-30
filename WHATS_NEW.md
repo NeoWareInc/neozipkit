@@ -1,5 +1,17 @@
 # What’s New in NeoZipKit
 
+## 0.6.1 (2026-03-30)
+
+### ZipkitNode: read `FileHandle` lifecycle (Node.js)
+
+- **`loadZipFile()`** now **closes any previously opened read handle** before resetting state and opening a new path. Calling `loadZipFile()` again on the **same** `ZipkitNode` used to assign `this.fileHandle = null` without closing the underlying `fs.promises.FileHandle`, which could leak descriptors and trigger Node’s **DEP0137** warning (closing `FileHandle` during garbage collection is deprecated).
+- **Failed loads:** If opening or parsing fails after the handle is created, the handle is closed and file state is reset so the instance is not left with a dangling handle.
+- **`closeFile()`** now also clears **`filePath`** and **`fileSize`** so “closed” matches “no archive loaded” metadata.
+
+See [README.md — ZipkitNode and file handles](README.md#zipkitnode-and-file-handles-nodejs) for usage notes.
+
+---
+
 ## 0.6.0 (2025-01-27)
 
 ### AES-256 encryption support

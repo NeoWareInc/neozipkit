@@ -113,6 +113,12 @@ See [`docs/DEV_BUILD.md`](docs/DEV_BUILD.md) for the development build system.
 
 ## API overview
 
+### ZipkitNode and file handles (Node.js)
+
+`ZipkitNode.loadZipFile()` opens the archive with `fs.promises.open()`. You should call **`closeFile()`** when you are done reading so the `FileHandle` is released promptly. Node deprecates relying on garbage collection to close handles ([DEP0137](https://nodejs.org/api/deprecations.html#DEP0137)).
+
+As of **v0.6.1**, `loadZipFile()` automatically **closes any prior read handle** before loading another path on the **same** instance, so reusing a `ZipkitNode` does not leak descriptors. `closeFile()` remains the right way to finish with the current archive.
+
 ### Core
 
 - **Zipkit** – Core ZIP handling (buffer-based, shared)
@@ -138,7 +144,7 @@ See [`docs/DEV_BUILD.md`](docs/DEV_BUILD.md) for the development build system.
 
 ## What’s new
 
-See [WHATS_NEW.md](WHATS_NEW.md) for release notes. **v0.6.0** adds full **AES-256 encryption** (create and extract, Node and browser, WinZip-compatible).
+See [WHATS_NEW.md](WHATS_NEW.md) for release notes. **v0.6.1** fixes **ZipkitNode** read handle lifecycle (reuse and failed loads; see above). **v0.6.0** adds full **AES-256 encryption** (create and extract, Node and browser, WinZip-compatible).
 
 ## Security
 
