@@ -142,7 +142,7 @@ The central directory **local header offset** must point to the **start** of tha
 | LOC/CEN headers, extra field read/write | `src/core/ZipEntry.ts` |
 | Constants (method 99, 0x9901, flags) | `src/core/constants/Headers.ts` |
 | Creating AES ZIPs (Node) | `src/node/ZipkitNode.ts`, `src/node/ZipCompressNode.ts` |
-| Examples | `examples/create-aes-zip.ts`, `examples/extract-aes-zip.ts` |
+| Examples | `examples/test-winzip-aes.ts` (create + verify WinZip AES in one run) |
 | Testing notes | `docs/UNIT_TESTING.md` (AES section) |
 
 ---

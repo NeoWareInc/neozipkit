@@ -329,21 +329,21 @@ yarn test:aes
 
 ### Integration Tests
 
-#### Create an AES-256 encrypted ZIP
+#### Create and verify a WinZip-compatible AES-256 ZIP
 
 ```bash
-yarn example:create-aes-zip
+yarn example:test-winzip-aes
 ```
 
-This creates `examples/output/aes-example.zip` with WinZip-compatible AES-256 (AE-1) encryption.
+Creates `examples/output/aes-example.zip` with WinZip-compatible AES-256 (AE-1) encryption, then decrypts each entry and verifies HMAC-SHA1 and CRC-32 without extracting files to disk.
 
-#### Verify integrity with neozipkit
+#### NeoEncrypt (NeoCrypto) AES-256 (default in examples)
 
 ```bash
-yarn example:extract-aes-zip
+yarn example:test-aes
 ```
 
-Decrypts each entry and verifies HMAC-SHA1 authentication and CRC-32 integrity without extracting files to disk.
+Creates `examples/output/neo-aes-example.zip` with NeoEncrypt and verifies entries in one run.
 
 ### External Tool Verification
 
@@ -358,7 +358,7 @@ lsar -t -l -p <password> <archive.zip>
 Example:
 
 ```bash
-lsar -t -l -p NeoZipTest2025! examples/output/aes-example.zip
+lsar -t -l -p NeoZipTest2026! examples/output/aes-example.zip
 ```
 
 Expected output:

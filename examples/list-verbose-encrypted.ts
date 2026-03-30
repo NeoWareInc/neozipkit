@@ -10,11 +10,11 @@
  * No password is required — this only reads metadata from the central directory.
  *
  * Usage:
- *   npx ts-node examples/list-encrypted-zip-verbose.ts
- *   npx ts-node examples/list-encrypted-zip-verbose.ts path/to/archive.zip
+ *   npx ts-node examples/list-verbose-encrypted.ts
+ *   npx ts-node examples/list-verbose-encrypted.ts path/to/archive.zip
  *
  * Default archives (if no path given): tries output/aes-example.zip then
- * output/neo-aes-example.zip (run create-aes-zip.ts / create-neo-aes-zip.ts first).
+ * output/neo-aes-example.zip (run example:test-winzip-aes / example:test-aes first).
  */
 
 import ZipkitNode from '../src/node';
@@ -89,7 +89,7 @@ async function main() {
     for (const p of defaults) {
       console.error(`  - ${p}`);
     }
-    console.error('\nOr run: npx ts-node examples/list-encrypted-zip-verbose.ts /path/to/encrypted.zip');
+    console.error('\nOr run: npx ts-node examples/list-verbose-encrypted.ts /path/to/encrypted.zip');
     process.exit(1);
   }
 }

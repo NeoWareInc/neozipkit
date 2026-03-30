@@ -68,10 +68,9 @@ Runnable examples are in the `examples/` directory:
 - **`examples/extract-zip.ts`** – Extract ZIP files to directories
 - **`examples/list-zip.ts`** – List ZIP archive contents
 - **`examples/copy-zip.ts`** – Copy and modify ZIP archives
-- **`examples/create-aes-zip.ts`** – Create AES-256 encrypted ZIPs (WinZip-compatible)
-- **`examples/extract-aes-zip.ts`** – Extract and verify AES-256 encrypted ZIPs
-- **`examples/create-neo-aes-zip.ts`** / **`examples/extract-neo-aes-zip.ts`** – NeoEncrypt (NeoZip-only) AES-256 ZIPs
-- **`examples/list-encrypted-zip-verbose.ts`** – Verbose central-directory dump for encrypted entries (WinZip AES, NeoEncrypt, extras)
+- **`examples/test-aes.ts`** – Create and verify NeoEncrypt (NeoCrypto) AES-256 ZIPs (default)
+- **`examples/test-winzip-aes.ts`** – Create and verify WinZip-compatible AES-256 ZIPs (optional)
+- **`examples/list-verbose-encrypted.ts`** – Verbose central-directory dump for encrypted entries (WinZip AES, NeoEncrypt, extras)
 
 Run an example:
 

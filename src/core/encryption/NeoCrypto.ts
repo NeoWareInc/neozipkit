@@ -1,6 +1,6 @@
 // ======================================
 //  NeoCrypto.ts - NeoEncrypt (NEO AES-256 via extra 0x024E)
-//  Copyright (c) 2025 NeoWare, Inc. All rights reserved.
+//  Copyright (c) 2026 NeoWare, Inc. All rights reserved.
 // ======================================
 // See docs/NEO_CRYPTO_FORMAT.md. Ciphertext layout matches AesCrypto (WinZip LE CTR + HMAC).
 // NeoEncrypt uses standard ZIP compression method; only encryption metadata is in the NEO extra.

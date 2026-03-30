@@ -94,24 +94,23 @@ ts-node examples/list-zip.ts
 - Lists all entries with basic metadata
 - Displays file sizes and compression information
 
-### 4. Create AES-256 ZIP (`create-aes-zip.ts`)
+### 4. Test AES encryption (`test-aes.ts`, `test-winzip-aes.ts`)
 
-Creates a WinZip-compatible AES-256 encrypted ZIP from the files in `examples/test-files/`.
+- **`test-aes.ts`** (default): NeoEncrypt (NeoCrypto) AES-256 — creates `examples/output/neo-aes-example.zip` and verifies each entry in one run.
+- **`test-winzip-aes.ts`**: WinZip-compatible AES-256 (AE-1) — creates `examples/output/aes-example.zip` and verifies each entry in one run.
 
 **Usage:**
 ```bash
-yarn example:create-aes-zip
+yarn example:test-aes
+yarn example:test-winzip-aes
 ```
 
-Output: `examples/output/aes-example.zip`
+### 5. Verbose encrypted listing (`list-verbose-encrypted.ts`)
 
-### 5. Test AES-256 ZIP (`extract-aes-zip.ts`)
+Dumps central-directory metadata and extra fields for encrypted entries (WinZip AES, NeoEncrypt, ZipCrypto). No password required.
 
-Verifies an AES-256 encrypted ZIP by decrypting and checking HMAC-SHA1 and CRC-32 (no files written to disk). Expects the archive from the create-aes-zip example.
-
-**Usage:**
 ```bash
-yarn example:extract-aes-zip
+yarn example:list-verbose-encrypted
 ```
 
 ### 6. Blockchain Tokenization (`blockchain-tokenize.ts`)
