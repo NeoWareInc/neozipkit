@@ -80,12 +80,13 @@
   "author": "NeoWare, Inc.",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/NeoWareInc/neozip-blockchain.git"
+    "url": "git+https://github.com/NeoWareInc/neozipkit.git",
+    "directory": "packages/neozip-blockchain"
   },
   "bugs": {
-    "url": "https://github.com/NeoWareInc/neozip-blockchain/issues"
+    "url": "https://github.com/NeoWareInc/neozipkit/issues"
   },
-  "homepage": "https://github.com/NeoWareInc/neozip-blockchain#readme",
+  "homepage": "https://github.com/NeoWareInc/neozipkit/tree/main/packages/neozip-blockchain#readme",
   "license": "MIT",
   "devDependencies": {
     "@types/jest": "^29.5.12",

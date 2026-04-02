@@ -1,10 +1,10 @@
 # neozip-blockchain
 
-**Open-source companion to [neozipkit](https://www.npmjs.com/package/neozipkit)** — blockchain functionality for NeoZip: **Zipstamp server timestamping** (stamp, upgrade, mint, verify), NFT minting, verification, and wallet management.
+Blockchain functionality for NeoZip: **Zipstamp server timestamping** (stamp, upgrade, mint, verify), NFT minting, verification, and wallet management. Part of the [neozipkit monorepo](../../README.md).
 
 > **Pre-1.0:** This package is under active development. The API may change before 1.0; use in production with caution.
 
-This repository provides the client-side API and utilities that work with the **neozipkit** NPM package for full NZIP (NeoZip) workflows. The **Zipstamp server** is a **separate application**; this library contains the **Zipstamp server API client and helpers** used to communicate with that server (submit digests, poll for confirmations, fetch proofs, etc.). Run the Zipstamp server separately when using timestamping features.
+This package provides the client-side API and utilities that work with the sibling **[neozipkit](../neozipkit/)** package for full NZIP (NeoZip) workflows. The **Zipstamp server** is a **separate application**; this library contains the **Zipstamp server API client and helpers** used to communicate with that server (submit digests, poll for confirmations, fetch proofs, etc.). Run the Zipstamp server separately when using timestamping features.
 
 ## Features
 
@@ -134,7 +134,7 @@ Use the Zipstamp server to stamp a ZIP (submit digest), upgrade once the batch i
 
 ## Integration with neozipkit
 
-This project is the **open-source companion** to the **[neozipkit](https://www.npmjs.com/package/neozipkit)** NPM package. Use neozipkit for ZIP creation, merkle roots, and file handling; use this package for blockchain timestamping, NFT minting, and verification. They work together for full NZIP workflows:
+Both packages live in the same [monorepo](../../README.md) and share a locked version number. Use **[neozipkit](../neozipkit/)** for ZIP creation, merkle roots, and file handling; use this package for blockchain timestamping, NFT minting, and verification. They work together for full NZIP workflows:
 
 ```typescript
 import { ZipkitNode } from 'neozipkit/node';
@@ -174,14 +174,36 @@ The NZIP-NFT smart contracts are included in the `contracts/` directory:
 
 MIT License - see [LICENSE](LICENSE) for details.
 
+## Development
+
+This package is part of the [neozipkit monorepo](../../README.md). From the **repository root**:
+
+```bash
+yarn install
+yarn build        # builds neozipkit first, then neozip-blockchain
+yarn test:unit
+```
+
+To work on this package alone:
+
+```bash
+cd packages/neozip-blockchain
+yarn build
+yarn test
+```
+
+See the [monorepo README](../../README.md) for version management and release workflow.
+
 ## Contributing
 
 Contributions are welcome! Please read our contributing guidelines before submitting PRs.
 
 ## Links
 
-- [neozipkit (NPM)](https://www.npmjs.com/package/neozipkit) - ZIP file processing library; use with this package for full NZIP workflows
-- [NeoZipKit (source)](https://github.com/NeoWareInc/neozipkit) - Open-source ZIP library repo
+- [neozipkit](../neozipkit/) — sibling ZIP processing package in this monorepo
+- [neozipkit on npm](https://www.npmjs.com/package/neozipkit)
+- [neozip-blockchain on npm](https://www.npmjs.com/package/neozip-blockchain)
+- [GitHub repository](https://github.com/NeoWareInc/neozipkit)
 - [Documentation](https://neozip.io/docs)
 - [NeoWare](https://neoware.com)
 

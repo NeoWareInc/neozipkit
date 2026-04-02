@@ -2,7 +2,7 @@
 
 Advanced ZIP file creation, compression, and encryption library for Node.js and the browser.
 
-**Scope of this package:** NeoZipKit focuses solely on creating and manipulating ZIP files (compression, encryption, extraction). All blockchain-related functionality—timestamping, NFT tokenization, verification, wallet integration, and smart contracts—has been moved to **[neozip-blockchain](https://github.com/NeoWareInc/neozip-blockchain)**. Use that package when you need to link ZIPs to the blockchain.
+**Scope of this package:** NeoZipKit focuses solely on creating and manipulating ZIP files (compression, encryption, extraction). All blockchain-related functionality—timestamping, NFT tokenization, verification, wallet integration, and smart contracts—lives in the sibling **[neozip-blockchain](../neozip-blockchain/)** package within this monorepo. Use that package when you need to link ZIPs to the blockchain.
 
 > **⚠️ Alpha Version Warning**: NeoZipKit is currently in **alpha** status. This means:
 > - The API may change in future releases
@@ -10,7 +10,7 @@ Advanced ZIP file creation, compression, and encryption library for Node.js and 
 > - Breaking changes may occur before the stable release
 > - Use in production with caution and thorough testing
 >
-> We welcome feedback and contributions! Please report issues on [GitHub](https://github.com/NeoWareInc/neozipkit/issues).
+> We welcome feedback and contributions! Please report issues on [GitHub](https://github.com/NeoWareInc/neozipkit/issues). This package is part of the [neozipkit monorepo](../../README.md).
 
 ## Features
 
@@ -82,7 +82,7 @@ See [`examples/README.md`](examples/README.md) for details.
 
 ## Blockchain integration
 
-All blockchain code has been moved to a separate package. For timestamping, NFT tokenization, on-chain verification, wallet management, and OpenTimestamps, use **[neozip-blockchain](https://github.com/NeoWareInc/neozip-blockchain)**. It depends on NeoZipKit for ZIP handling and adds all blockchain features on top. NeoZipKit itself contains no blockchain, contract, or wallet code.
+All blockchain code lives in the sibling **[neozip-blockchain](../neozip-blockchain/)** package within this monorepo. For timestamping, NFT tokenization, on-chain verification, wallet management, and OpenTimestamps, install `neozip-blockchain` alongside this package. It depends on `neozipkit` for ZIP handling and adds all blockchain features on top. NeoZipKit itself contains no blockchain, contract, or wallet code.
 
 ## Package layout
 
@@ -93,22 +93,28 @@ All blockchain code has been moved to a separate package. For timestamping, NFT 
 
 ## Development
 
+This package is part of the [neozipkit monorepo](../../README.md). From the **repository root**:
+
 ```bash
-# Install
+# Install all dependencies
 yarn install
 
-# Build
+# Build all packages (topological order)
 yarn build
 
-# Dev build (feature branches)
-yarn dev:build
-
-# Tests
-yarn test
-yarn test:examples
+# Run all unit tests
+yarn test:unit
 ```
 
-See [`docs/DEV_BUILD.md`](docs/DEV_BUILD.md) for the development build system.
+To work on this package alone:
+
+```bash
+cd packages/neozipkit
+yarn build
+yarn test
+```
+
+See [`docs/DEV_BUILD.md`](docs/DEV_BUILD.md) for the development build system and the [monorepo README](../../README.md) for version management and release workflow.
 
 ## API overview
 

@@ -134,7 +134,8 @@
   "author": "NeoWare, Inc.",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/NeoWareInc/neozipkit.git"
+    "url": "git+https://github.com/NeoWareInc/neozipkit.git",
+    "directory": "packages/neozipkit"
   },
   "bugs": {
     "url": "https://github.com/NeoWareInc/neozipkit/issues"
