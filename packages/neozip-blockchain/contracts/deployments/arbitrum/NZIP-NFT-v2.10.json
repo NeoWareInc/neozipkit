@@ -1,0 +1,12 @@
+{
+  "network": "Arbitrum One",
+  "networkKey": "Arbitrum",
+  "chainId": 42161,
+  "contractAddress": "0x2716c4609fD97DaEdF429BC4B4Ec2faa81e2cC60",
+  "version": "2.10.0",
+  "deployer": "0xab90062062A68576D9F2Be2fa3051e101f06AD93",
+  "transactionHash": "0x7033d592f9b0a87bb9164817ad129771bfe73eb09182e5a8ebddd64af5b339e9",
+  "blockNumber": 401371840,
+  "timestamp": "2025-11-18T00:11:09.100Z",
+  "explorerUrl": "https://arbiscan.io/address/0x2716c4609fD97DaEdF429BC4B4Ec2faa81e2cC60"
+}

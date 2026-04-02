@@ -1,0 +1,116 @@
+{
+  "name": "Sample Data File",
+  "description": "This is a JSON file with structured data",
+  "items": [
+    {
+      "id": 0,
+      "name": "Item 0",
+      "description": "This is item number 0 with some descriptive text",
+      "value": 123.45,
+      "tags": ["tag1", "tag2", "tag3"],
+      "metadata": {
+        "created": "2025-01-01T00:00:00.000Z",
+        "updated": "2025-01-01T00:00:00.000Z"
+      }
+    },
+    {
+      "id": 1,
+      "name": "Item 1",
+      "description": "This is item number 1 with some descriptive text",
+      "value": 234.56,
+      "tags": ["tag1", "tag2", "tag3"],
+      "metadata": {
+        "created": "2025-01-01T00:00:00.000Z",
+        "updated": "2025-01-01T00:00:00.000Z"
+      }
+    },
+    {
+      "id": 2,
+      "name": "Item 2",
+      "description": "This is item number 2 with some descriptive text",
+      "value": 345.67,
+      "tags": ["tag1", "tag2", "tag3"],
+      "metadata": {
+        "created": "2025-01-01T00:00:00.000Z",
+        "updated": "2025-01-01T00:00:00.000Z"
+      }
+    },
+    {
+      "id": 3,
+      "name": "Item 3",
+      "description": "This is item number 3 with some descriptive text",
+      "value": 456.78,
+      "tags": ["tag1", "tag2", "tag3"],
+      "metadata": {
+        "created": "2025-01-01T00:00:00.000Z",
+        "updated": "2025-01-01T00:00:00.000Z"
+      }
+    },
+    {
+      "id": 4,
+      "name": "Item 4",
+      "description": "This is item number 4 with some descriptive text",
+      "value": 567.89,
+      "tags": ["tag1", "tag2", "tag3"],
+      "metadata": {
+        "created": "2025-01-01T00:00:00.000Z",
+        "updated": "2025-01-01T00:00:00.000Z"
+      }
+    },
+    {
+      "id": 5,
+      "name": "Item 5",
+      "description": "This is item number 5 with some descriptive text",
+      "value": 678.90,
+      "tags": ["tag1", "tag2", "tag3"],
+      "metadata": {
+        "created": "2025-01-01T00:00:00.000Z",
+        "updated": "2025-01-01T00:00:00.000Z"
+      }
+    },
+    {
+      "id": 6,
+      "name": "Item 6",
+      "description": "This is item number 6 with some descriptive text",
+      "value": 789.01,
+      "tags": ["tag1", "tag2", "tag3"],
+      "metadata": {
+        "created": "2025-01-01T00:00:00.000Z",
+        "updated": "2025-01-01T00:00:00.000Z"
+      }
+    },
+    {
+      "id": 7,
+      "name": "Item 7",
+      "description": "This is item number 7 with some descriptive text",
+      "value": 890.12,
+      "tags": ["tag1", "tag2", "tag3"],
+      "metadata": {
+        "created": "2025-01-01T00:00:00.000Z",
+        "updated": "2025-01-01T00:00:00.000Z"
+      }
+    },
+    {
+      "id": 8,
+      "name": "Item 8",
+      "description": "This is item number 8 with some descriptive text",
+      "value": 901.23,
+      "tags": ["tag1", "tag2", "tag3"],
+      "metadata": {
+        "created": "2025-01-01T00:00:00.000Z",
+        "updated": "2025-01-01T00:00:00.000Z"
+      }
+    },
+    {
+      "id": 9,
+      "name": "Item 9",
+      "description": "This is item number 9 with some descriptive text",
+      "value": 12.34,
+      "tags": ["tag1", "tag2", "tag3"],
+      "metadata": {
+        "created": "2025-01-01T00:00:00.000Z",
+        "updated": "2025-01-01T00:00:00.000Z"
+      }
+    }
+  ]
+}

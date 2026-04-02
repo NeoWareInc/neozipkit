@@ -1,0 +1,18 @@
+{
+  "network": "Base Sepolia",
+  "networkKey": "base-sepolia",
+  "chainId": 84532,
+  "timestamp": "2026-01-27T00:00:00.000Z",
+  "deployer": "0xc6Bfa9051f17B9860b51370B72792CE66ddB17F9",
+  "contract": {
+    "name": "NZIPNFT",
+    "file": "NZIP-NFT-v2.50.sol",
+    "version": "2.50.0",
+    "address": "0xc9527869c2526C2A88d4f03202F93149B481e2d3",
+    "constructorArgs": ["0x3CFc4E3886839dC859f611887660783a3EE241b4"]
+  },
+  "linkedContracts": {
+    "NZIPTimestampReg": "0x3CFc4E3886839dC859f611887660783a3EE241b4"
+  },
+  "explorerUrl": "https://sepolia.basescan.org/address/0xc9527869c2526C2A88d4f03202F93149B481e2d3"
+}

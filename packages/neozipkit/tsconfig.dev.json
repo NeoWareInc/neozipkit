@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dev-dist",
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "removeComments": false,
+    "incremental": true,
+    "tsBuildInfoFile": "./dev-dist/.tsbuildinfo"
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "dev-dist",
+    "**/*.test.ts",
+    "contracts/**/*"
+  ]
+}

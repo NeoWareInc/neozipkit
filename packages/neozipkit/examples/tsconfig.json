@@ -1,0 +1,44 @@
+{
+  "compilerOptions": {
+    /* Language and Environment */
+    "target": "es2020",
+    "lib": ["es2020", "dom"],
+    
+    /* Modules */
+    "module": "Node16",
+    "rootDir": "./",
+    "moduleResolution": "node16",
+    
+    /* Emit */
+    "declaration": false,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "removeComments": false,
+    
+    /* Interop Constraints */
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    
+    /* Type Checking */
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "skipLibCheck": true,
+    
+    /* JavaScript Support */
+    "allowJs": false,
+    
+    /* Node.js types */
+    "types": ["node"]
+  },
+  "include": [
+    "*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}
+

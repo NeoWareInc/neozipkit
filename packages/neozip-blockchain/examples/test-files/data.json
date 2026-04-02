@@ -1,0 +1,70 @@
+{
+  "name": "Sample Data",
+  "value": 12345,
+  "description": "This is a comprehensive JSON data file for testing the NeoZip blockchain timestamping system. The file contains various data structures and nested objects to test JSON parsing and handling.",
+  "metadata": {
+    "version": "1.0.0",
+    "created": "2024-01-01T00:00:00Z",
+    "author": "NeoZip Test Suite",
+    "purpose": "Testing blockchain timestamping and tokenization"
+  },
+  "features": [
+    "Timestamping",
+    "Tokenization",
+    "Verification",
+    "Blockchain Integration",
+    "File Integrity",
+    "Provenance Tracking"
+  ],
+  "testData": {
+    "strings": [
+      "Lorem ipsum dolor sit amet",
+      "consectetur adipiscing elit",
+      "sed do eiusmod tempor incididunt",
+      "ut labore et dolore magna aliqua"
+    ],
+    "numbers": [1, 2, 3, 4, 5, 10, 20, 30, 40, 50, 100, 200, 300, 400, 500],
+    "booleans": [true, false, true, false, true],
+    "nested": {
+      "level1": {
+        "level2": {
+          "level3": {
+            "value": "Deep nesting test",
+            "array": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            "object": {
+              "key1": "value1",
+              "key2": "value2",
+              "key3": "value3"
+            }
+          }
+        }
+      }
+    }
+  },
+  "largeArray": [
+    {"id": 1, "name": "Item 1", "description": "First item in the array", "value": 100},
+    {"id": 2, "name": "Item 2", "description": "Second item in the array", "value": 200},
+    {"id": 3, "name": "Item 3", "description": "Third item in the array", "value": 300},
+    {"id": 4, "name": "Item 4", "description": "Fourth item in the array", "value": 400},
+    {"id": 5, "name": "Item 5", "description": "Fifth item in the array", "value": 500},
+    {"id": 6, "name": "Item 6", "description": "Sixth item in the array", "value": 600},
+    {"id": 7, "name": "Item 7", "description": "Seventh item in the array", "value": 700},
+    {"id": 8, "name": "Item 8", "description": "Eighth item in the array", "value": 800},
+    {"id": 9, "name": "Item 9", "description": "Ninth item in the array", "value": 900},
+    {"id": 10, "name": "Item 10", "description": "Tenth item in the array", "value": 1000}
+  ],
+  "configuration": {
+    "settings": {
+      "compression": true,
+      "encryption": false,
+      "timestamping": true,
+      "tokenization": true
+    },
+    "limits": {
+      "maxFileSize": 10485760,
+      "maxFiles": 1000,
+      "timeout": 30000
+    }
+  },
+  "additionalInfo": "This JSON file has been expanded to be at least 1KB in size to properly test file handling, compression, and blockchain operations. The structure includes various data types and nested objects to ensure comprehensive testing."
+}

@@ -1,0 +1,70 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build output
+dist/
+dev-dist/
+dev-build/
+
+# Yarn Berry (v2+) local state
+.yarn/install-state.gz
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/*.pnp.*
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Wallet and private keys (NEVER commit these!)
+wallet/
+*.key
+*.pem
+*.wallet
+*.keystore
+neozip-wallet.json
+secrets/
+
+# Documentation (internal)
+admin_docs/
+
+# Coverage
+coverage/
+
+# Compiled example files
+examples/**/*.js
+examples/**/*.js.map
+examples/**/*.d.ts
+examples/**/*.d.ts.map
+examples/output/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+*.tgz
+
+# Hardhat (contracts subproject)
+contracts/artifacts/
+contracts/cache/
+contracts/typechain/
+contracts/typechain-types/
+contracts/deployment-*.json
+contracts/.env
