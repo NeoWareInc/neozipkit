@@ -1,20 +1,42 @@
+# Release flow:
+#   • Actions → Publish → "Run workflow" = rehearse: build, test, optional npm --dry-run (no upload, no release).
+#   • Push tag v* = real publish + GitHub release (uses environment npm-publish).
+#
+# Publishes with npm Trusted Publishing (OIDC) when configured on npmjs.com (no long-lived NPM_TOKEN in CI).
+# Requires Node ≥22.14 for OIDC (see npm docs).
+#
+# One-time npm setup (both packages):
+#   neozipkit + neozip-blockchain → Settings → Trusted publishers → GitHub Actions
+#   (repo, workflow file publish.yml, optional Environment name: npm-publish — must match publish job below)
+# Optional hardening: Package → Publishing access → "Require 2FA and disallow tokens"
+#
+# GitHub: Settings → Environments → npm-publish → add required reviewers / deployment branches.
+
 name: Publish
 
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      npm_dry_run:
+        description: 'Run yarn npm publish --dry-run for both packages (shows packed files; no upload)'
+        type: boolean
+        default: true
 
 jobs:
-  publish:
+  rehearse:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           registry-url: https://registry.npmjs.org
 
       - run: corepack enable && corepack prepare yarn@4.12.0 --activate
@@ -22,6 +44,48 @@ jobs:
       - run: yarn install --immutable
 
       - run: yarn build
+
+      - run: yarn test:quick
+
+      - name: Show package versions (would publish)
+        run: |
+          echo "neozipkit:        $(node -p "require('./packages/neozipkit/package.json').name")@$(node -p "require('./packages/neozipkit/package.json').version")"
+          echo "neozip-blockchain: $(node -p "require('./packages/neozip-blockchain/package.json').name")@$(node -p "require('./packages/neozip-blockchain/package.json').version")"
+
+      - name: Preview neozipkit (npm publish --dry-run)
+        if: inputs.npm_dry_run
+        working-directory: packages/neozipkit
+        # Use npm (not `yarn npm publish`) so the file list matches the real npm tarball.
+        run: npm publish --access public --dry-run
+
+      - name: Preview neozip-blockchain (npm publish --dry-run)
+        if: inputs.npm_dry_run
+        working-directory: packages/neozip-blockchain
+        # Use npm here (not `yarn npm publish`): Yarn's dry-run can list extra README paths; npm matches the real tarball.
+        run: npm publish --access public --dry-run
+
+  publish:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: npm-publish
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - run: corepack enable && corepack prepare yarn@4.12.0 --activate
+
+      - run: yarn install --immutable
+
+      - run: yarn build
+
+      - run: yarn test:quick
 
       - name: Verify tag matches package versions
         run: |
@@ -37,14 +101,10 @@ jobs:
       - name: Publish neozipkit
         working-directory: packages/neozipkit
         run: yarn npm publish --access public
-        env:
-          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish neozip-blockchain
         working-directory: packages/neozip-blockchain
         run: yarn npm publish --access public
-        env:
-          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - uses: softprops/action-gh-release@v2
         with:

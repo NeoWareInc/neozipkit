@@ -1,0 +1,2 @@
+# Not published to npm (package "files" is the primary allowlist; this guards accidental inclusion).
+examples/

@@ -1,0 +1,5 @@
+# Not published to npm (the package "files" field is the primary allowlist).
+# These entries reduce risk if "files" is ever widened by mistake.
+examples/
+contracts/
+docs/

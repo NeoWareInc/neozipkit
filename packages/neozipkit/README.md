@@ -62,23 +62,15 @@ const zipBlob = await zip.createZipBlob();
 
 ### Examples
 
-Runnable examples are in the `examples/` directory:
+Runnable examples live **only in this repository**—they are **not** shipped in the [npm package](https://www.npmjs.com/package/neozipkit) (`package.json` `"files"` is `dist/`, `src/`, and `README.md`). Browse or clone the repo to use them.
 
-- **`examples/create-zip.ts`** – Create ZIP archives from multiple files
-- **`examples/extract-zip.ts`** – Extract ZIP files to directories
-- **`examples/list-zip.ts`** – List ZIP archive contents
-- **`examples/copy-zip.ts`** – Copy and modify ZIP archives
-- **`examples/test-aes.ts`** – Create and verify NeoEncrypt (NeoCrypto) AES-256 ZIPs (default)
-- **`examples/test-winzip-aes.ts`** – Create and verify WinZip-compatible AES-256 ZIPs (optional)
-- **`examples/list-verbose-encrypted.ts`** – Verbose central-directory dump for encrypted entries (WinZip AES, NeoEncrypt, extras)
-
-Run an example:
+On GitHub: [`packages/neozipkit/examples/`](https://github.com/NeoWareInc/neozipkit/tree/main/packages/neozipkit/examples) — see [`examples/README.md`](examples/README.md) for scripts (create/extract/list/copy ZIP, AES demos, encrypted listing) and how to run them from a checkout.
 
 ```bash
+# From monorepo root, after yarn install
+cd packages/neozipkit
 npx ts-node examples/create-zip.ts
 ```
-
-See [`examples/README.md`](examples/README.md) for details.
 
 ## Blockchain integration
 
@@ -90,6 +82,10 @@ All blockchain code lives in the sibling **[neozip-blockchain](../neozip-blockch
 - **`neozipkit/node`** – Node.js-only (ZipkitNode, file I/O, streaming)
 - **`neozipkit/browser`** – Browser-only (ZipkitBrowser, Blob API)
 - **`neozipkit/browser-esm`** – Browser ESM bundle (tree-shaking)
+
+## Publishing (npm)
+
+The published tarball includes **`dist/`**, **`src/`** (for `neozipkit/src` conditional exports), and the **package root [`README.md`](README.md)** only. **`examples/`** and other repo-only folders are excluded—use **`yarn publish:dry-run`** (`npm publish --dry-run`) to preview the file list.
 
 ## Development
 

@@ -13,7 +13,7 @@ This package provides the client-side API and utilities that work with the sibli
 - **Token Verification**: Verify ZIP file authenticity against blockchain
 - **Wallet Management**: Browser and Node.js wallet integrations
 - **Multi-Network Support**: Base Mainnet, Base Sepolia, and more
-- **Examples**: Runnable scripts for stamp, upgrade, mint, verify, and token-create flows (see `examples/` and `examples/README.md`)
+- **Examples**: Runnable scripts for stamp, upgrade, mint, verify, and token-create flows (see [`examples/README.md`](examples/README.md), `examples/`, and `package.json` `example:*` scripts)
 
 ## Installation
 
@@ -174,6 +174,12 @@ The NZIP-NFT smart contracts are included in the `contracts/` directory:
 
 MIT License - see [LICENSE](LICENSE) for details.
 
+## Publishing (npm)
+
+The npm tarball is intentionally minimal: compiled **`dist/`**, the **package root [`README.md`](README.md)**, and **[`LICENSE`](LICENSE)** only (`package.json` `"files"`). **`examples/`**, **`contracts/`**, and other repo docs are **not** on npm; use this repository for those.
+
+Preview what will ship: run **`yarn publish:dry-run`** (it uses **`npm publish --dry-run`**, which matches npm’s file list). Avoid **`yarn npm publish --dry-run`** for previews—Yarn can print extra paths such as nested `README.md` files that are **not** in the published package.
+
 ## Development
 
 This package is part of the [neozipkit monorepo](../../README.md). From the **repository root**:
@@ -193,6 +199,8 @@ yarn test
 ```
 
 See the [monorepo README](../../README.md) for version management and release workflow.
+
+Smart contracts (Solidity, ABI, deployments): see [`contracts/README.md`](contracts/README.md) and [`contracts/docs/`](contracts/docs/).
 
 ## Contributing
 

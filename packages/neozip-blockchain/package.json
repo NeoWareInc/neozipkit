@@ -51,6 +51,7 @@
     "test": "jest",
     "test:unit": "jest tests/unit",
     "test:watch": "jest --watch",
+    "publish:dry-run": "npm publish --access public --dry-run",
     "verify-email": "dotenv -e .env.local -e .env -- ts-node examples/verify-email.ts",
     "example:token-direct": "dotenv -e .env.local -e .env -- ts-node examples/token-direct.ts",
     "example:verify-token": "ts-node examples/verify-token.ts",

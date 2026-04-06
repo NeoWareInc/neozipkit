@@ -9,6 +9,10 @@ Monorepo for NeoZip packages — advanced ZIP file creation, compression, encryp
 | [`neozipkit`](packages/neozipkit/) | ZIP compression, encryption (AES-256, NeoEncrypt), and extraction | [neozipkit](https://www.npmjs.com/package/neozipkit) |
 | [`neozip-blockchain`](packages/neozip-blockchain/) | Blockchain features: NFT minting, verification, timestamps, wallets | [neozip-blockchain](https://www.npmjs.com/package/neozip-blockchain) |
 
+## Examples
+
+ZIP-focused sample scripts live under [`packages/neozipkit/examples/`](packages/neozipkit/examples/). They are **not** included in the [`neozipkit`](https://www.npmjs.com/package/neozipkit) npm tarball (only `dist/`, `src/`, and `README.md` are published); clone this repository to run them. Blockchain-oriented examples are under [`packages/neozip-blockchain/examples/`](packages/neozip-blockchain/examples/) (also repo-only).
+
 ## Getting started
 
 ```bash

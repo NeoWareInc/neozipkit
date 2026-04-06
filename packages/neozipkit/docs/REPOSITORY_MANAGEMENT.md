@@ -81,12 +81,16 @@ neozipkit/
 - Isolated Solidity contracts directory
 - Has its own `package.json` and dependencies
 - Contains deployment and verification scripts
-- See `contracts/README.md` for contract-specific documentation
+- Smart contracts live under `packages/neozip-blockchain/contracts/` — start with [`contracts/README.md`](../../neozip-blockchain/contracts/README.md); more detail in `contracts/docs/`
 
-**`examples/`** - Example Code
+**`examples/`** - Example Code (neozipkit package)
 - Basic examples demonstrating core functionality
-- Can be run with `ts-node` directly
+- Can be run with `ts-node` directly from a repo checkout
 - See `examples/README.md` for usage instructions
+- **Not published to npm** — the `neozipkit` tarball includes only `dist/`, `src/`, and `README.md` (`package.json` `"files"`)
+
+**`packages/neozip-blockchain/examples/`** - Blockchain / Zipstamp examples
+- Runnable scripts (stamp, upgrade, mint, verify, token flows); see [`examples/README.md`](../../neozip-blockchain/examples/README.md) in that package
 
 **`scripts/`** - Build Scripts
 - Utility scripts for build automation
@@ -117,8 +121,10 @@ See `DEV_BUILD.md` for detailed information about the development build system.
 - **`VERSION_MANAGEMENT.md`** - Version management procedures
 - **`DEV_BUILD.md`** - Development build system documentation
 - **`BRANCH_PROTECTION_ANALYSIS.md`** - Branch protection strategy
-- **`contracts/README.md`** - Smart contract documentation
-- **`examples/README.md`** - Example code documentation
+- **`packages/neozip-blockchain/contracts/README.md`** - Smart contract layout and deployment overview
+- **`packages/neozip-blockchain/contracts/docs/`** - Additional contract documentation
+- **`examples/README.md`** (neozipkit) - ZIP-focused example documentation
+- **`packages/neozip-blockchain/examples/README.md`** - Blockchain / Zipstamp example documentation
 
 ---
 
@@ -612,14 +618,14 @@ node -e "const { VERSION } = require('./dist/core/version.js'); console.log('Ver
 Review what will be published:
 
 ```bash
-# See what files will be included
-git status
+# npm tarball contents (neozipkit: dist/, src/, README.md — examples/ are repo-only)
+cd packages/neozipkit && npm publish --dry-run
 
 # Review package.json changes
 git diff package.json
 
 # Check dist/ contents
-ls -R dist/ | head -20
+ls -R packages/neozipkit/dist/ | head -20
 ```
 
 #### 5. Commit Changes
@@ -1677,7 +1683,7 @@ yarn set version stable
 
 - **GitHub Issues:** Open an issue for bugs or questions
 - **Documentation:** Check README.md and other docs
-- **Examples:** See `examples/` directory
+- **Examples:** `packages/neozipkit/examples/` in the repo (not included in the npm package)
 - **Workflow Logs:** Check GitHub Actions for CI errors
 
 #### Reporting Issues
@@ -1721,8 +1727,9 @@ This guide provides comprehensive instructions for managing the neozipkit reposi
 - **Version Management:** `VERSION_MANAGEMENT.md`
 - **Development Builds:** `DEV_BUILD.md`
 - **Branch Protection:** `BRANCH_PROTECTION_ANALYSIS.md`
-- **Smart Contracts:** `contracts/README.md`
-- **Examples:** `examples/README.md`
+- **Smart Contracts:** `packages/neozip-blockchain/contracts/README.md` and `contracts/docs/`
+- **Examples (ZIP):** `packages/neozipkit/examples/README.md`
+- **Examples (blockchain):** `packages/neozip-blockchain/examples/README.md`
 
 For questions or issues, please open a GitHub issue or contact the maintainers.
 

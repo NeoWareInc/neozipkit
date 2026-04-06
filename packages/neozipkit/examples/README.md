@@ -2,6 +2,8 @@
 
 Basic examples demonstrating core ZipkitNode functionality for file-based ZIP operations.
 
+> **npm install note:** The `neozipkit` package on [npm](https://www.npmjs.com/package/neozipkit) does **not** include this `examples/` directory. Clone the [neozipkit repository](https://github.com/NeoWareInc/neozipkit) (or copy snippets from GitHub) to run these scripts. Installed-from-npm users should import the library from `neozipkit` / `neozipkit/node` in their own projects.
+
 ## Overview
 
 These examples provide simple, focused demonstrations of ZipkitNode's core features. They are designed to be minimal and easy to understand, focusing on the essential API usage patterns.
@@ -12,7 +14,7 @@ For more advanced examples including full CLI tools, interactive prompts, and co
 
 - Node.js 16+ 
 - TypeScript (for running with ts-node)
-- NeoZipKit installed: `yarn add neozipkit`
+- This repository checked out (examples are not on npm). In the monorepo, `yarn install` links the workspace `neozipkit` package. In a separate project, add `neozipkit` from npm and copy or adapt example code from GitHub.
 
 ## Running Examples
 
@@ -265,7 +267,7 @@ If the blockchain example fails:
 - Verify your wallet has testnet ETH
 - Check network connectivity
 - Ensure `NEOZIP_WALLET_PASSKEY` is set correctly
-- See [contracts/README.md](../contracts/README.md) for testnet faucet information
+- See [contracts/README.md](../../neozip-blockchain/contracts/README.md) for contract layout and deployment; [QUICK_DEPLOY.md](../../neozip-blockchain/contracts/docs/QUICK_DEPLOY.md) for testnet faucet details
 
 ## Next Steps
 
