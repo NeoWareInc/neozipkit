@@ -54,8 +54,12 @@ Publishing is handled by [`.github/workflows/publish.yml`](.github/workflows/pub
    - Do **not** create a secret named `NPM_TOKEN` for this path (leave it unset so the job uses OIDC).  
    - Requires Node **≥ 22.14** in the workflow (already set). See [npm: Trusted publishers](https://docs.npmjs.com/trusted-publishers).
 
-   **B — Classic `NPM_TOKEN` (automation or granular publish token)**  
-   - Create a token on npm: [Access tokens](https://www.npmjs.com/settings/~/tokens) → **Generate New Token** — use a **Granular access token** with **Publish** on both packages, or a **Classic** **Automation** token with publish rights.  
+   **B — Classic `NPM_TOKEN` (CI must bypass publish 2FA)**  
+   - npm returns **`npm error code EOTP` / “requires a one-time password”** in GitHub Actions when the token is **not** allowed to publish without an interactive OTP (common with **Classic “Publish”** tokens or granular tokens without automation bypass).  
+   - **Fix (pick one token type):**  
+     - **Classic → [Automation](https://docs.npmjs.com/creating-and-viewing-access-tokens#creating-legacy-tokens-on-the-website)** (legacy token type **Automation**). These are meant for CI and **do not** require OTP on each publish.  
+     - **Granular access token:** when creating the token, enable **Bypass two-factor authentication (2FA) for automation** (wording on npm may vary) and grant **Publish** on **`neozipkit`** and **`neozip-blockchain`**.  
+   - Create tokens at [npm → Access tokens](https://www.npmjs.com/settings/~/tokens) → **Generate New Token**.  
    - Store it in GitHub in **one** of these places (the publish job uses `environment: npm-publish`, so either works):
      - **Recommended:** **Settings** → **Environments** → **`npm-publish`** → **Environment secrets** → **Add secret** → name **`NPM_TOKEN`** → paste the token.  
      - **Alternative:** **Settings** → **Secrets and variables** → **Actions** → **Repository secrets** → **New repository secret** → name **`NPM_TOKEN`** → paste the token.  
@@ -64,6 +68,8 @@ Publishing is handled by [`.github/workflows/publish.yml`](.github/workflows/pub
    - If you add `NPM_TOKEN`, you are using classic auth; you do not need Trusted Publishing configured for CI (you can still use it later and then remove the secret).
 
    **If publish fails with `YN0033: No authentication configured` or empty `NODE_AUTH_TOKEN` in the log:** the job did not get a token **and** OIDC did not authenticate. **Fix:** add **`NPM_TOKEN`** under **Settings → Environments → `npm-publish` → Environment secrets** (exact name `NPM_TOKEN`), or under **Repository secrets**, using an npm **Automation** or **Granular (Publish)** token. If you intend to use **only** Trusted Publishing, confirm both packages on npm have **Trusted publishers** set to this repo, workflow **`publish.yml`**, environment **`npm-publish`**.
+
+   **If publish fails with `EOTP` / “This operation requires a one-time password”:** your **`NPM_TOKEN`** is a type that still requires **interactive 2FA** for publish. **Replace** the secret with a **Classic Automation** token or a **Granular** token with **automation / bypass 2FA for publish** (see **B** above). Then **revoke** the old token on npm. **Alternative:** remove **`NPM_TOKEN`** from GitHub and use **Trusted Publishing (OIDC)** only (**A**).
 
    **Where things live in the GitHub UI (current layout)**  
    - **Repository** secrets & variables: **Settings** → **Secrets and variables** → **Actions** (tabs **Secrets** / **Variables**).  
