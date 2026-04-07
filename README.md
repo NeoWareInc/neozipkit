@@ -77,12 +77,15 @@ Publishing is handled by [`.github/workflows/publish.yml`](.github/workflows/pub
 
 **In GitHub (manual trigger):**
 
-1. Open the repo → **Actions** (top bar).
-2. In the **left sidebar**, under “All workflows”, click **Publish** (that name comes from `name: Publish` in [`.github/workflows/publish.yml`](.github/workflows/publish.yml)).  
-   If the sidebar is collapsed, use **Actions** → **All workflows** and select **Publish** from the list.
-3. Click **Run workflow** (right side) → choose branch (usually **`main`** or **`dev`**) → leave **npm_dry_run** checked → **Run workflow**.
+**Do not use** **Settings** → **Actions** → **General** / **Runners** / **OIDC**. That screen only configures Actions for the repo (permissions, self-hosted runners, OpenID Connect for cloud deployments). It does **not** list workflows or offer **Run workflow**.
 
-**If “Publish” does not appear:** GitHub only shows **Run workflow** for `workflow_dispatch` when that workflow file exists on the repository **default branch** (often `main`). Merge or push [`.github/workflows/publish.yml`](.github/workflows/publish.yml) to `main`, then refresh **Actions**. Also confirm **Settings** → **General** → **Actions** → **Actions permissions** allows workflows.
+Use the **Actions** item in the **top repository navigation bar** (same row as **Code**, **Issues**, **Pull requests**). Direct URL pattern: `https://github.com/<org>/<repo>/actions`.
+
+1. Open the repo → click **Actions** in the **top bar** (not under Settings).
+2. In the **left sidebar**, under “All workflows”, click **Publish** (from `name: Publish` in [`.github/workflows/publish.yml`](.github/workflows/publish.yml)).
+3. Click **Run workflow** (right side) → choose branch → leave **npm_dry_run** checked → **Run workflow**.
+
+**If “Publish” does not appear:** The workflow file must exist on the **default branch** (often `main`) for **Run workflow** to show. Merge [`.github/workflows/publish.yml`](.github/workflows/publish.yml) to `main` if needed. Under **Settings** → **Actions** → **General**, ensure **Actions permissions** allow workflows (that’s the only Settings → Actions step most repos need).
 
 **Locally (same checks, no GitHub UI):**
 
