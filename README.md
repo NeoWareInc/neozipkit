@@ -76,6 +76,17 @@ Publishing is handled by [`.github/workflows/publish.yml`](.github/workflows/pub
 3. Push branch and tags: `git push origin <branch> && git push origin v0.7.1`.
 4. The tag **must** match `version` in both `packages/neozipkit/package.json` and `packages/neozip-blockchain/package.json` (the workflow enforces this).
 
+### “Re-run” does **not** load a newer workflow file
+
+GitHub Actions **pins each run to the commit that started it**. **Re-run failed jobs** / **Re-run all jobs** replays the **same commit** — including **`.github/workflows/publish.yml` from that SHA**. Updating the file on `main` later does **nothing** to an old run.
+
+To use an updated workflow:
+
+- **Tag publish:** push a **new** tag whose target commit **already contains** the new workflow (e.g. delete the remote tag and push it again **only** if you accept rewriting that tag), **or** release a new version tag (`v0.7.1`, …).
+- **Manual dry run:** **Actions** → **Publish** → **Run workflow** → pick a **branch** whose **tip commit** has the new YAML (then click **Run workflow**). That creates a **new** run, not a re-run.
+
+On the run summary page, open **“X workflow runs”** / commit line and confirm the **commit SHA** matches the commit where you changed `publish.yml`.
+
 ### Dry run (no publish)
 
 **In GitHub (manual trigger):**

@@ -4,6 +4,7 @@
 #
 # If logs show "➤ YN0000" / Yarn security-key prompts: GitHub ran an OLD workflow that used
 # `yarn npm publish`. This file must use `npx npm@11 publish` only — merge to default branch & re-run.
+# "Re-run" on an old workflow run does NOT pick up edits to this file; start a NEW run (new tag or Run workflow).
 #
 # Authentication (pick one):
 #   A) npm Trusted Publishing (recommended): configure OIDC on npmjs.com — no NPM_TOKEN in GitHub.
