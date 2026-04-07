@@ -6,13 +6,17 @@ on:
   pull_request:
     branches: [main, dev]
 
+# Opt JavaScript actions into Node 24 on the runner (see GitHub deprecation notice for Node 20).
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v6.3.0
         with:
           node-version: 22
 

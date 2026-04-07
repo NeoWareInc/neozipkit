@@ -99,6 +99,14 @@ yarn workspace neozip-blockchain run publish:dry-run
 
 From the monorepo root: `yarn publish:all` (requires local `npm login` / token).
 
+### GitHub Actions: “Node.js 20 actions are deprecated” / still mentions `@v4`
+
+Workflows use **`actions/checkout@v6.0.2`** and **`actions/setup-node@v6.3.0`**, plus workflow env **`FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true`** ([GitHub changelog](https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/)).
+
+If the run log still lists **`actions/checkout@v4`** / **`actions/setup-node@v4`**, GitHub is using an **older copy of the workflow** (common causes: changes not **pushed**, **Run workflow** branch doesn’t have the update, or you opened a **re-run** of an old job). Fix: **merge/push** the workflow to the branch you select in **Run workflow**, then start a **new** workflow run (not re-run). On the run page, confirm the commit SHA matches the commit that contains `.github/workflows/publish.yml` with `@v6`.
+
+The **tag publish** job also uses **`softprops/action-gh-release@v2`**, which still declares **Node 20**; you may see a separate deprecation line for that action until upstream ships a Node 24 runtime.
+
 ## License
 
 MIT — Copyright (c) NeoWare, Inc.
