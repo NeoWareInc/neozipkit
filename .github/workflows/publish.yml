@@ -2,12 +2,15 @@
 #   • Actions → Publish → "Run workflow" = rehearse: build, test, optional npm --dry-run (no upload, no release).
 #   • Push tag v* = real publish + GitHub release (uses environment npm-publish).
 #
+# If logs show "➤ YN0000" / Yarn security-key prompts: GitHub ran an OLD workflow that used
+# `yarn npm publish`. This file must use `npx npm@11 publish` only — merge to default branch & re-run.
+#
 # Authentication (pick one):
 #   A) npm Trusted Publishing (recommended): configure OIDC on npmjs.com — no NPM_TOKEN in GitHub.
 #      Requires Node ≥ 22.14 (see https://docs.npmjs.com/trusted-publishers ).
 #   B) Classic token: GitHub → Settings → Environments → npm-publish → Environment secrets
 #      (recommended) OR Settings → Secrets and variables → Actions → Repository secrets —
-#      name NPM_TOKEN. Workflow sets NODE_AUTH_TOKEN + YARN_NPM_AUTH_TOKEN.
+#      name NPM_TOKEN. Publish steps set NODE_AUTH_TOKEN when non-empty.
 #
 # One-time npm setup for OIDC (repeat per package on npmjs.com):
 #   Package → Settings → Trusted publishers → GitHub Actions
@@ -110,10 +113,14 @@ jobs:
           fi
           echo "Tag v$TAG matches both package versions."
 
+      # Registry upload MUST use the npm CLI via npx — never `yarn npm publish`.
+      # Yarn Berry prints ➤ YN0000 and can open WebAuthn / interactive login → exit 42 on GitHub runners.
+      # `npx npm@11` forces the published npm package (OIDC + provenance need npm 11.5+ anyway).
+      - name: Preflight (npm CLI for publish, not Yarn)
+        run: npx --yes npm@11 --version
+
       # Auth: (1) Classic — NPM_TOKEN on npm-publish environment or repo secrets.
       #       (2) OIDC — omit NPM_TOKEN; Trusted Publishing on npm for BOTH packages.
-      # Use `npm publish` (not `yarn npm publish`): Yarn can open npm's interactive WebAuthn/browser
-      # login in CI and crash with "unexpected empty event loop" — npm CLI stays non-interactive.
       - name: Publish neozipkit
         working-directory: packages/neozipkit
         env:
@@ -125,7 +132,7 @@ jobs:
           else
             echo "::notice::Publishing neozipkit with OIDC (NPM_TOKEN unset — Trusted Publishing on npm required)."
           fi
-          npm publish --access public
+          npx --yes npm@11 publish --access public
 
       - name: Publish neozip-blockchain
         working-directory: packages/neozip-blockchain
@@ -138,7 +145,7 @@ jobs:
           else
             echo "::notice::Publishing neozip-blockchain with OIDC (NPM_TOKEN unset — Trusted Publishing on npm required)."
           fi
-          npm publish --access public
+          npx --yes npm@11 publish --access public
 
       - uses: softprops/action-gh-release@v2
         with:

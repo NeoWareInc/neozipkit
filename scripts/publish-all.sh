@@ -11,13 +11,13 @@ yarn build
 echo ""
 echo "Publishing neozipkit..."
 cd packages/neozipkit
-npm publish --access public
+npx --yes npm@11 publish --access public
 cd ../..
 
 echo ""
 echo "Publishing neozip-blockchain..."
 cd packages/neozip-blockchain
-npm publish --access public
+npx --yes npm@11 publish --access public
 cd ../..
 
 echo ""

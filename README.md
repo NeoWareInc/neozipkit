@@ -59,7 +59,7 @@ Publishing is handled by [`.github/workflows/publish.yml`](.github/workflows/pub
    - Store it in GitHub in **one** of these places (the publish job uses `environment: npm-publish`, so either works):
      - **Recommended:** **Settings** → **Environments** → **`npm-publish`** → **Environment secrets** → **Add secret** → name **`NPM_TOKEN`** → paste the token.  
      - **Alternative:** **Settings** → **Secrets and variables** → **Actions** → **Repository secrets** → **New repository secret** → name **`NPM_TOKEN`** → paste the token.  
-   - The **Publish** workflow uses **`npm publish`** (not `yarn npm publish`) so CI never hits Yarn’s interactive npm login / security-key prompt, which fails on GitHub-hosted runners.  
+   - The **Publish** workflow uses **`npx --yes npm@11 publish`** (never `yarn npm publish`). Yarn prints **`➤ YN0000`** and can open WebAuthn / security-key login → **exit 42** on GitHub runners. If you still see **`YN0000`** in Actions, the run is using an **old workflow file** on GitHub—merge the latest `publish.yml` to your default branch and start a **new** run (do not rely on an old re-run).  
    - **`NODE_AUTH_TOKEN`** is set only when `NPM_TOKEN` is non-empty (so an empty secret does not block OIDC).  
    - If you add `NPM_TOKEN`, you are using classic auth; you do not need Trusted Publishing configured for CI (you can still use it later and then remove the secret).
 
