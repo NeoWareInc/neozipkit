@@ -59,8 +59,10 @@ Publishing is handled by [`.github/workflows/publish.yml`](.github/workflows/pub
    - Store it in GitHub in **one** of these places (the publish job uses `environment: npm-publish`, so either works):
      - **Recommended:** **Settings** → **Environments** → **`npm-publish`** → **Environment secrets** → **Add secret** → name **`NPM_TOKEN`** → paste the token.  
      - **Alternative:** **Settings** → **Secrets and variables** → **Actions** → **Repository secrets** → **New repository secret** → name **`NPM_TOKEN`** → paste the token.  
-   - The workflow passes this value to **`NODE_AUTH_TOKEN`** and **`YARN_NPM_AUTH_TOKEN`** for `yarn npm publish`.  
+   - The workflow exports **`NODE_AUTH_TOKEN`** / **`YARN_NPM_AUTH_TOKEN`** only when `NPM_TOKEN` is non-empty (so an empty secret does not block OIDC).  
    - If you add `NPM_TOKEN`, you are using classic auth; you do not need Trusted Publishing configured for CI (you can still use it later and then remove the secret).
+
+   **If publish fails with `YN0033: No authentication configured` or empty `NODE_AUTH_TOKEN` in the log:** the job did not get a token **and** OIDC did not authenticate. **Fix:** add **`NPM_TOKEN`** under **Settings → Environments → `npm-publish` → Environment secrets** (exact name `NPM_TOKEN`), or under **Repository secrets**, using an npm **Automation** or **Granular (Publish)** token. If you intend to use **only** Trusted Publishing, confirm both packages on npm have **Trusted publishers** set to this repo, workflow **`publish.yml`**, environment **`npm-publish`**.
 
    **Where things live in the GitHub UI (current layout)**  
    - **Repository** secrets & variables: **Settings** → **Secrets and variables** → **Actions** (tabs **Secrets** / **Variables**).  

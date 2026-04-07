@@ -110,21 +110,36 @@ jobs:
           fi
           echo "Tag v$TAG matches both package versions."
 
-      # Classic token: add NPM_TOKEN (Environment secret on npm-publish or repository secret).
-      # OIDC: leave NPM_TOKEN unset; Trusted Publishing must be configured on npm for both packages.
+      # Auth: (1) Classic — set secret NPM_TOKEN on the npm-publish environment or repo (see README).
+      #       (2) OIDC — omit NPM_TOKEN; configure Trusted Publishing on npm for BOTH packages.
+      # Do not set NODE_AUTH_TOKEN to an empty string: that blocks OIDC; only export when non-empty.
       - name: Publish neozipkit
         working-directory: packages/neozipkit
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: yarn npm publish --access public
+          NPM_TOKEN_FOR_CI: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -n "${NPM_TOKEN_FOR_CI}" ]; then
+            export NODE_AUTH_TOKEN="$NPM_TOKEN_FOR_CI"
+            export YARN_NPM_AUTH_TOKEN="$NPM_TOKEN_FOR_CI"
+            echo "::notice::Publishing neozipkit with NPM_TOKEN (classic auth)."
+          else
+            echo "::notice::Publishing neozipkit with OIDC (NPM_TOKEN unset — Trusted Publishing on npm required)."
+          fi
+          yarn npm publish --access public
 
       - name: Publish neozip-blockchain
         working-directory: packages/neozip-blockchain
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: yarn npm publish --access public
+          NPM_TOKEN_FOR_CI: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -n "${NPM_TOKEN_FOR_CI}" ]; then
+            export NODE_AUTH_TOKEN="$NPM_TOKEN_FOR_CI"
+            export YARN_NPM_AUTH_TOKEN="$NPM_TOKEN_FOR_CI"
+            echo "::notice::Publishing neozip-blockchain with NPM_TOKEN (classic auth)."
+          else
+            echo "::notice::Publishing neozip-blockchain with OIDC (NPM_TOKEN unset — Trusted Publishing on npm required)."
+          fi
+          yarn npm publish --access public
 
       - uses: softprops/action-gh-release@v2
         with:
