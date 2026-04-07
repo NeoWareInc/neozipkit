@@ -2,15 +2,18 @@
 #   • Actions → Publish → "Run workflow" = rehearse: build, test, optional npm --dry-run (no upload, no release).
 #   • Push tag v* = real publish + GitHub release (uses environment npm-publish).
 #
-# Publishes with npm Trusted Publishing (OIDC) when configured on npmjs.com (no long-lived NPM_TOKEN in CI).
-# Requires Node ≥22.14 for OIDC (see npm docs).
+# Authentication (pick one):
+#   A) npm Trusted Publishing (recommended): configure OIDC on npmjs.com — no NPM_TOKEN in GitHub.
+#      Requires Node ≥ 22.14 (see https://docs.npmjs.com/trusted-publishers ).
+#   B) Classic token: GitHub → Settings → Environments → npm-publish → Environment secrets
+#      (recommended) OR Settings → Secrets and variables → Actions → Repository secrets —
+#      name NPM_TOKEN. Workflow sets NODE_AUTH_TOKEN + YARN_NPM_AUTH_TOKEN.
 #
-# One-time npm setup (both packages):
-#   neozipkit + neozip-blockchain → Settings → Trusted publishers → GitHub Actions
-#   (repo, workflow file publish.yml, optional Environment name: npm-publish — must match publish job below)
-# Optional hardening: Package → Publishing access → "Require 2FA and disallow tokens"
+# One-time npm setup for OIDC (repeat per package on npmjs.com):
+#   Package → Settings → Trusted publishers → GitHub Actions
+#   (this repo, workflow publish.yml, Environment name: npm-publish — must match the job below)
 #
-# GitHub: Settings → Environments → npm-publish → add required reviewers / deployment branches.
+# GitHub UI: Settings → Environments (create npm-publish); Secrets and variables → Actions (repo secrets).
 
 name: Publish
 
@@ -20,7 +23,7 @@ on:
   workflow_dispatch:
     inputs:
       npm_dry_run:
-        description: 'Run yarn npm publish --dry-run for both packages (shows packed files; no upload)'
+        description: 'Run npm publish --dry-run for both packages (shows packed files; no upload)'
         type: boolean
         default: true
 
@@ -68,9 +71,14 @@ jobs:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: npm-publish
+    concurrency:
+      group: npm-publish-${{ github.ref }}
+      cancel-in-progress: false
     permissions:
       contents: write
       id-token: write
+    env:
+      NPM_CONFIG_PROVENANCE: 'true'
     steps:
       - uses: actions/checkout@v4
 
@@ -98,12 +106,20 @@ jobs:
           fi
           echo "Tag v$TAG matches both package versions."
 
+      # Classic token: add NPM_TOKEN (Environment secret on npm-publish or repository secret).
+      # OIDC: leave NPM_TOKEN unset; Trusted Publishing must be configured on npm for both packages.
       - name: Publish neozipkit
         working-directory: packages/neozipkit
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: yarn npm publish --access public
 
       - name: Publish neozip-blockchain
         working-directory: packages/neozip-blockchain
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: yarn npm publish --access public
 
       - uses: softprops/action-gh-release@v2
