@@ -32,5 +32,5 @@ export type { LogLevel, LoggerConfig } from './utils/Logger';
 export * from './zipstamp-server';
 
 // Export package version (keep in sync with package.json version)
-export const VERSION = '0.6.0';
+export const VERSION = '0.7.0';
 

@@ -122,8 +122,8 @@ export interface NeoZipBlockchainInfo {
 }
 
 export const NEOZIP_BLOCKCHAIN_INFO: NeoZipBlockchainInfo = {
-  version: '0.6.0',
-  releaseDate: '2026-03-03'
+  version: '0.7.0',
+  releaseDate: '2026-04-06'
 };
 
 // ============================================================================
