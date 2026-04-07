@@ -110,9 +110,10 @@ jobs:
           fi
           echo "Tag v$TAG matches both package versions."
 
-      # Auth: (1) Classic — set secret NPM_TOKEN on the npm-publish environment or repo (see README).
-      #       (2) OIDC — omit NPM_TOKEN; configure Trusted Publishing on npm for BOTH packages.
-      # Do not set NODE_AUTH_TOKEN to an empty string: that blocks OIDC; only export when non-empty.
+      # Auth: (1) Classic — NPM_TOKEN on npm-publish environment or repo secrets.
+      #       (2) OIDC — omit NPM_TOKEN; Trusted Publishing on npm for BOTH packages.
+      # Use `npm publish` (not `yarn npm publish`): Yarn can open npm's interactive WebAuthn/browser
+      # login in CI and crash with "unexpected empty event loop" — npm CLI stays non-interactive.
       - name: Publish neozipkit
         working-directory: packages/neozipkit
         env:
@@ -120,12 +121,11 @@ jobs:
         run: |
           if [ -n "${NPM_TOKEN_FOR_CI}" ]; then
             export NODE_AUTH_TOKEN="$NPM_TOKEN_FOR_CI"
-            export YARN_NPM_AUTH_TOKEN="$NPM_TOKEN_FOR_CI"
             echo "::notice::Publishing neozipkit with NPM_TOKEN (classic auth)."
           else
             echo "::notice::Publishing neozipkit with OIDC (NPM_TOKEN unset — Trusted Publishing on npm required)."
           fi
-          yarn npm publish --access public
+          npm publish --access public
 
       - name: Publish neozip-blockchain
         working-directory: packages/neozip-blockchain
@@ -134,12 +134,11 @@ jobs:
         run: |
           if [ -n "${NPM_TOKEN_FOR_CI}" ]; then
             export NODE_AUTH_TOKEN="$NPM_TOKEN_FOR_CI"
-            export YARN_NPM_AUTH_TOKEN="$NPM_TOKEN_FOR_CI"
             echo "::notice::Publishing neozip-blockchain with NPM_TOKEN (classic auth)."
           else
             echo "::notice::Publishing neozip-blockchain with OIDC (NPM_TOKEN unset — Trusted Publishing on npm required)."
           fi
-          yarn npm publish --access public
+          npm publish --access public
 
       - uses: softprops/action-gh-release@v2
         with:
