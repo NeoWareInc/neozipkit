@@ -28,8 +28,8 @@ export type {
 export { Logger, configureLoggerFromEnvironment } from './utils/Logger';
 export type { LogLevel, LoggerConfig } from './utils/Logger';
 
-// Export Zipstamp server API functionality
-export * from './zipstamp-server';
+// Export NeoZip Token Service (TokenService) API functionality
+export * from './token-service';
 
 // Export package version (keep in sync with package.json version)
 export const VERSION = '0.7.0';

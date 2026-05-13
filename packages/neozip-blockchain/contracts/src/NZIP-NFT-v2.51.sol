@@ -11,7 +11,7 @@ import "./NZIP-TimestampReg-v0.90.sol";
  * @title NZIPNFT v2.51 (ZipFileNFTPublic compatible)
  * @dev NZIP ERC-721 NFT contract for NeoZip tokenized ZIP files.
  *
- * v2.51: Digest-only identity. No composite key; creationTimestamp is metadata only (link to Zipstamp).
+ * v2.51: Digest-only identity. No composite key; creationTimestamp is metadata only (link to NeoZip Token Service).
  * Multiple tokens per merkle root allowed; client suggests original (earliest) or user's token.
  *
  * Two minting modes:
@@ -29,7 +29,7 @@ contract NZIPNFT is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         string encryptedHash;
         string ipfsHash;
         address creator;
-        uint256 creationTimestamp;  // Metadata only: link to prior Zipstamp; 0 = none
+        uint256 creationTimestamp;  // Metadata only: link to prior token service stamp; 0 = none
         uint256 tokenizationTime;
         uint256 blockNumber;
     }

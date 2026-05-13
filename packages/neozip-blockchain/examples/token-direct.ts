@@ -4,7 +4,7 @@
  * Token Direct Example
  *
  * Direct mint: create a NZIP file and mint it on the blockchain using the NZIP contract v2.51
- * (no Zipstamp server). Default network is Base Sepolia, which uses the v2.51 contract.
+ * (no NeoZip Token Service). Default network is Base Sepolia, which uses the v2.51 contract.
  *
  * PREREQUISITES:
  * - This example requires neozipkit to be installed: npm install neozipkit

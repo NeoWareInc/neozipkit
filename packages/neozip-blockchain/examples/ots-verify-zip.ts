@@ -8,7 +8,7 @@
  * using neozip-blockchain/ots.
  *
  * This is a legacy/add-on example. For primary timestamping use the
- * Zipstamp server flow (stamp-zip, upgrade-zip, verify-zip).
+ * NeoZip Token Service flow (stamp-zip, upgrade-zip, verify-zip).
  *
  * Usage:
  *   ts-node examples/ots-verify-zip.ts <path-to.zip>
@@ -49,7 +49,7 @@ async function main() {
     switch (result.status) {
       case 'none':
         console.log('  Status: No OpenTimestamps proof found in this ZIP.');
-        console.log('  (Zipstamp server timestamps use TIMESTAMP.NZIP; this checks for TIMESTAMP.OTS / TS-SUBMIT.OTS)');
+        console.log('  (NeoZip Token Service timestamps use TIMESTAMP.NZIP; this checks for TIMESTAMP.OTS / TS-SUBMIT.OTS)');
         break;
       case 'valid':
         console.log('  Status: Verified');

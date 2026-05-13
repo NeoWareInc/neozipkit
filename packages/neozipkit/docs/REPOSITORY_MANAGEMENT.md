@@ -89,7 +89,7 @@ neozipkit/
 - See `examples/README.md` for usage instructions
 - **Not published to npm** — the `neozipkit` tarball includes only `dist/`, `src/`, and `README.md` (`package.json` `"files"`)
 
-**`packages/neozip-blockchain/examples/`** - Blockchain / Zipstamp examples
+**`packages/neozip-blockchain/examples/`** - Blockchain / NeoZip Token Service examples
 - Runnable scripts (stamp, upgrade, mint, verify, token flows); see [`examples/README.md`](../../neozip-blockchain/examples/README.md) in that package
 
 **`scripts/`** - Build Scripts
@@ -124,7 +124,7 @@ See `DEV_BUILD.md` for detailed information about the development build system.
 - **`packages/neozip-blockchain/contracts/README.md`** - Smart contract layout and deployment overview
 - **`packages/neozip-blockchain/contracts/docs/`** - Additional contract documentation
 - **`examples/README.md`** (neozipkit) - ZIP-focused example documentation
-- **`packages/neozip-blockchain/examples/README.md`** - Blockchain / Zipstamp example documentation
+- **`packages/neozip-blockchain/examples/README.md`** - Blockchain / NeoZip Token Service example documentation
 
 ---
 

@@ -6,7 +6,7 @@
  * 
  * This script:
  * 1. Reads the ZIP file and extracts TIMESTAMP.NZIP metadata
- * 2. Calls the Zipstamp server to prepare mint data
+ * 2. Calls the NeoZip Token Service to prepare mint data
  * 3. Checks if the digest is already minted
  * 4. Sends mintWithTimestampProof() transaction from user's wallet
  * 5. Creates a new ZIP with TOKEN.NZIP containing extended metadata
@@ -21,7 +21,7 @@
  *   --chain-id      Chain ID to mint on (defaults to chain from timestamp metadata)
  * 
  * Environment:
- *   ZIPSTAMP_SERVER_URL  Zipstamp server URL (default: https://zipstamp-dev.neozip.io)
+ *   TOKEN_SERVICE_URL  NeoZip Token Service URL (default: https://testnet.token-service.neozip.io)
  *   USER_PRIVATE_KEY  Alternative to --private-key flag
  * 
  * Examples:
@@ -51,7 +51,7 @@ import { ZipkitNode, ZipCopyNode, ZipEntry, crc32 } from 'neozipkit/node';
 import { 
   prepareMint, 
   checkNFTStatus, 
-  getZipStampServerUrl,
+  getTokenServiceUrl,
   type PrepareMintResponse,
   type TimestampMetadata,
   TIMESTAMP_METADATA,
@@ -60,13 +60,13 @@ import {
   NFT_METADATA_LEGACY,
   findMetadataEntry,
   getMetadataFileNames,
-} from '../src/zipstamp-server';
+} from '../src/token-service';
 
 import * as os from 'os';
 
 // Import NFT contract ABI and extended token metadata type from library
 import { NZIP_CONTRACT_ABI_V250 } from '../src/core/contracts';
-import type { ExtendedTokenMetadata } from '../src/zipstamp-server';
+import type { ExtendedTokenMetadata } from '../src/token-service';
 
 /**
  * Convert Unix timestamp to DOS date/time format
@@ -341,15 +341,15 @@ async function main() {
 
     // Step 2: Check if already minted
     console.log('Step 2: Checking if already minted...');
-    const zipStampServerUrl = getZipStampServerUrl();
-    console.log(`   Server: ${zipStampServerUrl}`);
+    const tokenServiceUrl = getTokenServiceUrl();
+    console.log(`   Server: ${tokenServiceUrl}`);
 
     let nftStatus;
     try {
       nftStatus = await checkNFTStatus(timestampMetadata.digest, chainId);
     } catch (error) {
       console.error(`❌ Error: ${error instanceof Error ? error.message : String(error)}`);
-      console.error(`\n💡 Make sure the Zipstamp server is running at ${zipStampServerUrl}`);
+      console.error(`\n💡 Make sure the NeoZip Token Service is running at ${tokenServiceUrl}`);
       process.exit(1);
     }
 
@@ -546,7 +546,7 @@ async function main() {
         batchTimestamp: mintData.batchTimestamp,
         registryAddress: mintData.registryAddress,
         nftContractAddress: mintData.nftContractAddress,
-        serverUrl: getZipStampServerUrl(),
+        serverUrl: getTokenServiceUrl(),
       },
     };
 

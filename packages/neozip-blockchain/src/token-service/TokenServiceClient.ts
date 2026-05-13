@@ -1,7 +1,7 @@
 /**
- * Zipstamp Server API Client
- * 
- * Client for interacting with the Zipstamp server API endpoints.
+ * NeoZip Token Service HTTP client
+ *
+ * Client for interacting with the NeoZip Token Service API endpoints.
  * Provides methods for timestamping, verification, batch processing, and token transfers.
  * 
  * **Authentication:**
@@ -10,15 +10,15 @@
  * 
  * @example
  * ```typescript
- * const client = new ZipstampServerClient({ serverUrl: 'https://calendar.neozip.io' });
+ * const client = new TokenServiceClient({ serverUrl: 'https://calendar.neozip.io' });
  * const result = await client.verify({ digest: '...' });
  * const stamp = await client.stamp({ digest: '...', email: 'user@example.com' });
  * ```
  */
 
-import { getZipStampServerUrl } from '../constants/servers';
+import { getTokenServiceUrl } from '../constants/servers';
 
-export interface ZipstampServerOptions {
+export interface TokenServiceClientOptions {
   serverUrl?: string;
   timeout?: number;
   retries?: number;
@@ -108,12 +108,12 @@ export interface HealthCheckResponse {
 export interface StampRequest {
   digest: string; // 64-character hex string (SHA-256)
   /**
-   * Optional chainId hint. Some Zipstamp server deployments accept this to select network.
+   * Optional chainId hint. Some NeoZip Token Service deployments accept this to select network.
    */
   chainId?: number;
   /**
    * Email address associated with this stamp request.
-   * (Zipstamp server API expects `email`.)
+   * (NeoZip Token Service API expects `email`.)
    */
   email?: string;
   /**
@@ -122,7 +122,7 @@ export interface StampRequest {
   recipientEmail?: string;
   /**
    * Backward-compat (some older clients used `mode`/metadata/etc).
-   * Current Zipstamp server API ignores these, but we MUST NOT send unknown keys
+   * Current NeoZip Token Service API ignores these, but we MUST NOT send unknown keys
    * to strict request validators. These are kept only to avoid breaking callers,
    * and will be stripped before sending.
    */
@@ -153,7 +153,7 @@ export interface StampResponse {
 export interface VerifyRequest {
   digest: string;
   /**
-   * Optional chainId hint. Some Zipstamp server deployments accept this to select network.
+   * Optional chainId hint. Some NeoZip Token Service deployments accept this to select network.
    */
   chainId?: number;
   /**
@@ -162,7 +162,7 @@ export interface VerifyRequest {
   batchId?: string;
   /**
    * Backward-compat (older clients used tokenId-based verification).
-   * Zipstamp server API does not accept this field on POST /verify.
+   * NeoZip Token Service API does not accept this field on POST /verify.
    */
   tokenId?: string;
 }
@@ -261,7 +261,7 @@ export interface ServerStatus {
 }
 
 // ============================================================================
-// NFT Proof Minting (Zipstamp server /nft/* endpoints)
+// NFT Proof Minting (NeoZip Token Service /nft/* endpoints)
 // ============================================================================
 
 export interface PrepareMintResponse {
@@ -324,23 +324,23 @@ export interface NFTContractInfoResponse {
 }
 
 /**
- * Client for interacting with the Zipstamp server API.
+ * Client for interacting with the NeoZip Token Service API.
  * 
- * Provides low-level methods for all Zipstamp server endpoints including timestamping,
+ * Provides low-level methods for all NeoZip Token Service endpoints including timestamping,
  * verification, batch operations, transfers, and NFT proof minting. This is the
- * base client that higher-level convenience functions (in ZipstampServerHelpers) wrap.
+ * base client that higher-level convenience functions (in TokenServiceHelpers) wrap.
  * 
  * **Features:**
  * - Automatic retry with exponential backoff
  * - Configurable timeouts
  * - Type-safe request/response handling
- * - Support for all Zipstamp server endpoints
+ * - Support for all NeoZip Token Service endpoints
  * 
  * @example
  * ```typescript
  * // Create client with custom settings
- * const client = new ZipstampServerClient({
- *   serverUrl: 'https://Zipstamp server.example.com',
+ * const client = new TokenServiceClient({
+ *   serverUrl: 'https://tokens.example.com',
  *   timeout: 60000, // 60 seconds
  *   retries: 5,
  *   retryDelay: 2000 // 2 seconds
@@ -354,14 +354,14 @@ export interface NFTContractInfoResponse {
  * });
  * ```
  */
-export class ZipstampServerClient {
+export class TokenServiceClient {
   private serverUrl: string;
   private timeout: number;
   private retries: number;
   private retryDelay: number;
 
-  constructor(options: ZipstampServerOptions = {}) {
-    this.serverUrl = getZipStampServerUrl({ serverUrl: options.serverUrl });
+  constructor(options: TokenServiceClientOptions = {}) {
+    this.serverUrl = getTokenServiceUrl({ serverUrl: options.serverUrl });
     this.timeout = options.timeout || 30000; // 30 seconds
     this.retries = options.retries || 3;
     this.retryDelay = options.retryDelay || 1000; // 1 second
@@ -437,7 +437,7 @@ export class ZipstampServerClient {
   /**
    * Retrieves calendar server information.
    * 
-   * Gets metadata about the Zipstamp server calendar including URI, donation address,
+   * Gets metadata about the NeoZip Token Service calendar including URI, donation address,
    * version, network, and contract address.
    * 
    * @returns Promise resolving to calendar information
@@ -447,7 +447,7 @@ export class ZipstampServerClient {
   }
 
   /**
-   * Creates a timestamp by submitting a digest to the Zipstamp server.
+   * Creates a timestamp by submitting a digest to the NeoZip Token Service.
    * 
    * Submits a SHA-256 digest (merkle root) to be included in the next batch for
    * blockchain timestamping. The digest is typically the merkle root of a ZIP file.
@@ -463,7 +463,7 @@ export class ZipstampServerClient {
    * @throws {Error} If request fails or server returns error
    */
   async stamp(request: StampRequest): Promise<StampResponse> {
-    // Zipstamp server expects { digest, chainId, email } and rejects unknown fields in strict validators.
+    // NeoZip Token Service expects { digest, chainId, email } and rejects unknown fields in strict validators.
     const body = {
       digest: request.digest,
       chainId: request.chainId,
@@ -475,7 +475,7 @@ export class ZipstampServerClient {
   /**
    * Gets the status of a pending stamp by digest.
    * 
-   * Queries the Zipstamp server for the current status of a submitted digest,
+   * Queries the NeoZip Token Service for the current status of a submitted digest,
    * including batch information and confirmation status.
    * 
    * @param digest - SHA-256 digest (64-character hex string) to check
@@ -490,7 +490,7 @@ export class ZipstampServerClient {
   }
 
   /**
-   * Verifies a timestamp by checking with the Zipstamp server.
+   * Verifies a timestamp by checking with the NeoZip Token Service.
    * 
    * Verifies whether a digest has been confirmed on the blockchain. Returns
    * detailed information including transaction hash, block number, and merkle proof
@@ -507,7 +507,7 @@ export class ZipstampServerClient {
    * @throws {Error} If request fails or server returns error
    */
   async verify(request: VerifyRequest): Promise<VerifyResponse> {
-    // Zipstamp server expects { digest, chainId, batchId } and rejects unknown fields in strict validators.
+    // NeoZip Token Service expects { digest, chainId, batchId } and rejects unknown fields in strict validators.
     const body = {
       digest: request.digest,
       chainId: request.chainId,
@@ -517,7 +517,7 @@ export class ZipstampServerClient {
   }
 
   /**
-   * Verifies a Merkle proof directly on-chain via Zipstamp server (no database access).
+   * Verifies a Merkle proof directly on-chain via NeoZip Token Service (no database access).
    * 
    * Performs on-chain verification of a Merkle proof without requiring database
    * access. Useful for verifying proofs from confirmed timestamps that may have
@@ -601,7 +601,7 @@ export class ZipstampServerClient {
   /**
    * Manually triggers batch processing (admin endpoint).
    * 
-   * Forces the Zipstamp server to process pending batches immediately. This is
+   * Forces the NeoZip Token Service to process pending batches immediately. This is
    * typically an admin-only operation and may require authentication.
    * 
    * @returns Promise resolving to batch status response
@@ -659,7 +659,7 @@ export class ZipstampServerClient {
   /**
    * Checks if a digest has been minted as an NFT-proof token.
    * 
-   * Queries the Zipstamp server to determine if a digest has been minted as an NFT
+   * Queries the NeoZip Token Service to determine if a digest has been minted as an NFT
    * on the TimestampProofNFT contract. Returns token information if minted.
    * 
    * Maps to `GET /nft/status` endpoint.

@@ -25,9 +25,9 @@
       "types": "./dist/ots/index.d.ts",
       "default": "./dist/ots/index.js"
     },
-    "./zipstamp-server": {
-      "types": "./dist/zipstamp-server/index.d.ts",
-      "default": "./dist/zipstamp-server/index.js"
+    "./token-service": {
+      "types": "./dist/token-service/index.d.ts",
+      "default": "./dist/token-service/index.js"
     },
     "./constants/metadata": {
       "types": "./dist/constants/metadata.d.ts",

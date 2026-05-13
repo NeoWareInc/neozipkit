@@ -23,10 +23,10 @@
 
 import {
   CalendarManager,
-  getZipStampServerUrl,
+  getTokenServiceUrl,
   type CalendarConfig,
   type CalendarStatus,
-} from '../src/zipstamp-server';
+} from '../src/token-service';
 
 // =============================================================================
 // Configuration
@@ -49,7 +49,7 @@ function getCalendarConfigs(): CalendarConfig[] {
 
   // Fallback to single calendar if no numbered ones configured
   if (configs.length === 0) {
-    const url = getZipStampServerUrl();
+    const url = getTokenServiceUrl();
     configs.push({
       url,
       priority: 1,

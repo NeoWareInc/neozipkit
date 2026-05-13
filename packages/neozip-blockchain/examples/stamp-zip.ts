@@ -16,21 +16,21 @@
  *   ts-node examples/stamp-zip.ts examples/output/stamp.nzip file1.txt file2.txt file3.txt
  * 
  * PREREQUISITES:
- * - Zipstamp server (default: https://zipstamp-dev.neozip.io)
- * - Set ZIPSTAMP_SERVER_URL if different
+ * - NeoZip Token Service (default: https://testnet.token-service.neozip.io)
+ * - Set TOKEN_SERVICE_URL if different from the default
  */
 
 // ZIP operations from neozipkit (peer dependency)
 import { ZipkitNode, CompressOptions } from 'neozipkit/node';
 
-// Zipstamp server API client
-import { submitDigest, getZipStampServerUrl, type TimestampMetadata, SUBMIT_METADATA } from '../src/zipstamp-server';
+// NeoZip Token Service API client
+import { submitDigest, getTokenServiceUrl, type TimestampMetadata, SUBMIT_METADATA } from '../src/token-service';
 
 import * as fs from 'fs';
 import * as path from 'path';
 
 /**
- * Returns true if the error indicates the email must be verified (Zipstamp server).
+ * Returns true if the error indicates the email must be verified (NeoZip Token Service).
  */
 function isEmailVerifyError(message: string): boolean {
   const lower = message.toLowerCase();
@@ -149,20 +149,24 @@ export async function createTimestampedZip(
   console.log();
 
   // Get configuration from environment
-  const zipStampServerUrl = getZipStampServerUrl();
+  const tokenServiceUrl = getTokenServiceUrl();
   
-  // Email is required for Zipstamp server (verified email)
-  const submitEmail = email || process.env.ZIPSTAMP_EMAIL;
+  // Email is required for NeoZip Token Service (verified email)
+  const submitEmail = email || process.env.TOKEN_SERVICE_EMAIL;
   if (!submitEmail) {
-    console.error('No email set. Zipstamp server requires a verified email.');
+    console.error('No email set. NeoZip Token Service requires a verified email.');
     console.error('Run: yarn verify-email');
-    console.error('Then run this example again, or set ZIPSTAMP_EMAIL in .env.local');
+    console.error('Then run this example again, or set TOKEN_SERVICE_EMAIL in .env.local');
     process.exit(1);
   }
   
-  const submitChainId = chainId || (process.env.ZIPSTAMP_CHAIN_ID ? parseInt(process.env.ZIPSTAMP_CHAIN_ID, 10) : undefined);
+  const submitChainId =
+    chainId ||
+    (process.env.TOKEN_SERVICE_CHAIN_ID
+      ? parseInt(process.env.TOKEN_SERVICE_CHAIN_ID, 10)
+      : undefined);
 
-  console.log(`Zipstamp Server: ${zipStampServerUrl}`);
+  console.log(`NeoZip Token Service: ${tokenServiceUrl}`);
   if (submitEmail) {
     console.log(`Email: ${submitEmail}`);
   }
@@ -213,8 +217,8 @@ export async function createTimestampedZip(
 
     console.log(`✅ Merkle root calculated: ${merkleRoot}\n`);
 
-    // Step 3: Submit digest to Zipstamp server
-    console.log('Step 3: Submitting digest to Zipstamp server...');
+    // Step 3: Submit digest to NeoZip Token Service
+    console.log('Step 3: Submitting digest to NeoZip Token Service...');
     console.log(`   Digest: ${merkleRoot}\n`);
     
     let submitResult;
@@ -223,12 +227,12 @@ export async function createTimestampedZip(
       submitResult = await submitDigest(merkleRoot, submitEmail, submitChainId);
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
-      console.warn('⚠️  Warning: Failed to submit digest to Zipstamp server');
+      console.warn('⚠️  Warning: Failed to submit digest to NeoZip Token Service');
       console.warn(`   ${errMsg}`);
       if (isEmailVerifyError(errMsg)) {
         console.warn(`\n💡 Register and verify your email first: yarn verify-email`);
       } else {
-        console.warn(`\n💡 Make sure the Zipstamp server is running at ${zipStampServerUrl}`);
+        console.warn(`\n💡 Make sure the NeoZip Token Service is running at ${tokenServiceUrl}`);
       }
       console.warn('   ZIP file will be created without timestamp metadata.\n');
       submissionFailed = true;
@@ -272,7 +276,7 @@ export async function createTimestampedZip(
         chainId: submitResult.chainId,
         // status is not included in TS-SUBMIT metadata as it becomes stale
         // Status is determined by querying the server/blockchain
-        serverUrl: zipStampServerUrl,
+        serverUrl: tokenServiceUrl,
         submittedAt: new Date().toISOString(),
       };
     

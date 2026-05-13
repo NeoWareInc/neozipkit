@@ -6,7 +6,7 @@ Examples demonstrating blockchain timestamping, NFT minting, and verification us
 
 NZIP (NeoZip) files are ZIP archives with embedded blockchain proofs. These examples demonstrate:
 
-- **Timestamping**: Create timestamped ZIP files via Zipstamp server (Ethereum blockchain)
+- **Timestamping**: Create timestamped ZIP files via NeoZip Token Service (Ethereum blockchain)
 - **NFT Proof**: Mint NFT tokens that prove ownership and link to timestamps
 - **Verification**: Verify ZIP files against the blockchain (pending, confirmed, or NFT proofs)
 - **OpenTimestamps**: Legacy Bitcoin-based timestamping (add-on)
@@ -15,11 +15,11 @@ NZIP (NeoZip) files are ZIP archives with embedded blockchain proofs. These exam
 
 | Script | File | Purpose | Workflow | Prerequisites |
 |--------|------|---------|----------|---------------|
-| `verify-email` | [verify-email.ts](verify-email.ts) | Register and verify email for Zipstamp server | Zipstamp server | Zipstamp server |
-| `example:timestamp` | [stamp-zip.ts](stamp-zip.ts) | Create timestamped ZIP (TS-SUBMIT.NZIP) | Zipstamp server | Zipstamp server |
-| `example:upgrade` | [upgrade-zip.ts](upgrade-zip.ts) | Upgrade pending → confirmed (TIMESTAMP.NZIP) | Zipstamp server | Zipstamp server |
-| `example:mint-nft` | [mint-nft.ts](mint-nft.ts) | Mint NFT from timestamped ZIP (adds TOKEN.NZIP) | Zipstamp server | Zipstamp server, wallet |
-| `example:verify-timestamp` | [verify-zip.ts](verify-zip.ts) | Verify pending timestamp | Verify | Zipstamp server |
+| `verify-email` | [verify-email.ts](verify-email.ts) | Register and verify email for NeoZip Token Service | NeoZip Token Service | NeoZip Token Service |
+| `example:timestamp` | [stamp-zip.ts](stamp-zip.ts) | Create timestamped ZIP (TS-SUBMIT.NZIP) | NeoZip Token Service | NeoZip Token Service |
+| `example:upgrade` | [upgrade-zip.ts](upgrade-zip.ts) | Upgrade pending → confirmed (TIMESTAMP.NZIP) | NeoZip Token Service | NeoZip Token Service |
+| `example:mint-nft` | [mint-nft.ts](mint-nft.ts) | Mint NFT from timestamped ZIP (adds TOKEN.NZIP) | NeoZip Token Service | NeoZip Token Service, wallet |
+| `example:verify-timestamp` | [verify-zip.ts](verify-zip.ts) | Verify pending timestamp | Verify | NeoZip Token Service |
 | `example:verify-upgrade` | [verify-zip.ts](verify-zip.ts) | Verify confirmed timestamp | Verify | None (offline) |
 | `example:verify-nft` | [verify-zip.ts](verify-zip.ts) | Verify NFT token | Verify | None (offline) |
 | `example:token-srv` | [token-create.ts](token-create.ts) | Create ZIP + mint NFT (UnifiedNFT) | Direct NFT | Wallet |
@@ -30,11 +30,11 @@ NZIP (NeoZip) files are ZIP archives with embedded blockchain proofs. These exam
 
 ## Workflows
 
-### Zipstamp Server Flow (Primary)
+### NeoZip Token Service Flow (Primary)
 
 The recommended flow for timestamping ZIP files:
 
-**Before stamp/upgrade/mint:** Examples that use the Zipstamp server (stamp-zip, upgrade-zip, mint-nft) require a verified email. Run `yarn verify-email` once to register and verify your email; the script saves it to `.env.local` (as `ZIPSTAMP_EMAIL`, and optionally `TOKEN_SERVER_EMAIL` for backward compatibility) so you don't need to pass `--email` each time. For a non-interactive register/verify split, use [zipstamp-server-auth.ts](zipstamp-server-auth.ts) or [token-server-auth.ts](token-server-auth.ts) (legacy name, same behavior).
+**Before stamp/upgrade/mint:** Examples that use the NeoZip Token Service (stamp-zip, upgrade-zip, mint-nft) require a verified email. Run `yarn verify-email` once to register and verify your email; the script saves it to `.env.local` as `TOKEN_SERVICE_EMAIL` so you don't need to pass `--email` each time. For a non-interactive register/verify split, use [token-service-auth.ts](token-service-auth.ts).
 
 1. **Stamp** → Create timestamped ZIP with pending proof (TS-SUBMIT.NZIP)
 2. **Upgrade** → Once batch is confirmed, upgrade to confirmed proof (TIMESTAMP.NZIP)
@@ -42,7 +42,7 @@ The recommended flow for timestamping ZIP files:
 
 ```mermaid
 flowchart LR
-  subgraph zipstamp_server [Zipstamp server flow]
+  subgraph token_service_flow [NeoZip Token Service flow]
     A[stamp-zip] --> B[upgrade-zip]
     B --> C[mint-nft]
     A --> V1[verify-zip]
@@ -62,12 +62,12 @@ flowchart LR
 
 #### 1. Stamp ZIP (`stamp-zip.ts`)
 
-Creates a timestamped ZIP file by submitting the merkle root to the Zipstamp server. The server batches submissions and mints them on-chain.
+Creates a timestamped ZIP file by submitting the merkle root to the NeoZip Token Service. The server batches submissions and mints them on-chain.
 
 **What it does:**
 - Creates a ZIP file from input files (supports wildcards)
 - Calculates merkle root for integrity verification
-- Submits merkle root to Zipstamp server for timestamping
+- Submits merkle root to NeoZip Token Service for timestamping
 - Adds `META-INF/TS-SUBMIT.NZIP` metadata (pending proof)
 
 **Usage:**
@@ -78,12 +78,12 @@ yarn example:timestamp examples/output/stamp.nzip examples/test-files/*
 # Using ts-node directly
 ts-node examples/stamp-zip.ts examples/output/stamp.nzip examples/test-files/*
 
-# With custom Zipstamp server URL
-ZIPSTAMP_SERVER_URL=https://zipstamp-dev.neozip.io yarn example:timestamp examples/output/stamp.nzip examples/test-files/*
+# With custom NeoZip Token Service URL
+TOKEN_SERVICE_URL=https://testnet.token-service.neozip.io yarn example:timestamp examples/output/stamp.nzip examples/test-files/*
 ```
 
 **Requirements:**
-- Zipstamp server (default: `https://zipstamp-dev.neozip.io`); set `ZIPSTAMP_SERVER_URL` if different
+- NeoZip Token Service (default: `https://testnet.token-service.neozip.io`); set `TOKEN_SERVICE_URL` to point at your deployment if different
 - No wallet or private keys needed (server handles blockchain transactions)
 
 **Output:**
@@ -99,7 +99,7 @@ Upgrades a pending timestamp (TS-SUBMIT.NZIP) to a confirmed timestamp (TIMESTAM
 - Downloads complete proof data (merkle proof, transaction hash, etc.)
 - Creates a new ZIP file with `META-INF/TIMESTAMP.NZIP` containing complete proof
 - Original ZIP file is preserved
-- Upgraded ZIP can be verified directly against the blockchain without the Zipstamp server
+- Upgraded ZIP can be verified directly against the blockchain without the NeoZip Token Service
 
 **Usage:**
 ```bash
@@ -117,7 +117,7 @@ ts-node examples/upgrade-zip.ts examples/output/stamp.nzip examples/output/stamp
 ```
 
 **Requirements:**
-- Zipstamp server must be running
+- NeoZip Token Service must be running
 - Input ZIP must have `META-INF/TS-SUBMIT.NZIP` (from `stamp-zip.ts`)
 - Batch must be confirmed on blockchain (use `--wait` to poll)
 
@@ -131,7 +131,7 @@ Mints an NFT proof token for a timestamped ZIP file. The NFT proves ownership an
 
 **What it does:**
 - Reads ZIP file and extracts `META-INF/TIMESTAMP.NZIP` metadata
-- Calls Zipstamp server to prepare mint data
+- Calls NeoZip Token Service to prepare mint data
 - Checks if the digest is already minted
 - Sends `mintWithTimestampProof()` transaction from user's wallet
 - Creates a new ZIP with `META-INF/TOKEN.NZIP` containing extended metadata
@@ -152,7 +152,7 @@ ts-node examples/mint-nft.ts examples/output/stamp-upgrade.nzip examples/output/
 ```
 
 **Requirements:**
-- Zipstamp server must be running
+- NeoZip Token Service must be running
 - `USER_PRIVATE_KEY` environment variable or `--private-key` flag (testnet only!)
 - Input ZIP must have `META-INF/TIMESTAMP.NZIP` (from `upgrade-zip.ts`)
 - Testnet ETH for gas fees
@@ -167,13 +167,13 @@ ts-node examples/mint-nft.ts examples/output/stamp-upgrade.nzip examples/output/
 
 Universal verifier that supports three modes:
 
-1. **PENDING (TS-SUBMIT.NZIP)** - Verifies via Zipstamp server
+1. **PENDING (TS-SUBMIT.NZIP)** - Verifies via NeoZip Token Service
    - Checks if digest is in database/batch
    - Suggests running `upgrade-zip.ts` once confirmed
 
 2. **CONFIRMED (TIMESTAMP.NZIP)** - Direct blockchain verification
    - Uses embedded merkle proof to verify on-chain
-   - No Zipstamp server required (self-contained proof)
+   - No NeoZip Token Service required (self-contained proof)
    - Similar to OpenTimestamps upgraded timestamps
 
 3. **NFT TOKEN (TOKEN.NZIP; legacy NZIP.TOKEN accepted)** - NFT proof verification
@@ -183,25 +183,25 @@ Universal verifier that supports three modes:
 
 **Usage:**
 ```bash
-# Verify pending timestamp (requires Zipstamp server)
+# Verify pending timestamp (requires NeoZip Token Service)
 yarn example:verify-timestamp examples/output/stamp.nzip
 
-# Verify confirmed timestamp (offline, no Zipstamp server needed)
+# Verify confirmed timestamp (offline, no NeoZip Token Service needed)
 yarn example:verify-upgrade examples/output/stamp-upgrade.nzip
 
-# Verify NFT token (offline, no Zipstamp server needed)
+# Verify NFT token (offline, no NeoZip Token Service needed)
 yarn example:verify-nft examples/output/stamp-upgrade-nft.nzip
 
 # Using ts-node directly
 ts-node examples/verify-zip.ts examples/output/stamp.nzip
 
-# Offline mode (skip Zipstamp server check)
+# Offline mode (skip NeoZip Token Service check)
 ts-node examples/verify-zip.ts examples/output/stamp-upgrade.nzip --offline
 ```
 
 **Requirements:**
-- For pending: Zipstamp server must be running
-- For confirmed/NFT: No Zipstamp server needed (offline verification)
+- For pending: NeoZip Token Service must be running
+- For confirmed/NFT: No NeoZip Token Service needed (offline verification)
 
 **Output:**
 - Verification status (valid/pending/error)
@@ -228,7 +228,7 @@ ts-node examples/verify-token.ts examples/output/token-direct.nzip
 
 ### Direct NFT Flow (No Timestamp Server)
 
-Create ZIP files with NFT tokens directly, without using the Zipstamp server timestamping flow.
+Create ZIP files with NFT tokens directly, without using the NeoZip Token Service timestamping flow.
 
 #### Token Direct (`token-direct.ts`)
 
@@ -299,7 +299,7 @@ ts-node examples/token-create.ts examples/output/token-test.nzip examples/test-f
 
 ### OpenTimestamps (Legacy)
 
-Bitcoin-based timestamping using OpenTimestamps protocol. This is a legacy/add-on feature. For primary timestamping, use the Zipstamp server flow above.
+Bitcoin-based timestamping using OpenTimestamps protocol. This is a legacy/add-on feature. For primary timestamping, use the NeoZip Token Service flow above.
 
 #### OTS Stamp ZIP (`ots-stamp-zip.ts`)
 
@@ -386,25 +386,25 @@ Create a `.env` file (excluded from git) for private keys:
 ```bash
 # Create .env file
 echo "USER_PRIVATE_KEY=0x..." > .env
-echo "ZIPSTAMP_SERVER_URL=https://zipstamp-dev.neozip.io" >> .env
+echo "TOKEN_SERVICE_URL=https://testnet.token-service.neozip.io" >> .env
 ```
 
-## Zipstamp Server Setup
+## NeoZip Token Service Setup
 
-The Zipstamp server flow examples require a Zipstamp server to be running. The Zipstamp server handles blockchain transactions on behalf of users, similar to OpenTimestamps calendar servers.
+The NeoZip Token Service flow examples require a NeoZip Token Service to be running. The NeoZip Token Service handles blockchain transactions on behalf of users, similar to OpenTimestamps calendar servers.
 
 ### Quick Start
 
-1. **Start the Zipstamp server** (in a separate terminal):
+1. **Start the NeoZip Token Service** (in a separate terminal; use your service checkout directory):
    ```bash
-   cd ../zipstamp
+   cd <path-to-neozip-token-service>
    npm install
    npm run dev
    ```
 
 2. **Verify server is running**:
    ```bash
-   curl https://zipstamp-dev.neozip.io/status
+   curl https://testnet.token-service.neozip.io/status
    ```
 
 3. **Run timestamp examples**:
@@ -412,15 +412,15 @@ The Zipstamp server flow examples require a Zipstamp server to be running. The Z
    yarn example:timestamp examples/output/stamp.nzip examples/test-files/*
    ```
 
-### Zipstamp Server Configuration
+### NeoZip Token Service Configuration
 
-The Zipstamp server requires:
+The NeoZip Token Service requires:
 - `DATABASE_URL` - PostgreSQL connection string
 - `SERVER_WALLET_PRIVATE_KEY` - Private key of server wallet
 - `DEFAULT_NETWORK` - Ethereum network (base-sepolia, base, ethereum, etc.)
 - `RPC_URL` - Ethereum RPC endpoint
 
-See the Zipstamp project README for detailed setup instructions.
+See the NeoZip Token Service project README for detailed setup instructions.
 
 ### Comparison with OpenTimestamps
 
@@ -437,7 +437,7 @@ See the Zipstamp project README for detailed setup instructions.
 
 ```
 examples/
-├── stamp-zip.ts              # Create timestamped ZIP (Zipstamp server)
+├── stamp-zip.ts              # Create timestamped ZIP (NeoZip Token Service)
 ├── upgrade-zip.ts            # Upgrade pending → confirmed
 ├── mint-nft.ts               # Mint NFT from timestamp
 ├── verify-zip.ts             # Universal verifier (pending/confirmed/NFT)
@@ -548,13 +548,13 @@ If ZIP operations fail:
 - **Check file permissions**: Ensure read/write access to example directories
 - **Verify ZIP file structure**: Use `verify-zip.ts` to check file integrity
 
-### Zipstamp Server Errors
+### NeoZip Token Service Errors
 
-If Zipstamp server examples fail:
+If NeoZip Token Service examples fail:
 
-- **Verify server is running**: `curl https://zipstamp-dev.neozip.io/status` (or your `ZIPSTAMP_SERVER_URL`)
-- **Check `ZIPSTAMP_SERVER_URL`**: Ensure it matches your server URL
-- **Check server logs**: Look for errors in the Zipstamp server terminal
+- **Verify server is running**: `curl https://testnet.token-service.neozip.io/status` (or your `TOKEN_SERVICE_URL`)
+- **Check `TOKEN_SERVICE_URL`**: Ensure it matches your server URL
+- **Check server logs**: Look for errors in the NeoZip Token Service terminal
 
 ## Integration Guide
 

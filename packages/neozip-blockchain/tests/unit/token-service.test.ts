@@ -1,5 +1,5 @@
 /**
- * Unit tests for Zipstamp server API (metadata, proof verification, entry helpers)
+ * Unit tests for NeoZip Token Service API (metadata, proof verification, entry helpers)
  */
 
 import { ethers } from 'ethers';
@@ -14,11 +14,11 @@ import {
   getMetadataFileNames,
   verifyMerkleProofLocal,
   getEthTimestampEntry,
-} from '../../src/zipstamp-server';
+} from '../../src/token-service';
 import type { ZipkitLike, ZipEntryLike } from '../../src/types';
-import type { TimestampMetadata } from '../../src/zipstamp-server';
+import type { TimestampMetadata } from '../../src/token-service';
 
-describe('Zipstamp Server API', () => {
+describe('NeoZip Token Service API', () => {
   describe('constants', () => {
     it('should export correct metadata filenames', () => {
       expect(SUBMIT_METADATA).toBe('META-INF/TS-SUBMIT.NZIP');

@@ -1,7 +1,7 @@
 /**
- * Zipstamp Server API Module
- * 
- * Provides timestamping functionality using Zipstamp server API,
+ * NeoZip Token Service (TokenService) module
+ *
+ * Provides timestamping functionality using the NeoZip Token Service API,
  * similar to OpenTimestamps but using Ethereum blockchain.
  * 
  * **Authentication:**
@@ -48,12 +48,12 @@ export {
   type MetadataEntryResult,
   // Proof verification utilities
   verifyMerkleProofLocal,
-} from './ZipstampServerAPI';
+} from './TokenServiceAPI';
 
-// ZipstampServerClient and core types
+// TokenServiceClient and core types
 export {
-  ZipstampServerClient,
-  type ZipstampServerOptions,
+  TokenServiceClient,
+  type TokenServiceClientOptions,
   type StampRequest,
   type StampResponse,
   type VerifyRequest,
@@ -78,9 +78,9 @@ export {
   type CalendarChainInfo,
   type HealthCheckResponse,
   type ComponentHealth,
-} from './ZipstampServerClient';
+} from './TokenServiceClient';
 
-// High-level convenience functions for Zipstamp server operations
+// High-level convenience functions for NeoZip Token Service operations
 export {
   // Core operations
   submitDigest,
@@ -89,7 +89,7 @@ export {
   prepareMint,
   checkNFTStatus,
   getNFTContractInfo,
-  getZipStampServerUrl,
+  getTokenServiceUrl,
   // Authentication helpers
   registerEmail,
   verifyEmailCode,
@@ -101,15 +101,15 @@ export {
   type VerifyDigestResponse,
   type TimestampMetadata,
   type ExtendedTokenMetadata,
-  type ZipstampServerHelperOptions,
-} from './ZipstampServerHelpers';
+  type TokenServiceHelperOptions,
+} from './TokenServiceHelpers';
 
 // Server URL constants (single source: src/constants/servers.ts)
 export {
-  DEFAULT_ZIPSTAMP_SERVER_URL,
-  ZIPSTAMP_SERVER_URLS,
-  getDefaultZipStampServerUrls,
-  type GetZipStampServerUrlOptions,
+  DEFAULT_TOKEN_SERVICE_URL,
+  TOKEN_SERVICE_URLS,
+  getDefaultTokenServiceUrls,
+  type GetTokenServiceUrlOptions,
 } from '../constants/servers';
 
 // Multi-calendar support

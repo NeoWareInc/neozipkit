@@ -1,13 +1,13 @@
 # NeoZip Timestamping Examples
 
-Examples demonstrating timestamping ZIP files using the Zipstamp server API with `neozipkit` for ZIP operations.
+Examples demonstrating timestamping ZIP files using the NeoZip Token Service API with `neozipkit` for ZIP operations.
 
 ## Overview
 
 These examples demonstrate how to:
-- Create timestamped ZIP files using the Zipstamp server API
-- Verify timestamped ZIP files against the Zipstamp server
-- Integrate ZIP operations (via neozipkit) with timestamping operations (via Zipstamp server API)
+- Create timestamped ZIP files using the NeoZip Token Service API
+- Verify timestamped ZIP files against the NeoZip Token Service
+- Integrate ZIP operations (via neozipkit) with timestamping operations (via NeoZip Token Service API)
 
 ## Prerequisites
 
@@ -25,15 +25,15 @@ yarn add neozipkit
 - `neozipkit` must be installed as a package: `npm install neozipkit`
 - These examples use:
   - Installed `neozipkit` package for ZIP file operations
-  - Zipstamp server API for timestamping (no direct blockchain access required)
+  - NeoZip Token Service API for timestamping (no direct blockchain access required)
 
-### Zipstamp Server
+### NeoZip Token Service
 
-The Zipstamp server (default: `https://zipstamp-dev.neozip.io`) must be available.
+The NeoZip Token Service (default: `https://testnet.token-service.neozip.io`) must be available.
 
-To start the Zipstamp server:
+To start the NeoZip Token Service:
 ```bash
-cd /path/to/zipstamp
+cd /path/to/neozip-token-service
 yarn dev
 ```
 
@@ -87,25 +87,25 @@ node verify-zip.js [path-to-stamped.zip]
 
 ### 1. Stamp ZIP (`stamp-zip.ts`)
 
-Demonstrates creating a timestamped ZIP file using the Zipstamp server API.
+Demonstrates creating a timestamped ZIP file using the NeoZip Token Service API.
 
 **What it does:**
 - Creates a ZIP file from test files
 - Calculates merkle root for integrity verification
-- Submits digest to Zipstamp server for timestamping
+- Submits digest to NeoZip Token Service for timestamping
 - Embeds submission metadata in the ZIP file (`META-INF/TS-SUBMIT.NZIP`)
 - Optionally waits for confirmation and adds timestamp metadata (`META-INF/TIMESTAMP.NZIP`)
 
 **Usage:**
 ```bash
-# Set Zipstamp server URL (optional, defaults to https://zipstamp-dev.neozip.io)
-export ZIPSTAMP_SERVER_URL="https://zipstamp-dev.neozip.io"
+# Set NeoZip Token Service URL (optional, defaults to https://testnet.token-service.neozip.io)
+export TOKEN_SERVICE_URL="https://testnet.token-service.neozip.io"
 
 # Optional: Set email for notifications
-export ZIPSTAMP_EMAIL="user@example.com"
+export TOKEN_SERVICE_EMAIL="user@example.com"
 
 # Optional: Set chain ID
-export ZIPSTAMP_CHAIN_ID="84532"
+export TOKEN_SERVICE_CHAIN_ID="84532"
 
 # Optional: Wait for confirmation (default: false)
 export WAIT_FOR_CONFIRMATION="true"
@@ -118,9 +118,9 @@ tsx stamp-zip/stamp-zip.ts file1.txt file2.txt
 ```
 
 **Requirements:**
-- Zipstamp server must be running
+- NeoZip Token Service must be running
 - No wallet private keys required
-- No gas fees (handled by the Zipstamp server)
+- No gas fees (handled by the NeoZip Token Service)
 
 **Output:**
 - Creates `stamp-zip/output/stamped.zip` with embedded timestamp metadata
@@ -132,13 +132,13 @@ tsx stamp-zip/stamp-zip.ts file1.txt file2.txt
 
 ### 2. Verify ZIP (`verify-zip.ts`)
 
-Demonstrates verifying a timestamped ZIP file using the Zipstamp server API.
+Demonstrates verifying a timestamped ZIP file using the NeoZip Token Service API.
 
 **What it does:**
 - Loads a timestamped ZIP file
 - Extracts timestamp metadata from `META-INF/TIMESTAMP.NZIP` or `META-INF/TS-SUBMIT.NZIP`
 - Calculates merkle root from ZIP contents
-- Verifies the timestamp via the Zipstamp server API
+- Verifies the timestamp via the NeoZip Token Service API
 - Displays verification results
 
 **Usage:**
@@ -152,7 +152,7 @@ tsx stamp-zip/verify-zip.ts
 
 **Requirements:**
 - A timestamped ZIP file (created with `stamp-zip.ts`)
-- Zipstamp server must be running
+- NeoZip Token Service must be running
 - No private keys required (read-only operations)
 
 **Output:**
@@ -168,7 +168,7 @@ stamp-zip/
 ├── stamp-zip.ts             # Timestamping example
 ├── verify-zip.ts             # Verification example
 ├── constants.ts              # Metadata file name constants
-├── zipStampServerClient.ts   # ZipStamp server API client
+├── TokenServiceClient.ts   # NeoZip Token Service HTTP client (example)
 ├── README.md                 # This file
 ├── output/                   # Generated ZIP files
 │   └── stamped.zip          # Timestamped ZIP output
@@ -181,9 +181,9 @@ stamp-zip/
 
 ### Environment Variables
 
-- `ZIPSTAMP_SERVER_URL` - Zipstamp server base URL (default: `https://zipstamp-dev.neozip.io`)
-- `ZIPSTAMP_EMAIL` - Optional email for notifications
-- `ZIPSTAMP_CHAIN_ID` - Optional chain ID override
+- `TOKEN_SERVICE_URL` - NeoZip Token Service base URL (default: `https://testnet.token-service.neozip.io`)
+- `TOKEN_SERVICE_EMAIL` - Optional email for notifications
+- `TOKEN_SERVICE_CHAIN_ID` - Optional chain ID override
 - `WAIT_FOR_CONFIRMATION` - Wait for batch confirmation (default: `false`)
 
 ### Command Line Arguments
@@ -209,7 +209,7 @@ When a batch is confirmed on the blockchain, `upgrade-zip.ts` creates a new ZIP 
 
 ---
 
-Added when digest is submitted to the Zipstamp server (pending state):
+Added when digest is submitted to the NeoZip Token Service (pending state):
 
 ```json
 {
@@ -218,7 +218,7 @@ Added when digest is submitted to the Zipstamp server (pending state):
   "chainId": 84532,
   "network": "base-sepolia",
   "status": "pending",
-  "serverUrl": "https://zipstamp-dev.neozip.io",
+  "serverUrl": "https://testnet.token-service.neozip.io",
   "submittedAt": "2025-01-04T20:30:00.000Z"
 }
 ```
@@ -240,7 +240,7 @@ Added when batch is confirmed on blockchain:
   "timestamp": 1704398400,
   "merkleRoot": "0x...",
   "contractAddress": "0x...",
-  "serverUrl": "https://zipstamp-dev.neozip.io",
+  "serverUrl": "https://testnet.token-service.neozip.io",
   "submittedAt": "2025-01-04T20:30:00.000Z",
   "confirmedAt": "2025-01-04T20:35:00.000Z"
 }
@@ -257,14 +257,14 @@ These examples demonstrate the integration pattern:
    import { ZipkitNode } from 'neozipkit/node';
    ```
 
-2. **Zipstamp Server API** → Use Zipstamp server library
+2. **NeoZip Token Service API** → Use NeoZip Token Service library
    ```typescript
-   import { submitDigest, verifyDigest } from '../src/zipstamp-server';
+   import { submitDigest, verifyDigest } from '../src/token-service';
    ```
 
-3. **Metadata** → Use constants from Zipstamp server library
+3. **Metadata** → Use constants from NeoZip Token Service library
    ```typescript
-   import { SUBMIT_METADATA, TIMESTAMP_METADATA } from '../src/zipstamp-server';
+   import { SUBMIT_METADATA, TIMESTAMP_METADATA } from '../src/token-service';
    ```
 
 ### Example Integration
@@ -275,27 +275,27 @@ import { ZipkitNode } from 'neozipkit/node';
 const zip = new ZipkitNode();
 await zip.createZipFromFiles(files, outputPath, { useSHA256: true });
 
-// Submit digest to Zipstamp server
-import { submitDigest } from '../src/zipstamp-server';
+// Submit digest to NeoZip Token Service
+import { submitDigest } from '../src/token-service';
 const result = await submitDigest(merkleRoot, email, chainId);
 
-// Verify with Zipstamp server
-import { verifyDigest } from '../src/zipstamp-server';
+// Verify with NeoZip Token Service
+import { verifyDigest } from '../src/token-service';
 const verification = await verifyDigest(merkleRoot, chainId);
 ```
 
 ## Troubleshooting
 
-### Zipstamp Server Connection Errors
+### NeoZip Token Service Connection Errors
 
 If you see connection errors:
 
 ```bash
-# Verify Zipstamp server is running
-curl https://zipstamp-dev.neozip.io/chains
+# Verify NeoZip Token Service is running
+curl https://testnet.token-service.neozip.io/chains
 
-# Check ZIPSTAMP_SERVER_URL environment variable
-echo $ZIPSTAMP_SERVER_URL
+# Check TOKEN_SERVICE_URL environment variable
+echo $TOKEN_SERVICE_URL
 ```
 
 ### Module Resolution Errors
@@ -331,10 +331,10 @@ If ZIP operations fail:
 
 ## Supported Networks
 
-The Zipstamp server supports multiple networks. Check available chains:
+The NeoZip Token Service supports multiple networks. Check available chains:
 
 ```bash
-curl https://zipstamp-dev.neozip.io/chains
+curl https://testnet.token-service.neozip.io/chains
 ```
 
 Common networks:
@@ -346,10 +346,10 @@ Common networks:
 ## Next Steps
 
 1. **Understand the API**: Read the [main README](../README.md) for detailed API documentation
-2. **Explore Advanced Features**: Check out the Zipstamp server admin panel
+2. **Explore Advanced Features**: Check out the NeoZip Token Service admin panel
 3. **Build Your Own Tools**: Use these examples as a starting point for your own applications
 4. **Check Documentation**: See [API_REQUIREMENTS.md](../docs/API_REQUIREMENTS.md) for API details
 
 ## License
 
-These examples are part of the Zipstamp project and are licensed under the same license as the project.
+These examples are part of the NeoZip Token Service project and are licensed under the same license as the project.

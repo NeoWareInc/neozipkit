@@ -9,7 +9,7 @@
  * - If confirmed, downloads the complete proof data (merkle proof, transaction hash, etc.)
  * - Creates a new ZIP file with TIMESTAMP.NZIP containing complete proof
  * - The original ZIP file is preserved
- * - The upgraded ZIP can be verified directly against the blockchain without the Zipstamp server
+ * - The upgraded ZIP can be verified directly against the blockchain without the NeoZip Token Service
  * 
  * Usage:
  *   yarn example:upgrade <input.nzip> [output.nzip]
@@ -28,7 +28,7 @@
  */
 
 import { ZipkitNode, ZipCopyNode, ZipEntry, crc32 } from 'neozipkit/node';
-import { verifyDigest, pollForConfirmation, getZipStampServerUrl, type TimestampMetadata, SUBMIT_METADATA, TIMESTAMP_METADATA, findMetadataEntry, shouldUpgrade, getMetadataFileNames } from '../src/zipstamp-server';
+import { verifyDigest, pollForConfirmation, getTokenServiceUrl, type TimestampMetadata, SUBMIT_METADATA, TIMESTAMP_METADATA, findMetadataEntry, shouldUpgrade, getMetadataFileNames } from '../src/token-service';
 
 import * as fs from 'fs';
 import * as path from 'path';
@@ -178,8 +178,8 @@ async function main() {
 
     // Step 2: Check if batch is confirmed
     console.log('Step 2: Checking batch status...');
-    const zipStampServerUrl = getZipStampServerUrl();
-    console.log(`   Server: ${zipStampServerUrl}`);
+    const tokenServiceUrl = getTokenServiceUrl();
+    console.log(`   Server: ${tokenServiceUrl}`);
 
     let verificationResult;
     
@@ -209,7 +209,7 @@ async function main() {
         );
       } catch (error) {
         console.error(`❌ Error: ${error instanceof Error ? error.message : String(error)}`);
-        console.error(`\n💡 Make sure the Zipstamp server is running at ${zipStampServerUrl}`);
+        console.error(`\n💡 Make sure the NeoZip Token Service is running at ${tokenServiceUrl}`);
         await zip.closeFile();
         process.exit(1);
       }
@@ -370,7 +370,7 @@ async function main() {
     }
     console.log();
     console.log('The upgraded timestamp can now be verified directly against');
-    console.log('the blockchain without needing the Zipstamp server.');
+    console.log('the blockchain without needing the NeoZip Token Service.');
     console.log('═'.repeat(60));
 
   } catch (error) {

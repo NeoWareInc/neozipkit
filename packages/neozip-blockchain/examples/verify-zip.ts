@@ -5,14 +5,14 @@
  * 
  * Universal verifier for timestamped ZIP files. Supports three verification modes:
  * 
- * 1. PENDING (TS-SUBMIT.NZIP) - Verifies via Zipstamp server
+ * 1. PENDING (TS-SUBMIT.NZIP) - Verifies via NeoZip Token Service
  *    - Checks if digest is in database/batch
  *    - Suggests running upgrade-zip.ts once confirmed
- *    - Requires Zipstamp server to be running
+ *    - Requires NeoZip Token Service to be running
  * 
  * 2. CONFIRMED (TIMESTAMP.NZIP) - Direct blockchain verification
  *    - Uses embedded merkle proof to verify on-chain
- *    - No Zipstamp server required (self-contained proof)
+ *    - No NeoZip Token Service required (self-contained proof)
  *    - Similar to OpenTimestamps upgraded timestamps
  *    - Works offline with --offline flag
  * 
@@ -30,7 +30,7 @@
  *   ts-node examples/verify-zip.ts <path-to-stamped.nzip> --offline
  * 
  * Options:
- *   --offline    Skip Zipstamp server check (only works for TIMESTAMP.NZIP or TOKEN.NZIP / legacy NZIP.TOKEN)
+ *   --offline    Skip NeoZip Token Service check (only works for TIMESTAMP.NZIP or TOKEN.NZIP / legacy NZIP.TOKEN)
  * 
  * Examples:
  *   yarn example:verify-timestamp examples/output/stamp.nzip
@@ -42,11 +42,11 @@
 // ZIP operations from neozipkit (peer dependency)
 import { ZipkitNode } from 'neozipkit/node';
 
-// Zipstamp server API client (for pending timestamps)
-import { verifyDigest, getZipStampServerUrl, type TimestampMetadata, SUBMIT_METADATA, TIMESTAMP_METADATA, NFT_METADATA, NFT_METADATA_LEGACY, findMetadataEntry, getMetadataFileNames } from '../src/zipstamp-server';
+// NeoZip Token Service API client (for pending timestamps)
+import { verifyDigest, getTokenServiceUrl, type TimestampMetadata, SUBMIT_METADATA, TIMESTAMP_METADATA, NFT_METADATA, NFT_METADATA_LEGACY, findMetadataEntry, getMetadataFileNames } from '../src/token-service';
 
 // Portable proof verification (for confirmed timestamps - no database access)
-import { verifyMerkleProofLocal } from '../src/zipstamp-server';
+import { verifyMerkleProofLocal } from '../src/token-service';
 import { getContractConfig, TIMESTAMP_PROOF_NFT_ABI, UNIFIED_NFT_VERIFY_ABI } from '../src/core/contracts';
 
 import { ethers } from 'ethers';
@@ -760,7 +760,7 @@ async function main() {
     console.error('\nUsage:');
     console.error('  tsx stamp-zip/verify-zip.ts <path-to-stamped.nzip> [--offline]');
     console.error('\nOptions:');
-    console.error('  --offline    Skip Zipstamp server (only for confirmed timestamps)');
+    console.error('  --offline    Skip NeoZip Token Service (only for confirmed timestamps)');
     console.error('\nExamples:');
     console.error('  tsx stamp-zip/verify-zip.ts stamp-zip/output/stamped.nzip');
     console.error('  tsx stamp-zip/verify-zip.ts stamp-zip/output/calgary.nzip --offline');
@@ -926,7 +926,7 @@ async function main() {
 
     // Step 4: Verify timestamp
     // For confirmed timestamps with complete proof, we can verify directly on blockchain
-    // For pending timestamps, we need to check with the Zipstamp server
+    // For pending timestamps, we need to check with the NeoZip Token Service
     
     const hasCompleteProof = metadataType === 'confirmed' && 
       timestampMetadata.merkleProof && 
@@ -1343,8 +1343,8 @@ async function main() {
     } else {
       // Verify via token server (for pending timestamps or incomplete proofs)
       console.log('Step 4: Verifying timestamp via token server...');
-      const zipStampServerUrl = getZipStampServerUrl();
-      console.log(`   Server: ${zipStampServerUrl}`);
+      const tokenServiceUrl = getTokenServiceUrl();
+      console.log(`   Server: ${tokenServiceUrl}`);
       console.log('   This may take a few moments...\n');
 
       try {
@@ -1354,7 +1354,7 @@ async function main() {
       } catch (error) {
         console.error('❌ Error: Failed to verify timestamp');
         console.error(`   ${error instanceof Error ? error.message : String(error)}`);
-        console.error(`\n💡 Make sure the Zipstamp server is running at ${zipStampServerUrl}`);
+        console.error(`\n💡 Make sure the NeoZip Token Service is running at ${tokenServiceUrl}`);
         process.exit(1);
       }
     }
@@ -1409,9 +1409,9 @@ async function main() {
           // Fallback for older verification results
           console.log(`Status: Confirmed (Transaction exists on blockchain)`);
           console.log(`\n📝 Blockchain Confirmation:`);
-          console.log(`   The Zipstamp server has confirmed this timestamp (transaction exists on blockchain).`);
+          console.log(`   The NeoZip Token Service has confirmed this timestamp (transaction exists on blockchain).`);
           if (!offlineMode && metadataType === 'pending') {
-            console.log(`   Note: This verification relies on the Zipstamp server.`);
+            console.log(`   Note: This verification relies on the NeoZip Token Service.`);
             console.log(`   To get independent verification directly through the blockchain contract, upgrade this ZIP file.`);
           } else if (!offlineMode) {
             console.log(`   Note: On-chain proof verification was not performed or failed.`);
@@ -1426,7 +1426,7 @@ async function main() {
         } else {
           console.log(`Status: Pending (Submitted to database, awaiting batch processing)`);
           console.log(`\n📝 Submission Status:`);
-          console.log(`   The digest has been successfully submitted to the Zipstamp server.`);
+          console.log(`   The digest has been successfully submitted to the NeoZip Token Service.`);
           console.log(`   It will be included in the next batch and confirmed on the blockchain.`);
         }
       } else {
@@ -1477,8 +1477,8 @@ async function main() {
           } else {
             // ZIP is in confirmed state but timestamp missing (upgrade was done before fix)
             console.log(`  ⚠️  Blockchain Timestamp: Not available (could not fetch from blockchain)`);
-            console.log(`      The Zipstamp server has confirmed this timestamp, but the blockchain timestamp could not be retrieved.`);
-            console.log(`      To get independent verification (not relying on the Zipstamp server), try re-upgrading the ZIP file.`);
+            console.log(`      The NeoZip Token Service has confirmed this timestamp, but the blockchain timestamp could not be retrieved.`);
+            console.log(`      To get independent verification (not relying on the NeoZip Token Service), try re-upgrading the ZIP file.`);
             console.log(`      The upgrade will enable validation directly through the contract on the blockchain:`);
             console.log(`      tsx stamp-zip/upgrade-zip.ts ${zipPath}`);
           }
@@ -1514,7 +1514,7 @@ async function main() {
       } else if (isConfirmed && metadataType === 'pending') {
         // No merkle proof available - this is a submit state ZIP
         console.log(`\n⚠️  Merkle Proof: Not available (ZIP file is in submit state)`);
-        console.log(`   The Zipstamp server has confirmed this timestamp, but the merkle proof is not yet stored in the ZIP.`);
+        console.log(`   The NeoZip Token Service has confirmed this timestamp, but the merkle proof is not yet stored in the ZIP.`);
         console.log(`   To get independent verification directly through the blockchain contract, upgrade this ZIP file.`);
       }
 
@@ -1527,8 +1527,8 @@ async function main() {
       // Suggest upgrade for pending timestamps that are confirmed on server
       if (isConfirmed && metadataType === 'pending') {
         console.log(`\n💡 TIP: Upgrade this timestamp for independent verification:`);
-        console.log(`   The Zipstamp server has confirmed this timestamp, but to get independent verification`);
-        console.log(`   (not relying on the Zipstamp server), upgrade this ZIP file. This will enable validation`);
+        console.log(`   The NeoZip Token Service has confirmed this timestamp, but to get independent verification`);
+        console.log(`   (not relying on the NeoZip Token Service), upgrade this ZIP file. This will enable validation`);
         console.log(`   directly through the contract on the blockchain:`);
         console.log(`   tsx stamp-zip/upgrade-zip.ts ${zipPath}`);
       } else if (isPending && !verificationResult.transactionHash) {

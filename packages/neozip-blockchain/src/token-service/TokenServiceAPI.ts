@@ -1,37 +1,37 @@
 /**
  * ======================================
- * ZipstampServerAPI.ts - Zipstamp Server API Integration
+ * TokenServiceAPI.ts - NeoZip Token Service API integration
  * ======================================
  * 
- * This module provides timestamping functionality using the Zipstamp server API,
+ * This module provides timestamping functionality using the NeoZip Token Service API,
  * similar to OpenTimestamps but using Ethereum blockchain.
  * 
  * Key Features:
- * - Ethereum blockchain timestamping via Zipstamp server
+ * - Ethereum blockchain timestamping via NeoZip Token Service
  * - Merkle root calculation and verification
  * - ZIP file integration for timestamp metadata
  * - Support for immediate, batched, and transferable modes
  * 
- * @fileoverview Zipstamp server API utilities for blockchain timestamping
+ * @fileoverview NeoZip Token Service API utilities for blockchain timestamping
  * @author NeoWare Inc.
  */
 
 import type { ZipkitLike, ZipEntryLike } from '../types';
 import { getContractConfig, getChainIdByName } from '../core/contracts';
-import { getZipStampServerUrl } from '../constants/servers';
+import { getTokenServiceUrl } from '../constants/servers';
 import { TS_SUBMIT_NZIP, TIMESTAMP_NZIP } from '../constants/metadata';
 import { crc32 } from '../utils/crc32';
 import { ethers } from 'ethers';
-import type { TimestampMetadata } from './ZipstampServerHelpers';
-import { submitDigest, verifyDigest } from './ZipstampServerHelpers';
+import type { TimestampMetadata } from './TokenServiceHelpers';
+import { submitDigest, verifyDigest } from './TokenServiceHelpers';
 
 export const CMP_METHOD = { STORED: 0, DEFLATED: 8 };
 
 /**
  * Timestamp metadata format stored in ZIP files
- * Re-exported from ZipstampServerHelpers.ts
+ * Re-exported from TokenServiceHelpers.ts
  */
-export type { TimestampMetadata } from './ZipstampServerHelpers';
+export type { TimestampMetadata } from './TokenServiceHelpers';
 
 /**
  * Verification result for timestamped ZIP files.
@@ -170,9 +170,9 @@ export async function extractTimestampData(
 }
 
 /**
- * Creates a timestamp by submitting a merkle root to the Zipstamp server.
+ * Creates a timestamp by submitting a merkle root to the NeoZip Token Service.
  * 
- * Submits a SHA-256 digest (merkle root) to the Zipstamp server API for blockchain
+ * Submits a SHA-256 digest (merkle root) to the NeoZip Token Service API for blockchain
  * timestamping. The digest is typically the merkle root of a ZIP file's contents.
  * 
  * The function uses `submitDigest` internally and converts the response to a
@@ -181,7 +181,7 @@ export async function extractTimestampData(
  * @param merkleRoot - A 64-character hexadecimal string representing the SHA-256 hash
  * @param options - Configuration options for timestamp creation
  * @param options.recipientEmail - Optional email address for notifications
- * @param options.serverUrl - Optional Zipstamp server URL (defaults to `ZIPSTAMP_SERVER_URL` env var or `https://zipstamp-dev.neozip.io`)
+ * @param options.serverUrl - Optional NeoZip Token Service URL (defaults to `TOKEN_SERVICE_URL` env var or `https://testnet.token-service.neozip.io`)
  * @param options.debug - Enable debug logging (defaults to `false`)
  * @param options.mode - **Deprecated**: For backward compatibility only, not sent to API
  * @param options.recipientAddress - **Deprecated**: For backward compatibility only, not sent to API
@@ -212,20 +212,20 @@ export async function createTimestamp(
   }
 
   try {
-    const serverUrl = getZipStampServerUrl(options);
+    const serverUrl = getTokenServiceUrl(options);
     
     if (options.debug) {
-      console.log('[Zipstamp Server API] ========================================');
-      console.log('[Zipstamp Server API] Creating Timestamp');
-      console.log('[Zipstamp Server API] ========================================');
-      console.log('[Zipstamp Server API] Server URL:', serverUrl);
-      console.log('[Zipstamp Server API] Merkle Root:', merkleRoot);
-      console.log('[Zipstamp Server API] ----------------------------------------');
+      console.log('[TokenService] ========================================');
+      console.log('[TokenService] Creating Timestamp');
+      console.log('[TokenService] ========================================');
+      console.log('[TokenService] Server URL:', serverUrl);
+      console.log('[TokenService] Merkle Root:', merkleRoot);
+      console.log('[TokenService] ----------------------------------------');
     }
 
     // Use submitDigest helper (only digest, email, and chainId are sent to API)
     // Note: mode, recipientAddress, and metadata options are for backward compatibility
-    // but are not actually sent to the Zipstamp server API
+    // but are not actually sent to the NeoZip Token Service API
     const response = await submitDigest(
       merkleRoot,
       options.recipientEmail,
@@ -236,7 +236,7 @@ export async function createTimestamp(
     if (!response.success) {
       const errorMsg = response.error || 'Failed to create timestamp';
       if (options.debug) {
-        console.error('[Zipstamp Server API] Error in response:', errorMsg);
+        console.error('[TokenService] Error in response:', errorMsg);
       }
       throw new Error(errorMsg);
     }
@@ -268,38 +268,38 @@ export async function createTimestamp(
     };
 
     if (options.debug) {
-      console.log('[Zipstamp Server API] Processed Timestamp Metadata:');
+      console.log('[TokenService] Processed Timestamp Metadata:');
       console.log(JSON.stringify(timestampMetadata, null, 2));
-      console.log('[Zipstamp Server API] ========================================\n');
+      console.log('[TokenService] ========================================\n');
     }
 
     return timestampMetadata;
   } catch (error) {
     if (options.debug) {
-      console.error('[Zipstamp Server API] ========================================');
-      console.error('[Zipstamp Server API] Error creating timestamp:');
-      console.error('[Zipstamp Server API]', error instanceof Error ? error.message : String(error));
+      console.error('[TokenService] ========================================');
+      console.error('[TokenService] Error creating timestamp:');
+      console.error('[TokenService]', error instanceof Error ? error.message : String(error));
       if (error instanceof Error && error.stack) {
-        console.error('[Zipstamp Server API] Stack trace:');
+        console.error('[TokenService] Stack trace:');
         console.error(error.stack);
       }
-      console.error('[Zipstamp Server API] ========================================\n');
+      console.error('[TokenService] ========================================\n');
     }
     throw error;
   }
 }
 
 /**
- * Verifies a timestamp against the Zipstamp server.
+ * Verifies a timestamp against the NeoZip Token Service.
  * 
  * Verifies that a timestamp has been confirmed on the blockchain by checking
- * with the Zipstamp server API. Uses `verifyDigest` internally and converts the
+ * with the NeoZip Token Service API. Uses `verifyDigest` internally and converts the
  * response to an `EthTimestampVerifyResult` format.
  * 
  * @param merkleRoot - The SHA-256 digest (merkle root) to verify
  * @param timestampData - The timestamp metadata from the ZIP file (contains batchId, chainId, etc.)
  * @param options - Configuration options for verification
- * @param options.serverUrl - Optional Zipstamp server URL (defaults to `ZIPSTAMP_SERVER_URL` env var or `https://zipstamp-dev.neozip.io`)
+ * @param options.serverUrl - Optional NeoZip Token Service URL (defaults to `TOKEN_SERVICE_URL` env var or `https://testnet.token-service.neozip.io`)
  * @param options.debug - Enable debug logging (defaults to `false`)
  * @returns Promise resolving to verification result with status and blockchain details
  * 
@@ -324,17 +324,17 @@ export async function verifyTimestamp(
   options: VerifyTimestampOptions = {}
 ): Promise<EthTimestampVerifyResult> {
   try {
-    const serverUrl = getZipStampServerUrl(options);
+    const serverUrl = getTokenServiceUrl(options);
     
     if (options.debug) {
-      console.log('[Zipstamp Server API] ========================================');
-      console.log('[Zipstamp Server API] Verifying Timestamp');
-      console.log('[Zipstamp Server API] ========================================');
-      console.log('[Zipstamp Server API] Server URL:', serverUrl);
-      console.log('[Zipstamp Server API] Merkle Root:', merkleRoot);
-      console.log('[Zipstamp Server API] Timestamp Data:');
+      console.log('[TokenService] ========================================');
+      console.log('[TokenService] Verifying Timestamp');
+      console.log('[TokenService] ========================================');
+      console.log('[TokenService] Server URL:', serverUrl);
+      console.log('[TokenService] Merkle Root:', merkleRoot);
+      console.log('[TokenService] Timestamp Data:');
       console.log(JSON.stringify(timestampData, null, 2));
-      console.log('[Zipstamp Server API] ----------------------------------------');
+      console.log('[TokenService] ----------------------------------------');
     }
 
     // Use verifyDigest helper
@@ -349,8 +349,8 @@ export async function verifyTimestamp(
     if (!response.success) {
       const errorMsg = response.error || 'Verification failed';
       if (options.debug) {
-        console.error('[Zipstamp Server API] Error in response:', errorMsg);
-        console.log('[Zipstamp Server API] ========================================\n');
+        console.error('[TokenService] Error in response:', errorMsg);
+        console.log('[TokenService] ========================================\n');
       }
       return {
         status: 'error',
@@ -372,9 +372,9 @@ export async function verifyTimestamp(
       };
       
       if (options.debug) {
-        console.log('[Zipstamp Server API] Verification Result (VALID):');
+        console.log('[TokenService] Verification Result (VALID):');
         console.log(JSON.stringify(result, null, 2));
-        console.log('[Zipstamp Server API] ========================================\n');
+        console.log('[TokenService] ========================================\n');
       }
       
       return result;
@@ -388,9 +388,9 @@ export async function verifyTimestamp(
     };
     
     if (options.debug) {
-      console.log('[Zipstamp Server API] Verification Result (PENDING):');
+      console.log('[TokenService] Verification Result (PENDING):');
       console.log(JSON.stringify(pendingResult, null, 2));
-      console.log('[Zipstamp Server API] ========================================\n');
+      console.log('[TokenService] ========================================\n');
     }
     
     return pendingResult;
@@ -401,14 +401,14 @@ export async function verifyTimestamp(
     };
     
     if (options.debug) {
-      console.error('[Zipstamp Server API] ========================================');
-      console.error('[Zipstamp Server API] Error during verification:');
-      console.error('[Zipstamp Server API]', error instanceof Error ? error.message : String(error));
+      console.error('[TokenService] ========================================');
+      console.error('[TokenService] Error during verification:');
+      console.error('[TokenService]', error instanceof Error ? error.message : String(error));
       if (error instanceof Error && error.stack) {
-        console.error('[Zipstamp Server API] Stack trace:');
+        console.error('[TokenService] Stack trace:');
         console.error(error.stack);
       }
-      console.error('[Zipstamp Server API] ========================================\n');
+      console.error('[TokenService] ========================================\n');
     }
     
     return errorResult;
@@ -419,12 +419,12 @@ export async function verifyTimestamp(
  * Verifies a timestamp within a ZIP file.
  * 
  * Extracts the merkle root and timestamp metadata from a ZIP file, then verifies
- * the timestamp against the Zipstamp server API. This is a convenience function that
+ * the timestamp against the NeoZip Token Service API. This is a convenience function that
  * combines `getEthTimestampEntry`, `extractTimestampData`, and `verifyTimestamp`.
  * 
  * @param zip - A ZipkitLike instance representing the timestamped ZIP file
  * @param options - Configuration options for verification
- * @param options.serverUrl - Optional Zipstamp server URL (defaults to `ZIPSTAMP_SERVER_URL` env var or `https://zipstamp-dev.neozip.io`)
+ * @param options.serverUrl - Optional NeoZip Token Service URL (defaults to `TOKEN_SERVICE_URL` env var or `https://testnet.token-service.neozip.io`)
  * @param options.debug - Enable debug logging (defaults to `false`)
  * @returns Promise resolving to verification result
  * 
@@ -538,7 +538,7 @@ export function createTimestampMetadataEntry(
 /**
  * Creates timestamp metadata for a ZIP file.
  * 
- * Extracts the merkle root from a ZIP file and submits it to the Zipstamp server
+ * Extracts the merkle root from a ZIP file and submits it to the NeoZip Token Service
  * for timestamping. Returns the timestamp metadata that can then be added to
  * the ZIP file using `createTimestampMetadataEntry`.
  * 
@@ -549,7 +549,7 @@ export function createTimestampMetadataEntry(
  * @param zipkit - A ZipkitLike instance representing the ZIP file to timestamp
  * @param options - Configuration options for timestamp creation
  * @param options.recipientEmail - Optional email address for notifications
- * @param options.serverUrl - Optional Zipstamp server URL (defaults to `ZIPSTAMP_SERVER_URL` env var or `https://zipstamp-dev.neozip.io`)
+ * @param options.serverUrl - Optional NeoZip Token Service URL (defaults to `TOKEN_SERVICE_URL` env var or `https://testnet.token-service.neozip.io`)
  * @param options.debug - Enable debug logging (defaults to `false`)
  * @returns Promise resolving to timestamp metadata, or `null` if creation fails
  * @throws {Error} If merkle root is not found in ZIP or timestamp creation fails
@@ -777,9 +777,9 @@ export function getMetadataFileNames(): string[] {
 // ============================================================================
 
 /**
- * Proof verification utilities for Zipstamp server timestamps.
+ * Proof verification utilities for NeoZip Token Service timestamps.
  * 
- * The Zipstamp server provides merkle proofs as an array of bytes32 hex strings.
+ * The NeoZip Token Service provides merkle proofs as an array of bytes32 hex strings.
  * This module provides local proof verification in the same style as
  * OpenZeppelin's MerkleProof (sorted pair hashing).
  */
@@ -806,7 +806,7 @@ function hashPair(a: string, b: string): string {
  * Verifies a Merkle proof locally using sorted pair hashing (keccak256).
  * 
  * Performs local verification of a Merkle proof without requiring access to
- * the Zipstamp server or blockchain. Uses the same sorted pair hashing algorithm
+ * the NeoZip Token Service or blockchain. Uses the same sorted pair hashing algorithm
  * as OpenZeppelin's MerkleProof library, ensuring compatibility with on-chain
  * verification.
  * 

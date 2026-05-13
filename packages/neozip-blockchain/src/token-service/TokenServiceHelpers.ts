@@ -1,23 +1,23 @@
 /**
- * Zipstamp Server Helpers
+ * NeoZip Token Service helpers
  * 
- * High-level convenience functions for interacting with the Zipstamp server API.
+ * High-level convenience functions for interacting with the NeoZip Token Service API.
  * These functions provide a simplified interface for common operations like
  * submitting digests, verifying timestamps, polling for confirmation, and NFT operations.
  * 
- * This module wraps the core ZipstampServerClient with convenience functions
+ * This module wraps the core TokenServiceClient with convenience functions
  * and response type transformations for easier use in applications.
  */
 
-import { ZipstampServerClient, type PrepareMintResponse, type NFTStatusResponse, type NFTContractInfoResponse } from './ZipstampServerClient';
-import { getZipStampServerUrl } from '../constants/servers';
+import { TokenServiceClient, type PrepareMintResponse, type NFTStatusResponse, type NFTContractInfoResponse } from './TokenServiceClient';
+import { getTokenServiceUrl } from '../constants/servers';
 
 // ============================================================================
 // Types
 // ============================================================================
 
 /**
- * Response from submitting a digest to the Zipstamp server.
+ * Response from submitting a digest to the NeoZip Token Service.
  * 
  * Returned by `submitDigest` function after submitting a digest for timestamping.
  */
@@ -33,7 +33,7 @@ export interface SubmitDigestResponse {
 }
 
 /**
- * Response from verifying a digest with the Zipstamp server.
+ * Response from verifying a digest with the NeoZip Token Service.
  * 
  * Returned by `verifyDigest` and `pollForConfirmation` functions after checking
  * timestamp status. Contains detailed blockchain information if confirmed.
@@ -85,7 +85,7 @@ export interface TimestampMetadata {
  * Extended Token Metadata (compatible with neozipkit TokenMetadata)
  * 
  * This interface extends the base TokenMetadata with timestamp proof information
- * for NFTs minted from timestamped ZIP files via the Zipstamp server.
+ * for NFTs minted from timestamped ZIP files via the NeoZip Token Service.
  * 
  * The timestampProof section links the NFT to the original timestamp batch,
  * proving both NFT ownership AND timestamp verification.
@@ -118,23 +118,23 @@ export interface ExtendedTokenMetadata {
   };
 }
 
-// Re-export NFT response types from ZipstampServerClient (source of truth)
-export type { PrepareMintResponse, NFTStatusResponse, NFTContractInfoResponse } from './ZipstampServerClient';
+// Re-export NFT response types from TokenServiceClient (source of truth)
+export type { PrepareMintResponse, NFTStatusResponse, NFTContractInfoResponse } from './TokenServiceClient';
 
 // ============================================================================
 // Options
 // ============================================================================
 
 /**
- * Options for Zipstamp server helper functions.
+ * Options for NeoZip Token Service helper functions.
  * 
- * Common configuration options used across helper functions in ZipstampServerHelpers.
+ * Common configuration options used across helper functions in TokenServiceHelpers.
  * Stamping requires a verified email in the request (no API key).
  */
-export interface ZipstampServerHelperOptions {
-  /** Zipstamp server URL (defaults to library constant / ZIPSTAMP_SERVER_URL or TOKEN_SERVER_URL env) */
+export interface TokenServiceHelperOptions {
+  /** NeoZip Token Service URL (defaults to library constant / TOKEN_SERVICE_URL env) */
   serverUrl?: string;
-  /** Key into ZIPSTAMP_SERVER_URLS (e.g. "default", "staging") */
+  /** Key into TOKEN_SERVICE_URLS (e.g. "default", "staging") */
   serverKey?: string;
   /** Enable debug logging */
   debug?: boolean;
@@ -145,19 +145,22 @@ export interface ZipstampServerHelperOptions {
 // ============================================================================
 
 /** Re-export for callers that need to resolve server URL (single source: constants/servers.ts) */
-export { getZipStampServerUrl };
+export { getTokenServiceUrl };
 
-function getClient(options?: ZipstampServerHelperOptions): ZipstampServerClient {
-  return new ZipstampServerClient({ 
-    serverUrl: getZipStampServerUrl(options),
+function getClient(options?: TokenServiceHelperOptions): TokenServiceClient {
+  return new TokenServiceClient({ 
+    serverUrl: getTokenServiceUrl(options),
   });
 }
 
-function shouldDebug(options?: ZipstampServerHelperOptions): boolean {
+function shouldDebug(options?: TokenServiceHelperOptions): boolean {
   if (options?.debug !== undefined) {
     return options.debug;
   }
-  return process.env.ZIPSTAMP_DEBUG === 'true' || process.env.DEBUG === 'true';
+  return (
+    process.env.TOKEN_SERVICE_DEBUG === 'true' ||
+    process.env.DEBUG === 'true'
+  );
 }
 
 // ============================================================================
@@ -165,9 +168,9 @@ function shouldDebug(options?: ZipstampServerHelperOptions): boolean {
 // ============================================================================
 
 /**
- * Submits a digest to the Zipstamp server for blockchain timestamping.
+ * Submits a digest to the NeoZip Token Service for blockchain timestamping.
  * 
- * Sends a SHA-256 digest (merkle root) to the Zipstamp server API to be included
+ * Sends a SHA-256 digest (merkle root) to the NeoZip Token Service API to be included
  * in the next batch for blockchain timestamping. The digest is typically the
  * merkle root of a ZIP file's contents.
  * 
@@ -178,7 +181,7 @@ function shouldDebug(options?: ZipstampServerHelperOptions): boolean {
  * @param email - Email address (must be verified on the server)
  * @param chainId - Optional chain ID hint (server may use this to select the network)
  * @param options - Optional configuration
- * @param options.serverUrl - Zipstamp server URL (defaults to `ZIPSTAMP_SERVER_URL` env var or `https://zipstamp-dev.neozip.io`)
+ * @param options.serverUrl - NeoZip Token Service URL (defaults to `TOKEN_SERVICE_URL` env var or `https://testnet.token-service.neozip.io`)
  * @param options.debug - Enable debug logging (defaults to `false`)
  * @returns Promise resolving to response containing batch information and status
  * 
@@ -201,16 +204,16 @@ export async function submitDigest(
   digest: string,
   email?: string,
   chainId?: number,
-  options?: ZipstampServerHelperOptions
+  options?: TokenServiceHelperOptions
 ): Promise<SubmitDigestResponse> {
   const client = getClient(options);
   const reqBody = { digest, chainId, email };
   if (shouldDebug(options)) {
-    console.log('[Zipstamp Server API] POST /stamp request:', JSON.stringify(reqBody, null, 2));
+    console.log('[TokenService] POST /stamp request:', JSON.stringify(reqBody, null, 2));
   }
   const res = await client.stamp(reqBody);
   if (shouldDebug(options)) {
-    console.log('[Zipstamp Server API] POST /stamp response:', JSON.stringify(res, null, 2));
+    console.log('[TokenService] POST /stamp response:', JSON.stringify(res, null, 2));
   }
 
   return {
@@ -226,18 +229,18 @@ export async function submitDigest(
 }
 
 /**
- * Verifies a digest using the Zipstamp server API.
+ * Verifies a digest using the NeoZip Token Service API.
  * 
- * Checks with the Zipstamp server whether a digest has been confirmed on the blockchain.
+ * Checks with the NeoZip Token Service whether a digest has been confirmed on the blockchain.
  * Returns detailed verification information including transaction hash, block number,
  * and merkle proof data if the timestamp is confirmed.
  * 
  * @param digest - The SHA-256 digest (64-character hex string) to verify
  * @param chainId - Optional chain ID hint to help server select the correct network
  * @param batchId - Optional batch ID hint to help server disambiguate if digest appears in multiple batches
- * @param client - Optional pre-configured ZipstampServerClient instance (useful for polling with custom timeout/retry settings)
+ * @param client - Optional pre-configured TokenServiceClient instance (useful for polling with custom timeout/retry settings)
  * @param options - Optional configuration
- * @param options.serverUrl - Zipstamp server URL (defaults to `ZIPSTAMP_SERVER_URL` env var or `https://zipstamp-dev.neozip.io`)
+ * @param options.serverUrl - NeoZip Token Service URL (defaults to `TOKEN_SERVICE_URL` env var or `https://testnet.token-service.neozip.io`)
  * @param options.debug - Enable debug logging (defaults to `false`)
  * @returns Promise resolving to verification response with status and blockchain details
  * 
@@ -265,17 +268,17 @@ export async function verifyDigest(
   digest: string,
   chainId?: number,
   batchId?: string,
-  client?: ZipstampServerClient,
-  options?: ZipstampServerHelperOptions
+  client?: TokenServiceClient,
+  options?: TokenServiceHelperOptions
 ): Promise<VerifyDigestResponse> {
   const c = client ?? getClient(options);
   const reqBody = { digest, chainId, batchId };
   if (shouldDebug(options)) {
-    console.log('[Zipstamp Server API] POST /verify request:', JSON.stringify(reqBody, null, 2));
+    console.log('[TokenService] POST /verify request:', JSON.stringify(reqBody, null, 2));
   }
   const res = await c.verify(reqBody);
   if (shouldDebug(options)) {
-    console.log('[Zipstamp Server API] POST /verify response:', JSON.stringify(res, null, 2));
+    console.log('[TokenService] POST /verify response:', JSON.stringify(res, null, 2));
   }
 
   return {
@@ -299,9 +302,9 @@ export async function verifyDigest(
 }
 
 /**
- * Polls the Zipstamp server for confirmation of a digest.
+ * Polls the NeoZip Token Service for confirmation of a digest.
  * 
- * Continuously checks the Zipstamp server API until the digest is confirmed on the
+ * Continuously checks the NeoZip Token Service API until the digest is confirmed on the
  * blockchain or the timeout is reached. Uses deadline-aware polling with per-request
  * timeouts to ensure proper exit behavior.
  * 
@@ -316,7 +319,7 @@ export async function verifyDigest(
  * @param timeout - Maximum time to poll in milliseconds (default: 300000 = 5 minutes)
  * @param interval - Time between polling attempts in milliseconds (default: 5000 = 5 seconds)
  * @param options - Optional configuration
- * @param options.serverUrl - Zipstamp server URL (defaults to `ZIPSTAMP_SERVER_URL` env var or `https://zipstamp-dev.neozip.io`)
+ * @param options.serverUrl - NeoZip Token Service URL (defaults to `TOKEN_SERVICE_URL` env var or `https://testnet.token-service.neozip.io`)
  * @param options.debug - Enable debug logging (defaults to `false`)
  * @returns Promise resolving to verification response if confirmed, or `null` if timeout reached
  * 
@@ -348,9 +351,9 @@ export async function pollForConfirmation(
   batchId?: string,
   timeout: number = 300000, // 5 minutes default
   interval: number = 5000, // 5 seconds default
-  options?: ZipstampServerHelperOptions
+  options?: TokenServiceHelperOptions
 ): Promise<VerifyDigestResponse | null> {
-  const serverUrl = getZipStampServerUrl(options);
+  const serverUrl = getTokenServiceUrl(options);
   let attempts = 0;
 
   const startTime = Date.now();
@@ -366,13 +369,13 @@ export async function pollForConfirmation(
     attempts++;
     const elapsed = now - startTime;
     if (shouldDebug(options)) {
-      console.log(`[Zipstamp Server API] pollForConfirmation attempt=${attempts} elapsedMs=${elapsed} remainingMs=${remaining}`);
+      console.log(`[TokenService] pollForConfirmation attempt=${attempts} elapsedMs=${elapsed} remainingMs=${remaining}`);
     }
     try {
       // Ensure a single /verify call cannot exceed the overall poll timeout.
       // Also disable retries during polling so the deadline is honored.
       const perRequestTimeoutMs = Math.max(1000, Math.min(30000, remaining));
-      const client = new ZipstampServerClient({
+      const client = new TokenServiceClient({
         serverUrl,
         timeout: perRequestTimeoutMs,
         retries: 0,
@@ -406,7 +409,7 @@ export async function pollForConfirmation(
       return result;
     } catch (error) {
       if (shouldDebug(options)) {
-        console.log(`[Zipstamp Server API] pollForConfirmation verify error: ${error instanceof Error ? error.message : String(error)}`);
+        console.log(`[TokenService] pollForConfirmation verify error: ${error instanceof Error ? error.message : String(error)}`);
       }
       // On error, wait and retry
       const sleepMs = Math.min(interval, Math.max(0, deadline - Date.now()));
@@ -434,7 +437,7 @@ export async function pollForConfirmation(
  * @param chainId - Optional chain ID hint
  * @param batchId - Optional batch ID from TIMESTAMP.NZIP metadata to ensure the correct batch is used
  * @param options - Optional configuration
- * @param options.serverUrl - Zipstamp server URL (defaults to `ZIPSTAMP_SERVER_URL` env var or `https://zipstamp-dev.neozip.io`)
+ * @param options.serverUrl - NeoZip Token Service URL (defaults to `TOKEN_SERVICE_URL` env var or `https://testnet.token-service.neozip.io`)
  * @param options.debug - Enable debug logging (defaults to `false`)
  * @returns Promise resolving to mint data response containing all parameters needed for contract call
  * 
@@ -461,7 +464,7 @@ export async function prepareMint(
   digest: string,
   chainId?: number,
   batchId?: string,
-  options?: ZipstampServerHelperOptions
+  options?: TokenServiceHelperOptions
 ): Promise<PrepareMintResponse> {
   const client = getClient(options);
   return client.prepareMint(digest, chainId, batchId);
@@ -470,14 +473,14 @@ export async function prepareMint(
 /**
  * Checks if a digest has already been minted as an NFT proof token.
  * 
- * Queries the Zipstamp server to determine if a digest has been minted as an NFT
+ * Queries the NeoZip Token Service to determine if a digest has been minted as an NFT
  * on the TimestampProofNFT contract. Returns token information if minted, including
  * token ID, owner, and proof data.
  * 
  * @param digest - The SHA-256 digest (64-character hex string) to check
  * @param chainId - Optional chain ID hint
  * @param options - Optional configuration
- * @param options.serverUrl - Zipstamp server URL (defaults to `ZIPSTAMP_SERVER_URL` env var or `https://zipstamp-dev.neozip.io`)
+ * @param options.serverUrl - NeoZip Token Service URL (defaults to `TOKEN_SERVICE_URL` env var or `https://testnet.token-service.neozip.io`)
  * @param options.debug - Enable debug logging (defaults to `false`)
  * @returns Promise resolving to NFT status response indicating if minted and token details
  * 
@@ -497,21 +500,21 @@ export async function prepareMint(
 export async function checkNFTStatus(
   digest: string,
   chainId?: number,
-  options?: ZipstampServerHelperOptions
+  options?: TokenServiceHelperOptions
 ): Promise<NFTStatusResponse> {
   const client = getClient(options);
   return client.checkNFTStatus(digest, chainId);
 }
 
 /**
- * Retrieves NFT contract information from the Zipstamp server.
+ * Retrieves NFT contract information from the NeoZip Token Service.
  * 
  * Gets details about the TimestampProofNFT contract for a given network,
  * including contract address, registry address, minting fee, and version.
  * 
  * @param chainId - Optional chain ID hint (if not provided, server uses default network)
  * @param options - Optional configuration
- * @param options.serverUrl - Zipstamp server URL (defaults to `ZIPSTAMP_SERVER_URL` env var or `https://zipstamp-dev.neozip.io`)
+ * @param options.serverUrl - NeoZip Token Service URL (defaults to `TOKEN_SERVICE_URL` env var or `https://testnet.token-service.neozip.io`)
  * @param options.debug - Enable debug logging (defaults to `false`)
  * @returns Promise resolving to contract information response
  * 
@@ -529,7 +532,7 @@ export async function checkNFTStatus(
  */
 export async function getNFTContractInfo(
   chainId?: number,
-  options?: ZipstampServerHelperOptions
+  options?: TokenServiceHelperOptions
 ): Promise<NFTContractInfoResponse> {
   const client = getClient(options);
   return client.getNFTContractInfo(chainId);
@@ -544,9 +547,9 @@ import type {
   VerifyEmailResponse,
   CalendarIdentity,
   HealthCheckResponse,
-} from './ZipstampServerClient';
+} from './TokenServiceClient';
 
-// Re-export auth types from ZipstampServerClient
+// Re-export auth types from TokenServiceClient
 export type {
   RegisterRequest,
   RegisterResponse,
@@ -556,7 +559,7 @@ export type {
   CalendarChainInfo,
   HealthCheckResponse,
   ComponentHealth,
-} from './ZipstampServerClient';
+} from './TokenServiceClient';
 
 /**
  * Register an email address with a calendar server.
@@ -569,7 +572,7 @@ export type {
  * 
  * @param email - Email address to register
  * @param options - Optional configuration
- * @param options.serverUrl - Zipstamp server URL
+ * @param options.serverUrl - NeoZip Token Service URL
  * @returns Promise resolving to registration response
  * 
  * @example
@@ -585,15 +588,15 @@ export type {
  */
 export async function registerEmail(
   email: string,
-  options?: ZipstampServerHelperOptions
+  options?: TokenServiceHelperOptions
 ): Promise<RegisterResponse> {
   const client = getClient(options);
   if (shouldDebug(options)) {
-    console.log('[Zipstamp Server API] POST /auth/register request:', { email });
+    console.log('[TokenService] POST /auth/register request:', { email });
   }
   const result = await client.register({ email });
   if (shouldDebug(options)) {
-    console.log('[Zipstamp Server API] POST /auth/register response:', JSON.stringify(result, null, 2));
+    console.log('[TokenService] POST /auth/register response:', JSON.stringify(result, null, 2));
   }
   return result;
 }
@@ -611,21 +614,21 @@ export async function registerEmail(
  * @param email - Email address that was registered
  * @param code - Verification code from email
  * @param options - Optional configuration
- * @param options.serverUrl - Zipstamp server URL
+ * @param options.serverUrl - NeoZip Token Service URL
  * @returns Promise resolving to verification response
  */
 export async function verifyEmailCode(
   email: string,
   code: string,
-  options?: ZipstampServerHelperOptions
+  options?: TokenServiceHelperOptions
 ): Promise<VerifyEmailResponse> {
   const client = getClient(options);
   if (shouldDebug(options)) {
-    console.log('[Zipstamp Server API] POST /auth/verify request:', { email, code: '***' });
+    console.log('[TokenService] POST /auth/verify request:', { email, code: '***' });
   }
   const result = await client.verifyEmail({ email, code });
   if (shouldDebug(options)) {
-    console.log('[Zipstamp Server API] POST /auth/verify response:', JSON.stringify(result, null, 2));
+    console.log('[TokenService] POST /auth/verify response:', JSON.stringify(result, null, 2));
   }
   return result;
 }
@@ -639,7 +642,7 @@ export async function verifyEmailCode(
  * PUBLIC: No API key required.
  * 
  * @param options - Optional configuration
- * @param options.serverUrl - Zipstamp server URL
+ * @param options.serverUrl - NeoZip Token Service URL
  * @returns Promise resolving to calendar identity information
  * 
  * @example
@@ -654,15 +657,15 @@ export async function verifyEmailCode(
  * ```
  */
 export async function getCalendarIdentity(
-  options?: ZipstampServerHelperOptions
+  options?: TokenServiceHelperOptions
 ): Promise<CalendarIdentity> {
   const client = getClient(options);
   if (shouldDebug(options)) {
-    console.log('[Zipstamp Server API] GET /calendar');
+    console.log('[TokenService] GET /calendar');
   }
   const result = await client.getCalendar();
   if (shouldDebug(options)) {
-    console.log('[Zipstamp Server API] GET /calendar response:', JSON.stringify(result, null, 2));
+    console.log('[TokenService] GET /calendar response:', JSON.stringify(result, null, 2));
   }
   return result;
 }
@@ -676,7 +679,7 @@ export async function getCalendarIdentity(
  * PUBLIC: No API key required.
  * 
  * @param options - Optional configuration
- * @param options.serverUrl - Zipstamp server URL
+ * @param options.serverUrl - NeoZip Token Service URL
  * @param full - If true, returns detailed component health (default: false)
  * @returns Promise resolving to health check response
  * 
@@ -694,17 +697,17 @@ export async function getCalendarIdentity(
  * ```
  */
 export async function checkCalendarHealth(
-  options?: ZipstampServerHelperOptions,
+  options?: TokenServiceHelperOptions,
   full: boolean = false
 ): Promise<HealthCheckResponse> {
   const client = getClient(options);
   const endpoint = full ? '/health/full' : '/health';
   if (shouldDebug(options)) {
-    console.log(`[Zipstamp Server API] GET ${endpoint}`);
+    console.log(`[TokenService] GET ${endpoint}`);
   }
   const result = full ? await client.healthCheckFull() : await client.healthCheck();
   if (shouldDebug(options)) {
-    console.log(`[Zipstamp Server API] GET ${endpoint} response:`, JSON.stringify(result, null, 2));
+    console.log(`[TokenService] GET ${endpoint} response:`, JSON.stringify(result, null, 2));
   }
   return result;
 }

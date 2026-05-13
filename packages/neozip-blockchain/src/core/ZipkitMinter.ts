@@ -248,7 +248,7 @@ export class ZipkitMinter {
    * Estimate gas costs for minting
    */
   async estimateGasCosts(): Promise<{ gasLimit: bigint; gasPrice: bigint; estimatedCost: string }> {
-    // v2.50/v2.51: use 0 for direct mint (no prior Zipstamp link); creationTimestamp is metadata only
+    // v2.50/v2.51: use 0 for direct mint (no prior token service link); creationTimestamp is metadata only
     const version = this.networkConfig.version || '';
     const useZeroTimestamp = version === '2.50' || version === '2.51';
     const creationTimestamp = useZeroTimestamp ? 0 : Math.floor(Date.now() / 1000);
@@ -332,7 +332,7 @@ export class ZipkitMinter {
       // Generate token ID (could be random or sequential)
       const tokenId = Math.floor(Math.random() * 1000000).toString();
       const metadata = this.createTokenMetadataString();
-      // v2.50/v2.51: use 0 for direct mint (no prior Zipstamp link)
+      // v2.50/v2.51: use 0 for direct mint (no prior token service link)
       const version = this.networkConfig.version || '';
       const useZeroTimestamp = version === '2.50' || version === '2.51';
       const creationTimestamp = useZeroTimestamp ? 0 : Math.floor(Date.now() / 1000);
@@ -748,8 +748,8 @@ export class ZipkitMinter {
     options: { preserveTimestampInfo?: boolean } = {}
   ): Promise<MintingResult> {
     try {
-      // Import Zipstamp server API functions dynamically to avoid circular dependencies
-      const { getEthTimestampEntry, extractTimestampData } = await import('../zipstamp-server/ZipstampServerAPI.js');
+      // Import NeoZip Token Service API functions dynamically to avoid circular dependencies
+      const { getEthTimestampEntry, extractTimestampData } = await import('../token-service/TokenServiceAPI.js');
       
       // Find timestamp entry in ZIP
       const timestampEntry = getEthTimestampEntry(zipkit);

@@ -1,14 +1,14 @@
 # neozip-blockchain
 
-Blockchain functionality for NeoZip: **Zipstamp server timestamping** (stamp, upgrade, mint, verify), NFT minting, verification, and wallet management. Part of the [neozipkit monorepo](../../README.md).
+Blockchain functionality for NeoZip: **NeoZip Token Service timestamping** (stamp, upgrade, mint, verify), NFT minting, verification, and wallet management. Part of the [neozipkit monorepo](../../README.md).
 
 > **Pre-1.0:** This package is under active development. The API may change before 1.0; use in production with caution.
 
-This package provides the client-side API and utilities that work with the sibling **[neozipkit](../neozipkit/)** package for full NZIP (NeoZip) workflows. The **Zipstamp server** is a **separate application**; this library contains the **Zipstamp server API client and helpers** used to communicate with that server (submit digests, poll for confirmations, fetch proofs, etc.). Run the Zipstamp server separately when using timestamping features.
+This package provides the client-side API and utilities that work with the sibling **[neozipkit](../neozipkit/)** package for full NZIP (NeoZip) workflows. The **NeoZip Token Service** is a **separate application**; this library contains the **NeoZip Token Service API client and helpers** used to communicate with that server (submit digests, poll for confirmations, fetch proofs, etc.). Run the NeoZip Token Service separately when using timestamping features.
 
 ## Features
 
-- **Zipstamp server timestamping** (recommended): Submit digest to Zipstamp server, batch to blockchain, upgrade to TIMESTAMP.NZIP, mint NFT proof. Uses the **Zipstamp server API** in this repo to talk to a **separate Zipstamp server application**.
+- **NeoZip Token Service timestamping** (recommended): Submit digest to NeoZip Token Service, batch to blockchain, upgrade to TIMESTAMP.NZIP, mint NFT proof. Uses the **NeoZip Token Service API** in this repo to talk to a **separate NeoZip Token Service application**.
 - **NFT Minting**: Mint ZIP file hashes as NFTs on Base network
 - **Token Verification**: Verify ZIP file authenticity against blockchain
 - **Wallet Management**: Browser and Node.js wallet integrations
@@ -29,15 +29,15 @@ For full NZIP creation and verification you typically use **neozipkit** together
 npm install neozipkit neozip-blockchain
 ```
 
-## Zipstamp server (separate application)
+## NeoZip Token Service (separate application)
 
-The **Zipstamp server** is a **separate application** (not part of this repo). It runs the backend that batches digest submissions and writes timestamps to the blockchain. This library provides the **Zipstamp server API client and helpers** (`src/zipstamp-server/`) used by your app to:
+The **NeoZip Token Service** is a **separate application** (not part of this repo). It runs the backend that batches digest submissions and writes timestamps to the blockchain. This library provides the **NeoZip Token Service API client and helpers** (`src/token-service/`) used by your app to:
 
 - Submit digests and poll for confirmations
 - Fetch TIMESTAMP.NZIP and proof data
 - Support stamp → upgrade → mint workflows
 
-Configure your app with the Zipstamp server URL (e.g. `ZIPSTAMP_SERVER_URL`) and run the Zipstamp server separately when using timestamping features. See `examples/` and `.env.sample` for usage.
+Configure your app with the NeoZip Token Service URL (`TOKEN_SERVICE_URL`) and run the NeoZip Token Service separately when using timestamping features. See `examples/` and `.env.sample` for usage.
 
 ## Quick Start
 
@@ -85,9 +85,9 @@ const wallet = new WalletManagerNode();
 await wallet.setupWallet(privateKey);
 ```
 
-### Zipstamp server timestamping (stamp, upgrade, mint)
+### NeoZip Token Service timestamping (stamp, upgrade, mint)
 
-Use the Zipstamp server to stamp a ZIP (submit digest), upgrade once the batch is confirmed (get TIMESTAMP.NZIP), then mint an NFT. See examples: `stamp-zip`, `upgrade-zip`, `mint-nft`, `token-create`.
+Use the NeoZip Token Service to stamp a ZIP (submit digest), upgrade once the batch is confirmed (get TIMESTAMP.NZIP), then mint an NFT. See examples: `stamp-zip`, `upgrade-zip`, `mint-nft`, `token-create`.
 
 ## Supported Networks
 
@@ -107,10 +107,10 @@ Use the Zipstamp server to stamp a ZIP (submit digest), upgrade once the batch i
 - `CONTRACT_CONFIGS` - Network configurations
 - `NZIP_CONTRACT_ABI` - Contract ABI
 
-### Zipstamp server API (client for separate Zipstamp server app)
+### NeoZip Token Service API (client for separate NeoZip Token Service app)
 
-- `ZipstampServerClient` - HTTP client for the Zipstamp server
-- `submitDigest`, `verifyDigest`, `getTimestampProof`, etc. (see `src/zipstamp-server/`) - Helpers and verification used by examples and apps that talk to the Zipstamp server
+- `TokenServiceClient` - HTTP client for the NeoZip Token Service
+- `submitDigest`, `verifyDigest`, `getTimestampProof`, etc. (see `src/token-service/`) - Helpers and verification used by examples and apps that talk to the NeoZip Token Service
 
 ### Browser Exports
 
@@ -125,10 +125,10 @@ Use the Zipstamp server to stamp a ZIP (submit digest), upgrade once the batch i
 
 ## OpenTimestamps (OTS) add-on
 
-**Zipstamp server timestamping is the recommended and supported path.** OpenTimestamps (OTS) is provided as an **optional add-on** for Bitcoin-backed timestamps and backward compatibility. OTS may be **deprecated in a future release** in favor of Zipstamp server timestamps.
+**NeoZip Token Service timestamping is the recommended and supported path.** OpenTimestamps (OTS) is provided as an **optional add-on** for Bitcoin-backed timestamps and backward compatibility. OTS may be **deprecated in a future release** in favor of NeoZip Token Service timestamps.
 
 - **Access**: OTS is **not** on the main package entry. Use the subpath: `import { createTimestamp, verifyOtsZip } from 'neozip-blockchain/ots'`
-- **Metadata**: OTS uses `TIMESTAMP.OTS` / `TS-SUBMIT.OTS`; Zipstamp server uses `TIMESTAMP.NZIP` / `TS-SUBMIT.NZIP`.
+- **Metadata**: OTS uses `TIMESTAMP.OTS` / `TS-SUBMIT.OTS`; NeoZip Token Service uses `TIMESTAMP.NZIP` / `TS-SUBMIT.NZIP`.
 - **Functions**: `createTimestamp()`, `verifyOts()`, `verifyOtsZip()`, `deserializeOts()`, `parseVerifyResult()`, `upgradeOTS()`, `createOtsMetadataEntry()`, `getOtsEntry()`, `getOtsBuffer()`, `getMerkleRootSafe()`, `bufferToArrayBuffer()`
 - **Note**: `upgradeOTS()` requires a Zipkit instance from neozipkit for ZIP file manipulation; pass it as the third argument.
 
@@ -215,5 +215,5 @@ Contributions are welcome! Please read our contributing guidelines before submit
 - [Documentation](https://neozip.io/docs)
 - [NeoWare](https://neoware.com)
 
-**Note:** The **Zipstamp server** is a separate application (not in this repo). This library only contains the client API used to communicate with it.
+**Note:** The **NeoZip Token Service** is a separate application (not in this repo). This library only contains the client API used to communicate with it.
 

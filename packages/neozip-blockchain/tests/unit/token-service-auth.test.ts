@@ -1,28 +1,28 @@
 /**
- * Zipstamp Server Authentication Tests
+ * NeoZip Token Service authentication tests
  * 
  * Unit tests for the authentication and calendar discovery functionality.
  */
 
 import {
-  ZipstampServerClient,
+  TokenServiceClient,
   CalendarManager,
   type CalendarConfig,
-} from '../../src/zipstamp-server';
+} from '../../src/token-service';
 
 // =============================================================================
-// ZipstampServerClient Tests
+// TokenServiceClient Tests
 // =============================================================================
 
-describe('ZipstampServerClient', () => {
+describe('TokenServiceClient', () => {
   describe('constructor', () => {
     it('should use default server URL', () => {
-      const client = new ZipstampServerClient();
-      expect(client.getServerUrl()).toBe('https://zipstamp-dev.neozip.io');
+      const client = new TokenServiceClient();
+      expect(client.getServerUrl()).toBe('https://testnet.token-service.neozip.io');
     });
 
     it('should use custom server URL', () => {
-      const client = new ZipstampServerClient({ serverUrl: 'https://custom.server.com' });
+      const client = new TokenServiceClient({ serverUrl: 'https://custom.server.com' });
       expect(client.getServerUrl()).toBe('https://custom.server.com');
     });
 
@@ -30,20 +30,20 @@ describe('ZipstampServerClient', () => {
 
   describe('authentication types', () => {
     it('should export auth request/response types', () => {
-      const zipstampServer = require('../../src/zipstamp-server');
-      expect(zipstampServer.ZipstampServerClient).toBeDefined();
-      expect(zipstampServer.registerEmail).toBeDefined();
-      expect(zipstampServer.verifyEmailCode).toBeDefined();
+      const tokenService = require('../../src/token-service');
+      expect(tokenService.TokenServiceClient).toBeDefined();
+      expect(tokenService.registerEmail).toBeDefined();
+      expect(tokenService.verifyEmailCode).toBeDefined();
     });
   });
 
   describe('calendar discovery types', () => {
     it('should export calendar-related module (types are compile-time only)', () => {
-      const zipstampServer = require('../../src/zipstamp-server');
-      expect(zipstampServer.ZipstampServerClient).toBeDefined();
-      expect(zipstampServer.CalendarManager).toBeDefined();
-      expect(zipstampServer.getCalendarIdentity).toBeDefined();
-      expect(zipstampServer.checkCalendarHealth).toBeDefined();
+      const tokenService = require('../../src/token-service');
+      expect(tokenService.TokenServiceClient).toBeDefined();
+      expect(tokenService.CalendarManager).toBeDefined();
+      expect(tokenService.getCalendarIdentity).toBeDefined();
+      expect(tokenService.checkCalendarHealth).toBeDefined();
     });
   });
 });
@@ -145,7 +145,7 @@ describe('CalendarManager', () => {
       const manager = new CalendarManager(testCalendars);
       const client = manager.getClient('https://alpha.test.com');
       
-      expect(client).toBeInstanceOf(ZipstampServerClient);
+      expect(client).toBeInstanceOf(TokenServiceClient);
       expect(client.getServerUrl()).toBe('https://alpha.test.com');
     });
 
@@ -201,31 +201,31 @@ describe('CalendarManager', () => {
 
 describe('Module Exports', () => {
   it('should export all expected functions', () => {
-    const zipstampServer = require('../../src/zipstamp-server');
+    const tokenService = require('../../src/token-service');
     
     // Core functions
-    expect(zipstampServer.submitDigest).toBeDefined();
-    expect(zipstampServer.verifyDigest).toBeDefined();
-    expect(zipstampServer.pollForConfirmation).toBeDefined();
+    expect(tokenService.submitDigest).toBeDefined();
+    expect(tokenService.verifyDigest).toBeDefined();
+    expect(tokenService.pollForConfirmation).toBeDefined();
     
     // Auth functions
-    expect(zipstampServer.registerEmail).toBeDefined();
-    expect(zipstampServer.verifyEmailCode).toBeDefined();
+    expect(tokenService.registerEmail).toBeDefined();
+    expect(tokenService.verifyEmailCode).toBeDefined();
     
     // Calendar functions
-    expect(zipstampServer.getCalendarIdentity).toBeDefined();
-    expect(zipstampServer.checkCalendarHealth).toBeDefined();
+    expect(tokenService.getCalendarIdentity).toBeDefined();
+    expect(tokenService.checkCalendarHealth).toBeDefined();
     
     // Classes
-    expect(zipstampServer.ZipstampServerClient).toBeDefined();
-    expect(zipstampServer.CalendarManager).toBeDefined();
+    expect(tokenService.TokenServiceClient).toBeDefined();
+    expect(tokenService.CalendarManager).toBeDefined();
   });
 
   it('should export metadata constants', () => {
-    const zipstampServer = require('../../src/zipstamp-server');
+    const tokenService = require('../../src/token-service');
     
-    expect(zipstampServer.SUBMIT_METADATA).toBeDefined();
-    expect(zipstampServer.TIMESTAMP_METADATA).toBeDefined();
-    expect(zipstampServer.NFT_METADATA).toBeDefined();
+    expect(tokenService.SUBMIT_METADATA).toBeDefined();
+    expect(tokenService.TIMESTAMP_METADATA).toBeDefined();
+    expect(tokenService.NFT_METADATA).toBeDefined();
   });
 });

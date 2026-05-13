@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking
+
+- **NeoZip Token Service client** — The HTTP client module lives at [`src/token-service/`](src/token-service/) with exports such as `TokenServiceClient`, `getTokenServiceUrl`, and `DEFAULT_TOKEN_SERVICE_URL`. The npm subpath is `neozip-blockchain/token-service`. Configuration uses `TOKEN_SERVICE_URL`, `TOKEN_SERVICE_EMAIL`, `TOKEN_SERVICE_CHAIN_ID`, and `TOKEN_SERVICE_DEBUG` only. The library default base URL is `https://testnet.token-service.neozip.io`.
+- **REST paths unchanged** — HTTP routes (`/stamp`, `/verify`, `/auth/register`, etc.) match the current NeoZip Token Service; update the client when the service publishes new paths.
+
+### External verification (outside this repo)
+
+Search downstream repos and CI for older `neozip-blockchain` subpath imports, renamed symbols, and outdated environment variable names. Smoke-test register/verify email, stamp, verify, batch status, NFT prepare-mint, and health against your deployed `TOKEN_SERVICE_URL`.
+
 ## [0.6.0-beta.1] - 2026-03-03
 
 - Beta pre-release of 0.6.0 for npm (unscoped `neozip-blockchain`). Same changes as [0.6.0]; install with `npm install neozip-blockchain@beta`.
@@ -34,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.5.0] - Initial open-source release
 
 - Open-source companion to [neozipkit](https://www.npmjs.com/package/neozipkit) for blockchain timestamping, NFT minting, and verification
-- Zipstamp server API client and helpers for stamp, upgrade, and mint workflows
+- NeoZip Token Service API client and helpers for stamp, upgrade, and mint workflows
 - NZIP contract v2.50 as default; support for v2.11 and v2.10
 - Wallet management (browser and Node.js), ZipkitMinter, ZipkitVerifier
 - OpenTimestamps (OTS) add-on for Bitcoin-backed timestamps

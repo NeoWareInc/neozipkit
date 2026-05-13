@@ -1,6 +1,6 @@
 # Token Server API Update Plan
 
-> **Note:** The codebase now uses a single server module: `src/zipstamp-server`. The former `src/token-server` has been removed; all callers use the Zipstamp server API. This document is kept for historical context.
+> **Note:** The codebase now uses a single server module: [`src/token-service/`](../src/token-service/) (NeoZip Token Service / `TokenService` client). The former `src/token-server` has been removed. This document is kept for historical context.
 
 This plan updates the `neozip-blockchain` library to support the new token-server APIs for authentication, calendar discovery, and multi-calendar redundancy.
 

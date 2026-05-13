@@ -47,7 +47,7 @@ import type { CompressOptions } from 'neozipkit';
 
 // Configuration
 import { getContractConfig, NZIP_CONTRACT_ABI_V250 } from '../src/core/contracts';
-import { NFT_METADATA } from '../src/zipstamp-server';
+import { NFT_METADATA } from '../src/token-service';
 
 import { ethers } from 'ethers';
 import * as os from 'os';

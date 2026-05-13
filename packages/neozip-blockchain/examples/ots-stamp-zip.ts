@@ -7,7 +7,7 @@
  * OpenTimestamps proof, and adds META-INF/TS-SUBMIT.OTS to the archive.
  * This mirrors the neozip-ots "zip" flow using our OTS add-on.
  *
- * Legacy/add-on example. For primary timestamping use the Zipstamp server
+ * Legacy/add-on example. For primary timestamping use the NeoZip Token Service
  * flow (stamp-zip, upgrade-zip).
  *
  * Usage:

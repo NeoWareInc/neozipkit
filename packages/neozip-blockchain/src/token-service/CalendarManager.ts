@@ -2,7 +2,7 @@
  * CalendarManager - Multi-calendar support for redundancy
  * 
  * Similar to OpenTimestamps' approach of submitting to multiple calendars,
- * this class manages multiple Zipstamp server calendars for reliability.
+ * this class manages multiple NeoZip Token Service calendars for reliability.
  * 
  * **Use Cases:**
  * - Submit timestamps to multiple calendars for redundancy
@@ -31,12 +31,12 @@
  */
 
 import {
-  ZipstampServerClient,
+  TokenServiceClient,
   type CalendarIdentity,
   type HealthCheckResponse,
   type StampResponse,
   type VerifyResponse,
-} from './ZipstampServerClient';
+} from './TokenServiceClient';
 
 // ============================================================================
 // Types
@@ -208,7 +208,7 @@ export class CalendarManager {
    */
   async checkHealth(url: string): Promise<CalendarStatus> {
     const start = Date.now();
-    const client = new ZipstampServerClient({ 
+    const client = new TokenServiceClient({ 
       serverUrl: url, 
       timeout: 10000, // 10 second timeout for health checks
       retries: 0, // No retries for health checks
@@ -324,7 +324,7 @@ export class CalendarManager {
 
     const results = await Promise.allSettled(
       healthy.map(async cal => {
-        const client = new ZipstampServerClient({
+        const client = new TokenServiceClient({
           serverUrl: cal.url,
           timeout: options?.timeout ?? 30000,
         });
@@ -390,7 +390,7 @@ export class CalendarManager {
 
     for (const cal of healthy) {
       try {
-        const client = new ZipstampServerClient({ serverUrl: cal.url });
+        const client = new TokenServiceClient({ serverUrl: cal.url });
         const result = await client.verify({ digest, chainId, batchId });
         
         if (result.success) {
@@ -465,15 +465,15 @@ export class CalendarManager {
    * Create a client for a specific calendar
    * 
    * @param url - URL of the calendar (must be configured)
-   * @returns ZipstampServerClient instance
+   * @returns TokenServiceClient instance
    * @throws Error if calendar is not configured
    */
-  getClient(url: string): ZipstampServerClient {
+  getClient(url: string): TokenServiceClient {
     const config = this.calendars.find(c => c.url === url);
     if (!config) {
       throw new Error(`Calendar not configured: ${url}`);
     }
-    return new ZipstampServerClient({
+    return new TokenServiceClient({
       serverUrl: config.url,
     });
   }
@@ -481,9 +481,9 @@ export class CalendarManager {
   /**
    * Get client for the highest priority healthy calendar
    * 
-   * @returns ZipstampServerClient instance or null if no healthy calendars
+   * @returns TokenServiceClient instance or null if no healthy calendars
    */
-  getBestClient(): ZipstampServerClient | null {
+  getBestClient(): TokenServiceClient | null {
     const healthy = this.getHealthyCalendars();
     if (healthy.length === 0) return null;
     return this.getClient(healthy[0].url);

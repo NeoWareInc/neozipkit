@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 /**
- * Verify Email - Register and verify email for Zipstamp server
+ * Verify Email - Register and verify email for NeoZip Token Service
  *
- * Tasks that use the Zipstamp server (stamp-zip, upgrade-zip, mint-nft) require
+ * Tasks that use the NeoZip Token Service (stamp-zip, upgrade-zip, mint-nft) require
  * a verified email. This script registers your email; the server sends a
  * verification link. After you click the link, run this script again with your
  * email to save it to .env.local.
@@ -20,16 +20,16 @@
  *   yarn verify-email user@example.com
  *
  * PREREQUISITES:
- * - Zipstamp server (default: https://zipstamp-dev.neozip.io)
- * - Set ZIPSTAMP_SERVER_URL (or TOKEN_SERVER_URL) if different
+ * - NeoZip Token Service (default: https://testnet.token-service.neozip.io)
+ * - Set TOKEN_SERVICE_URL if different from the default
  */
 
 import { config } from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import * as readline from 'readline';
-import { registerEmail } from '../src/zipstamp-server';
-import { getZipStampServerUrl } from '../src/zipstamp-server';
+import { registerEmail } from '../src/token-service';
+import { getTokenServiceUrl } from '../src/token-service';
 
 const envLocalPath = path.resolve(process.cwd(), '.env.local');
 const envPath = path.resolve(process.cwd(), '.env');
@@ -78,22 +78,21 @@ function setEnvLocalKey(key: string, value: string): void {
 }
 
 /**
- * Save the verified email to .env.local as ZIPSTAMP_EMAIL (and TOKEN_SERVER_EMAIL for backward compatibility).
+ * Save the verified email to .env.local as TOKEN_SERVICE_EMAIL.
  */
 function saveEmailToEnvLocal(email: string): void {
-  setEnvLocalKey('ZIPSTAMP_EMAIL', email);
-  setEnvLocalKey('TOKEN_SERVER_EMAIL', email);
+  setEnvLocalKey('TOKEN_SERVICE_EMAIL', email);
 }
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2).filter((a) => !a.startsWith('--'));
   let email = args[0];
 
-  const serverUrl = getZipStampServerUrl();
+  const serverUrl = getTokenServiceUrl();
 
   if (!email) {
     console.log('');
-    console.log('Zipstamp server requires a verified email for stamp/upgrade/mint.');
+    console.log('NeoZip Token Service requires a verified email for stamp/upgrade/mint.');
     console.log('');
     email = await ask('Email to verify: ');
     if (!email) {
