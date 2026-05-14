@@ -1,12 +1,12 @@
-# Token Server API Update Plan
+# NeoZip Token Service API update plan (archive)
 
-> **Note:** The codebase now uses a single server module: [`src/token-service/`](../src/token-service/) (NeoZip Token Service / `TokenService` client). The former `src/token-server` has been removed. This document is kept for historical context.
+> **Note:** This document is historical. The NeoZip Token Service client lives at [`src/token-service/`](../src/token-service/) (`TokenServiceClient` and related exports). This document is kept for context.
 
-This plan updates the `neozip-blockchain` library to support the new token-server APIs for authentication, calendar discovery, and multi-calendar redundancy.
+This plan updates the `neozip-blockchain` library to support the NeoZip Token Service APIs for authentication, calendar discovery, and multi-calendar redundancy.
 
 ## Background
 
-The token-server has been updated with:
+The NeoZip Token Service has been updated with:
 - **Email-based authentication** with API keys for stamping operations
 - **Calendar identity & discovery** for server identification
 - **Public verification endpoints** - no API key required to verify
@@ -18,16 +18,16 @@ The token-server has been updated with:
 
 ## Phase 1: API Key Authentication Support
 
-Update `TokenServerClient` to support API key authentication for protected endpoints.
+Update `TokenServiceClient` to support API key authentication for protected endpoints.
 
-### 1.1 Update TokenServerClient Options
+### 1.1 Update TokenServiceClient Options
 
-**File**: `src/token-server/TokenServerClient.ts`
+**File**: `src/token-service/TokenServiceClient.ts`
 
 Add API key support to the client:
 
 ```typescript
-export interface TokenServerOptions {
+export interface TokenServiceClientOptions {
   serverUrl?: string;
   timeout?: number;
   retries?: number;
@@ -53,12 +53,12 @@ private async request<T>(method: string, path: string, body?: any): Promise<T> {
 }
 ```
 
-### 1.2 Update TokenServerHelperOptions
+### 1.2 Update TokenServiceHelperOptions
 
-**File**: `src/token-server/TokenServerHelpers.ts`
+**File**: `src/token-service/TokenServiceHelpers.ts`
 
 ```typescript
-export interface TokenServerHelperOptions {
+export interface TokenServiceHelperOptions {
   serverUrl?: string;
   debug?: boolean;
   apiKey?: string;  // NEW: API key for authenticated requests
@@ -68,9 +68,9 @@ export interface TokenServerHelperOptions {
 Update `getClient()` helper to pass API key:
 
 ```typescript
-function getClient(options?: TokenServerHelperOptions): TokenServerClient {
-  return new TokenServerClient({ 
-    serverUrl: getTokenServerUrl(options),
+function getClient(options?: TokenServiceHelperOptions): TokenServiceClient {
+  return new TokenServiceClient({ 
+    serverUrl: getTokenServiceUrl(options),
     apiKey: options?.apiKey,
   });
 }
@@ -81,7 +81,7 @@ function getClient(options?: TokenServerHelperOptions): TokenServerClient {
 Support `NEOZIP_API_KEY` environment variable as default:
 
 ```typescript
-function getApiKey(options?: TokenServerHelperOptions): string | undefined {
+function getApiKey(options?: TokenServiceHelperOptions): string | undefined {
   return options?.apiKey || process.env.NEOZIP_API_KEY || undefined;
 }
 ```
@@ -94,7 +94,7 @@ Add methods for the user registration and API key management flow.
 
 ### 2.1 Add Auth Types
 
-**File**: `src/token-server/TokenServerClient.ts`
+**File**: `src/token-service/TokenServiceClient.ts`
 
 ```typescript
 // === Authentication Types ===
@@ -174,7 +174,7 @@ export interface GetUsageResponse {
 }
 ```
 
-### 2.2 Add Auth Methods to TokenServerClient
+### 2.2 Add Auth Methods to TokenServiceClient
 
 ```typescript
 // === Authentication Methods ===
@@ -231,7 +231,7 @@ async getUsage(): Promise<GetUsageResponse> {
 
 ### 2.3 Add Auth Helper Functions
 
-**File**: `src/token-server/TokenServerHelpers.ts`
+**File**: `src/token-service/TokenServiceHelpers.ts`
 
 ```typescript
 /**
@@ -240,7 +240,7 @@ async getUsage(): Promise<GetUsageResponse> {
  */
 export async function registerEmail(
   email: string,
-  options?: TokenServerHelperOptions
+  options?: TokenServiceHelperOptions
 ): Promise<RegisterResponse> {
   const client = getClient(options);
   return client.register({ email });
@@ -253,7 +253,7 @@ export async function registerEmail(
 export async function verifyEmailCode(
   email: string,
   code: string,
-  options?: TokenServerHelperOptions
+  options?: TokenServiceHelperOptions
 ): Promise<VerifyEmailResponse> {
   const client = getClient(options);
   return client.verifyEmail({ email, code });
@@ -268,7 +268,7 @@ Add support for discovering calendar server identity and capabilities.
 
 ### 3.1 Add Calendar Types
 
-**File**: `src/token-server/TokenServerClient.ts`
+**File**: `src/token-service/TokenServiceClient.ts`
 
 ```typescript
 // === Calendar Discovery Types ===
@@ -345,17 +345,17 @@ Add utilities for working with multiple calendar servers for redundancy.
 
 ### 4.1 Create CalendarManager Class
 
-**File**: `src/token-server/CalendarManager.ts` (NEW)
+**File**: `src/token-service/CalendarManager.ts` (NEW)
 
 ```typescript
 /**
  * CalendarManager - Multi-calendar support for redundancy
  * 
  * Similar to OpenTimestamps' approach of submitting to multiple calendars,
- * this class manages multiple token-server calendars for reliability.
+ * this class manages multiple token-service calendars for reliability.
  */
 
-import { TokenServerClient, type CalendarIdentity, type HealthCheckResponse } from './TokenServerClient';
+import { TokenServiceClient, type CalendarIdentity, type HealthCheckResponse } from './TokenServiceClient';
 
 export interface CalendarConfig {
   url: string;
@@ -415,7 +415,7 @@ export class CalendarManager {
   async checkHealth(url: string): Promise<CalendarStatus> {
     const start = Date.now();
     const config = this.calendars.find(c => c.url === url);
-    const client = new TokenServerClient({ serverUrl: url, apiKey: config?.apiKey });
+    const client = new TokenServiceClient({ serverUrl: url, apiKey: config?.apiKey });
     
     try {
       const [identity, health] = await Promise.all([
@@ -471,7 +471,7 @@ export class CalendarManager {
     
     const results = await Promise.allSettled(
       healthy.map(async cal => {
-        const client = new TokenServerClient({ 
+        const client = new TokenServiceClient({ 
           serverUrl: cal.url, 
           apiKey: cal.apiKey,
           timeout: options?.timeout,
@@ -513,7 +513,7 @@ export class CalendarManager {
     
     for (const cal of healthy) {
       try {
-        const client = new TokenServerClient({ serverUrl: cal.url });
+        const client = new TokenServiceClient({ serverUrl: cal.url });
         const result = await client.verify({ digest, chainId, batchId });
         if (result.success && result.verified) {
           return { calendar: cal.url, result };
@@ -536,11 +536,11 @@ Update existing helper functions to support new options.
 
 ### 5.1 Update submitDigest
 
-**File**: `src/token-server/TokenServerHelpers.ts`
+**File**: `src/token-service/TokenServiceHelpers.ts`
 
 ```typescript
 /**
- * Submits a digest to the token-server for timestamping.
+ * Submits a digest to the token-service for timestamping.
  * 
  * NOTE: Stamping now requires an API key. Set via:
  * - options.apiKey parameter
@@ -550,13 +550,13 @@ export async function submitDigest(
   digest: string,
   email?: string,
   chainId?: number,
-  options?: TokenServerHelperOptions
+  options?: TokenServiceHelperOptions
 ): Promise<SubmitDigestResponse> {
   const apiKey = getApiKey(options);
   
   if (!apiKey) {
-    console.warn('[Token Server] Warning: No API key provided. Stamping may fail.');
-    console.warn('[Token Server] Set NEOZIP_API_KEY environment variable or pass options.apiKey');
+    console.warn('[TokenService] Warning: No API key provided. Stamping may fail.');
+    console.warn('[TokenService] Set NEOZIP_API_KEY environment variable or pass options.apiKey');
   }
   
   const c = getClient({ ...options, apiKey });
@@ -595,7 +595,7 @@ Update the module exports.
 
 ### 6.1 Update Index Exports
 
-**File**: `src/token-server/index.ts`
+**File**: `src/token-service/index.ts`
 
 ```typescript
 // Add new exports
@@ -619,13 +619,13 @@ export {
   type CalendarIdentity,
   type CalendarChainInfo,
   type HealthCheckResponse,
-} from './TokenServerClient';
+} from './TokenServiceClient';
 
 // Auth helper functions
 export {
   registerEmail,
   verifyEmailCode,
-} from './TokenServerHelpers';
+} from './TokenServiceHelpers';
 
 // Multi-calendar support
 export {
@@ -643,7 +643,7 @@ Update example scripts to demonstrate new features.
 
 ### 7.1 Create Auth Example
 
-**File**: `examples/token-server-auth.ts` (NEW)
+**File**: `examples/token-service-auth.ts` (NEW)
 
 Demonstrate the registration and API key flow:
 - Register email
@@ -674,7 +674,7 @@ Update `stamp-zip.ts` and others to:
 
 ### 8.1 Unit Tests
 
-**File**: `tests/unit/token-server-auth.test.ts` (NEW)
+**File**: `tests/unit/token-service-auth.test.ts` (NEW)
 
 Test authentication methods:
 - Register request format

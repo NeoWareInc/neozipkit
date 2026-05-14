@@ -22,7 +22,7 @@ NZIP (NeoZip) files are ZIP archives with embedded blockchain proofs. These exam
 | `example:verify-timestamp` | [verify-zip.ts](verify-zip.ts) | Verify pending timestamp | Verify | NeoZip Token Service |
 | `example:verify-upgrade` | [verify-zip.ts](verify-zip.ts) | Verify confirmed timestamp | Verify | None (offline) |
 | `example:verify-nft` | [verify-zip.ts](verify-zip.ts) | Verify NFT token | Verify | None (offline) |
-| `example:token-srv` | [token-create.ts](token-create.ts) | Create ZIP + mint NFT (UnifiedNFT) | Direct NFT | Wallet |
+| `example:token-service` | [token-create.ts](token-create.ts) | Create ZIP + mint NFT (UnifiedNFT) | Direct NFT | Wallet |
 | `example:token-direct` | [token-direct.ts](token-direct.ts) | Create ZIP + mint NFT (ZipkitMinter, v2.51) | Direct NFT | Wallet |
 | `example:verify-token` | [verify-token.ts](verify-token.ts) | Verify tokenized ZIP (simpler) | Verify | None |
 | `example:ots-stamp` | [ots-stamp-zip.ts](ots-stamp-zip.ts) | Create ZIP + OpenTimestamps proof | OTS | None |
@@ -275,7 +275,7 @@ Creates a tokenized ZIP file using the UnifiedNFT contract directly.
 **Usage:**
 ```bash
 # Using yarn script
-USER_PRIVATE_KEY=0x... yarn example:token-srv examples/output/token-test.nzip examples/test-files/*
+USER_PRIVATE_KEY=0x... yarn example:token-service examples/output/token-test.nzip examples/test-files/*
 
 # Using ts-node directly
 ts-node examples/token-create.ts examples/output/token-test.nzip examples/test-files/* --private-key 0x...

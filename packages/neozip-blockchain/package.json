@@ -61,7 +61,7 @@
     "example:verify-upgrade": "dotenv -e .env.local -e .env -- ts-node examples/verify-zip.ts examples/output/stamp-upgrade.nzip",
     "example:mint-nft": "dotenv -e .env.local -e .env -- ts-node examples/mint-nft.ts examples/output/stamp-upgrade.nzip",
     "example:verify-nft": "dotenv -e .env.local -e .env -- ts-node examples/verify-zip.ts examples/output/stamp-upgrade-nft.nzip",
-    "example:token-srv": "dotenv -e .env.local -e .env -- ts-node examples/token-create.ts examples/output/token-test.nzip examples/test-files/*",
+    "example:token-service": "dotenv -e .env.local -e .env -- ts-node examples/token-create.ts examples/output/token-test.nzip examples/test-files/*",
     "example:ots-stamp": "ts-node examples/ots-stamp-zip.ts examples/output/ots.nzip examples/test-files/*",
     "example:ots-verify": "ts-node examples/ots-verify-zip.ts examples/output/ots.nzip"
   },

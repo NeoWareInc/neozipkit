@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **NeoZip Token Service client** — The HTTP client module lives at [`src/token-service/`](src/token-service/) with exports such as `TokenServiceClient`, `getTokenServiceUrl`, and `DEFAULT_TOKEN_SERVICE_URL`. The npm subpath is `neozip-blockchain/token-service`. Configuration uses `TOKEN_SERVICE_URL`, `TOKEN_SERVICE_EMAIL`, `TOKEN_SERVICE_CHAIN_ID`, and `TOKEN_SERVICE_DEBUG` only. The library default base URL is `https://testnet.token-service.neozip.io`.
 - **REST paths unchanged** — HTTP routes (`/stamp`, `/verify`, `/auth/register`, etc.) match the current NeoZip Token Service; update the client when the service publishes new paths.
+- **Examples** — The yarn script `example:token-srv` was renamed to `example:token-service` (`token-create.ts` flow).
 
 ### External verification (outside this repo)
 
