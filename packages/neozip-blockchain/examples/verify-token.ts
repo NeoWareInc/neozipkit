@@ -29,8 +29,8 @@
  *   ts-node examples/verify-token.ts [path-to-tokenized.nzip]
  * 
  * Examples:
- *   yarn example:verify-token examples/output/token-direct.nzip
- *   ts-node examples/verify-token.ts examples/output/token-direct.nzip
+ *   yarn example:verify-token examples/output/token.nzip
+ *   ts-node examples/verify-token.ts examples/output/token.nzip
  * 
  * Note: For timestamp verification (pending/confirmed/NFT), use verify-zip.ts instead.
  */
@@ -50,14 +50,14 @@ async function main() {
   console.log('Verify ZIP Example\n');
 
   // Get ZIP file path from command line argument or use default
-  const zipPath = process.argv[2] || path.join(__dirname, 'output', 'token-direct.nzip');
+  const zipPath = process.argv[2] || path.join(__dirname, 'output', 'token.nzip');
 
   if (!fs.existsSync(zipPath)) {
     console.error(`❌ Error: ZIP file not found: ${zipPath}`);
     console.error('\nUsage:');
     console.error('  ts-node examples/verify-token.ts [path-to-tokenized.nzip]');
     console.error('\nExample:');
-    console.error('  ts-node examples/verify-token.ts examples/output/token-direct.nzip');
+    console.error('  ts-node examples/verify-token.ts examples/output/token.nzip');
     process.exit(1);
   }
 
@@ -87,7 +87,7 @@ async function main() {
       console.error('❌ Error: Token metadata not found in ZIP file');
       console.error(`   Expected: ${TOKENIZED_METADATA} (or legacy ${TOKENIZED_METADATA_LEGACY})`);
       console.error('\n💡 This ZIP file does not appear to be tokenized.');
-      console.error('   Use token-direct.ts to create a tokenized NZIP file.');
+      console.error('   Use yarn example:token (examples/token.ts) to create a tokenized NZIP file.');
       await zip.closeFile();
       process.exit(1);
     }

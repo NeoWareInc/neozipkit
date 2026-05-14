@@ -1,0 +1,14 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "baseUrl": ".",
+    "skipLibCheck": true,
+    "paths": {
+      "neozipkit": ["../../neozipkit/src/index.ts"],
+      "neozipkit/node": ["../../neozipkit/src/node/index.ts"]
+    }
+  },
+  "include": ["./**/*.ts", "../src/**/*.ts"],
+  "exclude": ["../dist", "../tests", "../node_modules"]
+}

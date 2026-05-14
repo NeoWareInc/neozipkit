@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 /**
- * Token Direct Example
+ * Token example (`yarn example:token`)
  *
- * Direct mint: create a NZIP file and mint it on the blockchain using the NZIP contract v2.51
+ * Create a NZIP and mint on-chain using the NZIP contract v2.51
  * (no NeoZip Token Service). Default network is Base Sepolia, which uses the v2.51 contract.
  *
  * PREREQUISITES:
@@ -23,8 +23,8 @@
  * - Network configuration (defaults to Base Sepolia testnet, NZIP v2.51)
  * - Gas fees for minting
  *
- * Usage: yarn example:token-direct
- * Output: examples/output/token-direct.nzip
+ * Usage: yarn example:token
+ * Output: examples/output/token.nzip
  */
 
 // ZIP operations from neozipkit (peer dependency)
@@ -40,6 +40,26 @@ import type { TokenMetadata } from '../src/types';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as readline from 'readline';
+import { ethers } from 'ethers';
+
+/** True for .env.sample-style placeholders (e.g. `0x...`), not real keys. */
+function isPlaceholderPrivateKey(pk: string): boolean {
+  const t = pk.trim();
+  if (!t) return true;
+  if (/^0x\.+$/i.test(t)) return true;
+  return false;
+}
+
+function isValidWalletPrivateKey(pk: string): boolean {
+  try {
+    let h = pk.trim();
+    if (!h.startsWith('0x')) h = `0x${h}`;
+    const bytes = ethers.getBytes(h);
+    return bytes.length === 32;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Prompt for private key input (hidden)
@@ -157,19 +177,34 @@ function promptAction(hasUserOwnedToken: boolean): Promise<ActionChoice> {
 }
 
 async function main() {
-  console.log('Token Direct Example (NZIP contract v2.51)\n');
+  console.log('Token example (NZIP contract v2.51)\n');
 
   // Check for wallet private key, prompt if not set
-  let walletPrivateKey = process.env.USER_PRIVATE_KEY;
+  let walletPrivateKey = (process.env.USER_PRIVATE_KEY || '').trim();
+  const privateKeyFromEnv = walletPrivateKey.length > 0;
   if (!walletPrivateKey) {
     console.log('Private key not found in environment.');
     console.log('💡 Get testnet ETH from: https://www.coinbase.com/faucets/base-ethereum-sepolia-faucet\n');
-    walletPrivateKey = await promptForPrivateKey();
+    walletPrivateKey = (await promptForPrivateKey()).trim();
 
-    if (!walletPrivateKey || walletPrivateKey.trim() === '') {
+    if (!walletPrivateKey) {
       console.error('❌ Error: Private key is required');
       process.exit(1);
     }
+  }
+
+  if (isPlaceholderPrivateKey(walletPrivateKey) || !isValidWalletPrivateKey(walletPrivateKey)) {
+    console.error('❌ Error: USER_PRIVATE_KEY is not a valid 32-byte hex private key.');
+    if (privateKeyFromEnv && isPlaceholderPrivateKey(walletPrivateKey)) {
+      console.error('   Your env still has the documentation placeholder (e.g. 0x... from .env.sample).');
+      console.error('   Set USER_PRIVATE_KEY to a real testnet key in .env.local, or remove it to be prompted.');
+    } else if (privateKeyFromEnv) {
+      console.error('   Expected optional 0x prefix plus 64 hex characters (32 bytes).');
+      console.error('   Fix .env / .env.local or unset USER_PRIVATE_KEY to be prompted.');
+    } else {
+      console.error('   Expected optional 0x prefix plus 64 hex characters (32 bytes).');
+    }
+    process.exit(1);
   }
 
   // Network configuration (default to Base Sepolia testnet — uses NZIP v2.51)
@@ -207,7 +242,7 @@ async function main() {
   const zip = new ZipkitNode();
 
   // Define output NZIP file path
-  const outputZip = path.join(__dirname, 'output', 'token-direct.nzip');
+  const outputZip = path.join(__dirname, 'output', 'token.nzip');
   const outputDir = path.dirname(outputZip);
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
@@ -391,7 +426,7 @@ async function main() {
     }
 
   } catch (error) {
-    console.error('❌ Error during direct tokenization:');
+    console.error('❌ Error during token mint:');
     console.error(error instanceof Error ? error.message : String(error));
     if (error instanceof Error && error.stack) {
       console.error('\nStack trace:');

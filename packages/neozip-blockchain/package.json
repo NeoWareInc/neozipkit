@@ -52,18 +52,18 @@
     "test:unit": "jest tests/unit",
     "test:watch": "jest --watch",
     "publish:dry-run": "npm publish --access public --dry-run",
-    "verify-email": "dotenv -e .env.local -e .env -- ts-node examples/verify-email.ts",
-    "example:token-direct": "dotenv -e .env.local -e .env -- ts-node examples/token-direct.ts",
-    "example:verify-token": "ts-node examples/verify-token.ts",
-    "example:timestamp": "dotenv -e .env.local -e .env -- ts-node examples/stamp-zip.ts examples/output/stamp.nzip examples/test-files/*",
-    "example:verify-timestamp": "dotenv -e .env.local -e .env -- ts-node examples/verify-zip.ts examples/output/stamp.nzip",
-    "example:upgrade": "dotenv -e .env.local -e .env -- ts-node examples/upgrade-zip.ts examples/output/stamp.nzip",
-    "example:verify-upgrade": "dotenv -e .env.local -e .env -- ts-node examples/verify-zip.ts examples/output/stamp-upgrade.nzip",
-    "example:mint-nft": "dotenv -e .env.local -e .env -- ts-node examples/mint-nft.ts examples/output/stamp-upgrade.nzip",
-    "example:verify-nft": "dotenv -e .env.local -e .env -- ts-node examples/verify-zip.ts examples/output/stamp-upgrade-nft.nzip",
-    "example:token-service": "dotenv -e .env.local -e .env -- ts-node examples/token-create.ts examples/output/token-test.nzip examples/test-files/*",
-    "example:ots-stamp": "ts-node examples/ots-stamp-zip.ts examples/output/ots.nzip examples/test-files/*",
-    "example:ots-verify": "ts-node examples/ots-verify-zip.ts examples/output/ots.nzip"
+    "verify-email": "dotenv -e .env.local -e .env -- ts-node -r tsconfig-paths/register --project examples/tsconfig.json examples/verify-email.ts",
+    "example:timestamp": "dotenv -e .env.local -e .env -- ts-node -r tsconfig-paths/register --project examples/tsconfig.json examples/stamp-zip.ts examples/output/stamp.nzip examples/test-files/*",
+    "example:verify-timestamp": "dotenv -e .env.local -e .env -- ts-node -r tsconfig-paths/register --project examples/tsconfig.json examples/verify-zip.ts examples/output/stamp.nzip",
+    "example:upgrade": "dotenv -e .env.local -e .env -- ts-node -r tsconfig-paths/register --project examples/tsconfig.json examples/upgrade-zip.ts examples/output/stamp.nzip",
+    "example:verify-upgrade": "node examples/ensure-stamp-upgrade-artifact.cjs && dotenv -e .env.local -e .env -- ts-node -r tsconfig-paths/register --project examples/tsconfig.json examples/verify-zip.ts examples/output/stamp-upgrade.nzip",
+    "example:mint-nft": "dotenv -e .env.local -e .env -- ts-node -r tsconfig-paths/register --project examples/tsconfig.json examples/mint-nft.ts examples/output/stamp-upgrade.nzip",
+    "example:verify-nft": "dotenv -e .env.local -e .env -- ts-node -r tsconfig-paths/register --project examples/tsconfig.json examples/verify-zip.ts examples/output/stamp-upgrade-nft.nzip",
+    "example:token": "dotenv -e .env.local -e .env -- ts-node -r tsconfig-paths/register --project examples/tsconfig.json examples/token.ts",
+    "example:verify-token": "ts-node -r tsconfig-paths/register --project examples/tsconfig.json examples/verify-token.ts",
+    "example:token-service": "dotenv -e .env.local -e .env -- ts-node -r tsconfig-paths/register --project examples/tsconfig.json examples/token-create.ts examples/output/token-test.nzip examples/test-files/*",
+    "example:ots-stamp": "ts-node -r tsconfig-paths/register --project examples/tsconfig.json examples/ots-stamp-zip.ts examples/output/ots.nzip examples/test-files/*",
+    "example:ots-verify": "ts-node -r tsconfig-paths/register --project examples/tsconfig.json examples/ots-verify-zip.ts examples/output/ots.nzip"
   },
   "keywords": [
     "blockchain",
@@ -98,6 +98,7 @@
     "jest-util": "^30.2.0",
     "ts-jest": "^29.1.2",
     "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typescript": "^5.0.0"
   },
   "dependencies": {

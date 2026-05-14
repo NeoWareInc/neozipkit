@@ -275,7 +275,7 @@ async function main() {
     process.exit(1);
   }
 
-  const { outputPath, inputPatterns, privateKey, chainId } = parseArgs(args);
+  let { outputPath, inputPatterns, privateKey, chainId } = parseArgs(args);
 
   // Validate arguments
   if (!outputPath) {

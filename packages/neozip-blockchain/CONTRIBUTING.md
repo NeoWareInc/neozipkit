@@ -20,7 +20,7 @@ Contributions are welcome. This project follows the same contributing approach a
 
 3. Make changes to TypeScript files in `src/`.
 4. Run `yarn build` for production build (or `npm run build`).
-5. Test changes using the examples (e.g. `yarn example:token-direct`, `yarn example:verify-token`).
+5. Test changes using the examples (e.g. `yarn example:token`, `yarn example:verify-token`).
 6. Commit only source files, not generated files (e.g. do not commit `dist/`).
 
 ## Making changes

@@ -22,9 +22,9 @@ NZIP (NeoZip) files are ZIP archives with embedded blockchain proofs. These exam
 | `example:verify-timestamp` | [verify-zip.ts](verify-zip.ts) | Verify pending timestamp | Verify | NeoZip Token Service |
 | `example:verify-upgrade` | [verify-zip.ts](verify-zip.ts) | Verify confirmed timestamp | Verify | None (offline) |
 | `example:verify-nft` | [verify-zip.ts](verify-zip.ts) | Verify NFT token | Verify | None (offline) |
-| `example:token-service` | [token-create.ts](token-create.ts) | Create ZIP + mint NFT (UnifiedNFT) | Direct NFT | Wallet |
-| `example:token-direct` | [token-direct.ts](token-direct.ts) | Create ZIP + mint NFT (ZipkitMinter, v2.51) | Direct NFT | Wallet |
+| `example:token` | [token.ts](token.ts) | Create ZIP + mint NFT (ZipkitMinter, v2.51) | Wallet NFT | Wallet |
 | `example:verify-token` | [verify-token.ts](verify-token.ts) | Verify tokenized ZIP (simpler) | Verify | None |
+| `example:token-service` | [token-create.ts](token-create.ts) | Create ZIP + mint NFT (UnifiedNFT) | Direct NFT | Wallet |
 | `example:ots-stamp` | [ots-stamp-zip.ts](ots-stamp-zip.ts) | Create ZIP + OpenTimestamps proof | OTS | None |
 | `example:ots-verify` | [ots-verify-zip.ts](ots-verify-zip.ts) | Verify OTS proof | OTS | None |
 
@@ -49,8 +49,8 @@ flowchart LR
     B --> V1
     C --> V1
   end
-  subgraph direct [Direct NFT]
-    T1[token-direct]
+  subgraph direct [Wallet NFT (no Token Service)]
+    T1[token]
     T2[token-create]
     T1 --> V2[verify-token or verify-zip]
     T2 --> V2
@@ -209,28 +209,11 @@ ts-node examples/verify-zip.ts examples/output/stamp-upgrade.nzip --offline
 - Blockchain data validation
 - Explorer links to view transactions
 
-#### Verify Token (`verify-token.ts`)
+### Wallet NFT flow (no Token Service)
 
-Simpler verifier for tokenized ZIP files (TOKEN.NZIP; legacy NZIP.TOKEN accepted for reading). Use this if you only need to verify NFT tokens without timestamp proofs.
+Create tokenized NZIPs from your wallet without the NeoZip Token Service timestamping flow.
 
-**Usage:**
-```bash
-# Using yarn script
-yarn example:verify-token examples/output/token-direct.nzip
-
-# Using ts-node directly
-ts-node examples/verify-token.ts examples/output/token-direct.nzip
-```
-
-**Requirements:**
-- Tokenized ZIP file with `META-INF/TOKEN.NZIP` (legacy `META-INF/NZIP.TOKEN` accepted for verification)
-- No private keys required (read-only blockchain operations)
-
-### Direct NFT Flow (No Timestamp Server)
-
-Create ZIP files with NFT tokens directly, without using the NeoZip Token Service timestamping flow.
-
-#### Token Direct (`token-direct.ts`)
+#### Token (`token.ts`)
 
 Creates a tokenized NZIP file using the core `ZipkitMinter` API and the **NZIP contract v2.51** (default network: Base Sepolia).
 
@@ -244,13 +227,13 @@ Creates a tokenized NZIP file using the core `ZipkitMinter` API and the **NZIP c
 **Usage:**
 ```bash
 # Using yarn script
-USER_PRIVATE_KEY=0x... yarn example:token-direct
+USER_PRIVATE_KEY=0x... yarn example:token
 
 # Using ts-node directly
-USER_PRIVATE_KEY=0x... ts-node examples/token-direct.ts
+USER_PRIVATE_KEY=0x... ts-node examples/token.ts
 
 # With custom network
-NEOZIP_NETWORK=base-sepolia USER_PRIVATE_KEY=0x... ts-node examples/token-direct.ts
+NEOZIP_NETWORK=base-sepolia USER_PRIVATE_KEY=0x... ts-node examples/token.ts
 ```
 
 **Requirements:**
@@ -259,7 +242,7 @@ NEOZIP_NETWORK=base-sepolia USER_PRIVATE_KEY=0x... ts-node examples/token-direct
 - Network configuration (defaults to Base Sepolia testnet, v2.51)
 
 **Output:**
-- Creates `examples/output/token-direct.nzip` with embedded token metadata
+- Creates `examples/output/token.nzip` with embedded token metadata
 - Displays token ID, transaction hash, and blockchain explorer link
 
 #### Token Create (`token-create.ts`)
@@ -292,10 +275,27 @@ ts-node examples/token-create.ts examples/output/token-test.nzip examples/test-f
 - Creates `examples/output/token-test.nzip` with embedded token metadata
 - Displays token ID, transaction hash, and blockchain explorer link
 
-**Difference from `token-direct.ts`:**
-- `token-direct.ts` uses `ZipkitMinter` (core API, NZIP v2.51)
-- `token-create.ts` uses UnifiedNFT contract directly (via ethers)
+**Difference from `token.ts`:**
+- `token-create.ts` uses the UnifiedNFT contract directly (via ethers)
+- `token.ts` uses `ZipkitMinter` (core API, NZIP v2.51)
 - Both create ZIP files with TOKEN.NZIP, but use different minting APIs
+
+#### Verify Token (`verify-token.ts`)
+
+Simpler verifier for tokenized ZIP files (TOKEN.NZIP; legacy NZIP.TOKEN accepted for reading). Use this if you only need to verify NFT tokens without timestamp proofs.
+
+**Usage:**
+```bash
+# Using yarn script
+yarn example:verify-token examples/output/token.nzip
+
+# Using ts-node directly
+ts-node examples/verify-token.ts examples/output/token.nzip
+```
+
+**Requirements:**
+- Tokenized ZIP file with `META-INF/TOKEN.NZIP` (legacy `META-INF/NZIP.TOKEN` accepted for verification)
+- No private keys required (read-only blockchain operations)
 
 ### OpenTimestamps (Legacy)
 
@@ -441,9 +441,9 @@ examples/
 ├── upgrade-zip.ts            # Upgrade pending → confirmed
 ├── mint-nft.ts               # Mint NFT from timestamp
 ├── verify-zip.ts             # Universal verifier (pending/confirmed/NFT)
-├── token-create.ts           # Create ZIP + mint NFT (UnifiedNFT)
-├── token-direct.ts           # Create ZIP + mint NFT (ZipkitMinter, v2.51)
+├── token.ts                  # Create ZIP + mint NFT (ZipkitMinter, v2.51)
 ├── verify-token.ts           # Verify tokenized ZIP (simpler)
+├── token-create.ts           # Create ZIP + mint NFT (UnifiedNFT)
 ├── ots-stamp-zip.ts          # Create ZIP + OpenTimestamps proof
 ├── ots-verify-zip.ts         # Verify OTS proof
 ├── README.md                 # This file
@@ -451,7 +451,7 @@ examples/
 │   ├── stamp.nzip           # Timestamped ZIP (pending)
 │   ├── stamp-upgrade.nzip   # Timestamped ZIP (confirmed)
 │   ├── stamp-upgrade-nft.nzip # Timestamped ZIP with NFT
-│   ├── token-direct.nzip   # Tokenized NZIP (direct mint, v2.51)
+│   ├── token.nzip           # Tokenized NZIP (ZipkitMinter, v2.51)
 │   ├── token-test.nzip      # Tokenized ZIP (UnifiedNFT)
 │   └── ots.nzip             # OTS timestamped ZIP
 └── test-files/              # Test data files

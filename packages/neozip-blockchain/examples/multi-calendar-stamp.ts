@@ -18,7 +18,7 @@
  *   NEOZIP_CALENDAR_1     - First calendar URL (required)
  *   NEOZIP_CALENDAR_2     - Second calendar URL (optional)
  *   NEOZIP_CALENDAR_3     - Third calendar URL (optional)
- *   NEOZIP_EMAIL         - Verified email for stamping (required for stamp command)
+ *   TOKEN_SERVICE_EMAIL  - Verified email for stamping (required for stamp command)
  */
 
 import {
@@ -109,9 +109,9 @@ async function cmdHealth(): Promise<void> {
 }
 
 async function cmdStamp(digest: string): Promise<void> {
-  const email = process.env.NEOZIP_EMAIL;
+  const email = process.env.TOKEN_SERVICE_EMAIL;
   if (!email) {
-    console.error('\n❌ NEOZIP_EMAIL environment variable not set.');
+    console.error('\n❌ TOKEN_SERVICE_EMAIL environment variable not set.');
     console.error('Stamping requires a verified email. Run: yarn verify-email');
     process.exit(1);
   }
@@ -312,11 +312,11 @@ async function main(): Promise<void> {
         console.log('  NEOZIP_CALENDAR_1  - First calendar URL');
         console.log('  NEOZIP_CALENDAR_2  - Second calendar URL (optional)');
         console.log('  ... up to 5 calendars');
-        console.log('  NEOZIP_EMAIL      - Verified email for stamp command');
+        console.log('  TOKEN_SERVICE_EMAIL - Verified email for stamp command');
         console.log('\nExample Setup:');
         console.log('  export NEOZIP_CALENDAR_1=https://alpha.timestamp.neozip.io');
         console.log('  export NEOZIP_CALENDAR_2=https://beta.timestamp.neozip.io');
-        console.log('  export NEOZIP_EMAIL=your@email.com');
+        console.log('  export TOKEN_SERVICE_EMAIL=your@email.com');
         process.exit(1);
     }
   } catch (error) {

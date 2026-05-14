@@ -75,6 +75,33 @@ function getChainConfig(chainId: number): ChainConfig | null {
   };
 }
 
+/** Same flags as package.json example scripts (monorepo path resolution). */
+const TS_NODE_VERIFY =
+  'ts-node -r tsconfig-paths/register --project examples/tsconfig.json examples/verify-zip.ts';
+const TS_NODE_UPGRADE =
+  'ts-node -r tsconfig-paths/register --project examples/tsconfig.json examples/upgrade-zip.ts';
+
+function printMissingZipFileHints(zipPath: string): void {
+  const base = path.basename(zipPath);
+  console.error('\n💡 Example outputs are gitignored. From packages/neozip-blockchain, run:');
+  if (base === 'stamp-upgrade.nzip' || zipPath.endsWith(`${path.sep}stamp-upgrade.nzip`)) {
+    console.error('   1. yarn example:timestamp   → examples/output/stamp.nzip');
+    console.error('   2. yarn example:upgrade     → examples/output/stamp-upgrade.nzip');
+    console.error('   3. yarn example:verify-upgrade  (may run stamp then yarn example:upgrade -- --wait)');
+  } else if (base === 'stamp-upgrade-nft.nzip' || zipPath.endsWith(`${path.sep}stamp-upgrade-nft.nzip`)) {
+    console.error('   1. yarn example:timestamp');
+    console.error('   2. yarn example:upgrade');
+    console.error('   3. yarn example:mint-nft    → examples/output/stamp-upgrade-nft.nzip');
+    console.error('   4. yarn example:verify-nft');
+  } else if (base === 'stamp.nzip' || zipPath.endsWith(`${path.sep}stamp.nzip`)) {
+    console.error('   yarn example:timestamp      → examples/output/stamp.nzip');
+    console.error('   yarn example:verify-timestamp');
+  } else {
+    console.error('   yarn example:timestamp → yarn example:upgrade → yarn example:verify-upgrade');
+    console.error('   Or pass the path to any stamped .nzip you already have.');
+  }
+}
+
 function normalizeHex32(hex: string): string {
   const with0x = hex.startsWith('0x') ? hex : `0x${hex}`;
   const bytes = ethers.getBytes(with0x);
@@ -758,12 +785,13 @@ async function main() {
   if (nonFlagArgs.length === 0) {
     console.error('❌ Error: ZIP file path is required');
     console.error('\nUsage:');
-    console.error('  tsx stamp-zip/verify-zip.ts <path-to-stamped.nzip> [--offline]');
+    console.error('  yarn example:verify-timestamp|verify-upgrade|verify-nft');
+    console.error(`  ${TS_NODE_VERIFY} <path-to-stamped.nzip> [--offline]`);
     console.error('\nOptions:');
     console.error('  --offline    Skip NeoZip Token Service (only for confirmed timestamps)');
     console.error('\nExamples:');
-    console.error('  tsx stamp-zip/verify-zip.ts stamp-zip/output/stamped.nzip');
-    console.error('  tsx stamp-zip/verify-zip.ts stamp-zip/output/calgary.nzip --offline');
+    console.error('  yarn example:verify-timestamp');
+    console.error(`  ${TS_NODE_VERIFY} examples/output/stamp.nzip --offline`);
     process.exit(1);
   }
 
@@ -772,10 +800,9 @@ async function main() {
   if (!fs.existsSync(zipPath)) {
     console.error(`❌ Error: ZIP file not found: ${zipPath}`);
     console.error('\nUsage:');
-    console.error('  tsx stamp-zip/verify-zip.ts <path-to-stamped.nzip>');
-    console.error('\nExamples:');
-    console.error('  tsx stamp-zip/verify-zip.ts stamp-zip/output/stamped.nzip');
-    console.error('  tsx stamp-zip/verify-zip.ts stamp-zip/output/calgary.nzip');
+    console.error('  yarn example:verify-timestamp|verify-upgrade|verify-nft');
+    console.error(`  ${TS_NODE_VERIFY} <path-to-stamped.nzip> [--offline]`);
+    printMissingZipFileHints(zipPath);
     process.exit(1);
   }
 
@@ -821,7 +848,7 @@ async function main() {
       console.error('❌ Error: No metadata found in ZIP file');
       console.error(`   Expected: TOKEN.NZIP (or legacy NZIP.TOKEN), or ${getMetadataFileNames().join(', ')}`);
       console.error('\n💡 This ZIP file does not appear to be timestamped or tokenized.');
-      console.error('   Use stamp-zip.ts to create a timestamped ZIP file.');
+      console.error('   Use yarn example:timestamp (examples/stamp-zip.ts) to create a timestamped ZIP.');
       await zip.closeFile();
       process.exit(1);
     }
@@ -1480,7 +1507,7 @@ async function main() {
             console.log(`      The NeoZip Token Service has confirmed this timestamp, but the blockchain timestamp could not be retrieved.`);
             console.log(`      To get independent verification (not relying on the NeoZip Token Service), try re-upgrading the ZIP file.`);
             console.log(`      The upgrade will enable validation directly through the contract on the blockchain:`);
-            console.log(`      tsx stamp-zip/upgrade-zip.ts ${zipPath}`);
+            console.log(`      ${TS_NODE_UPGRADE} ${zipPath} --wait`);
           }
         }
         if (verificationResult.merkleRoot) {
@@ -1530,12 +1557,12 @@ async function main() {
         console.log(`   The NeoZip Token Service has confirmed this timestamp, but to get independent verification`);
         console.log(`   (not relying on the NeoZip Token Service), upgrade this ZIP file. This will enable validation`);
         console.log(`   directly through the contract on the blockchain:`);
-        console.log(`   tsx stamp-zip/upgrade-zip.ts ${zipPath}`);
+        console.log(`   ${TS_NODE_UPGRADE} ${zipPath}`);
       } else if (isPending && !verificationResult.transactionHash) {
         console.log(`\n💡 TIP: Once minted, upgrade for independent verification:`);
         console.log(`   After the batch is confirmed on blockchain, upgrade this ZIP file to enable`);
         console.log(`   independent verification directly through the contract on the blockchain:`);
-        console.log(`   tsx stamp-zip/upgrade-zip.ts ${zipPath} --wait`);
+        console.log(`   ${TS_NODE_UPGRADE} ${zipPath} --wait`);
       }
 
       // Display explorer link if available
