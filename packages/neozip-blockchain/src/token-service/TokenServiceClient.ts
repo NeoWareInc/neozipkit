@@ -29,9 +29,18 @@ export interface TokenServiceClientOptions {
 // Authentication Types
 // ============================================================================
 
+/**
+ * How the token service formats the verification email (`POST /auth/register`).
+ * - **`browser`**: web confirm link + 6-digit code (default).
+ * - **`app`**: NeoZip deep link + code only (no web link; desktop in-app flow).
+ */
+export type VerificationDelivery = 'browser' | 'app';
+
 /** Request to register an email for verification */
 export interface RegisterRequest {
   email: string;
+  /** When omitted, the server defaults to `browser`. */
+  verificationDelivery?: VerificationDelivery;
 }
 
 /** Response from email registration */
@@ -39,6 +48,9 @@ export interface RegisterResponse {
   success: boolean;
   message?: string;
   error?: string;
+  isNewUser?: boolean;
+  /** Echo of which delivery format was used for the email. */
+  verificationDelivery?: VerificationDelivery;
 }
 
 /** Request to verify email with code */
@@ -701,16 +713,24 @@ export class TokenServiceClient {
   /**
    * Request email verification (first step of registration).
    * 
-   * Sends a verification code to the provided email address. The user must
-   * then call `verifyEmail` with the code to complete registration.
+   * Sends a verification email to the provided email address. The server may send
+   * a web confirmation link and/or a NeoZip deep link depending on `verificationDelivery`
+   * (`browser` default, `app` for desktop-only layout). The user completes verification
+   * via the link and/or by submitting the 6-digit code to `POST /auth/verify`.
    * 
    * PUBLIC: No API key required.
    * 
-   * @param request - Registration request with email address
+   * @param request - Registration request with email and optional `verificationDelivery`
    * @returns Promise resolving to registration response
    */
   async register(request: RegisterRequest): Promise<RegisterResponse> {
-    return this.request<RegisterResponse>('POST', '/auth/register', request);
+    const body: { email: string; verificationDelivery?: VerificationDelivery } = {
+      email: request.email,
+    };
+    if (request.verificationDelivery !== undefined) {
+      body.verificationDelivery = request.verificationDelivery;
+    }
+    return this.request<RegisterResponse>('POST', '/auth/register', body);
   }
 
   /**

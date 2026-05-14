@@ -9,7 +9,14 @@
  * and response type transformations for easier use in applications.
  */
 
-import { TokenServiceClient, type PrepareMintResponse, type NFTStatusResponse, type NFTContractInfoResponse } from './TokenServiceClient';
+import {
+  TokenServiceClient,
+  type VerificationDelivery,
+  type RegisterRequest,
+  type PrepareMintResponse,
+  type NFTStatusResponse,
+  type NFTContractInfoResponse,
+} from './TokenServiceClient';
 import { getTokenServiceUrl } from '../constants/servers';
 
 // ============================================================================
@@ -138,6 +145,11 @@ export interface TokenServiceHelperOptions {
   serverKey?: string;
   /** Enable debug logging */
   debug?: boolean;
+  /**
+   * Only used by {@link registerEmail}: forwarded as `verificationDelivery` on `POST /auth/register`.
+   * `browser` (default when omitted): web confirm link + code. `app`: deep link + code only.
+   */
+  verificationDelivery?: VerificationDelivery;
 }
 
 // ============================================================================
@@ -161,6 +173,21 @@ function shouldDebug(options?: TokenServiceHelperOptions): boolean {
     process.env.TOKEN_SERVICE_DEBUG === 'true' ||
     process.env.DEBUG === 'true'
   );
+}
+
+/**
+ * Parses env or CLI values for {@link registerEmail} (`POST /auth/register` body field `verificationDelivery`).
+ *
+ * @returns `undefined` when absent or empty (server defaults to `browser`).
+ * @throws Error when a non-empty value is not `browser` or `app`.
+ */
+export function parseVerificationDeliveryInput(raw: unknown): VerificationDelivery | undefined {
+  if (raw === undefined || raw === null) return undefined;
+  const s = String(raw).trim().toLowerCase();
+  if (s === '') return undefined;
+  if (s === 'browser') return 'browser';
+  if (s === 'app') return 'app';
+  throw new Error(`verificationDelivery must be "browser" or "app" (got: ${JSON.stringify(raw)})`);
 }
 
 // ============================================================================
@@ -553,6 +580,7 @@ import type {
 export type {
   RegisterRequest,
   RegisterResponse,
+  VerificationDelivery,
   VerifyEmailRequest,
   VerifyEmailResponse,
   CalendarIdentity,
@@ -573,6 +601,7 @@ export type {
  * @param email - Email address to register
  * @param options - Optional configuration
  * @param options.serverUrl - NeoZip Token Service URL
+ * @param options.verificationDelivery - `browser` (default) or `app`; matches token service `POST /auth/register`
  * @returns Promise resolving to registration response
  * 
  * @example
@@ -591,10 +620,14 @@ export async function registerEmail(
   options?: TokenServiceHelperOptions
 ): Promise<RegisterResponse> {
   const client = getClient(options);
-  if (shouldDebug(options)) {
-    console.log('[TokenService] POST /auth/register request:', { email });
+  const payload: RegisterRequest = { email };
+  if (options?.verificationDelivery !== undefined) {
+    payload.verificationDelivery = options.verificationDelivery;
   }
-  const result = await client.register({ email });
+  if (shouldDebug(options)) {
+    console.log('[TokenService] POST /auth/register request:', payload);
+  }
+  const result = await client.register(payload);
   if (shouldDebug(options)) {
     console.log('[TokenService] POST /auth/register response:', JSON.stringify(result, null, 2));
   }

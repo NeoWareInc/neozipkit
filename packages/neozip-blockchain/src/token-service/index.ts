@@ -71,6 +71,7 @@ export {
   // Authentication types
   type RegisterRequest,
   type RegisterResponse,
+  type VerificationDelivery,
   type VerifyEmailRequest,
   type VerifyEmailResponse,
   // Calendar discovery types
@@ -93,6 +94,7 @@ export {
   // Authentication helpers
   registerEmail,
   verifyEmailCode,
+  parseVerificationDeliveryInput,
   // Calendar discovery helpers
   getCalendarIdentity,
   checkCalendarHealth,

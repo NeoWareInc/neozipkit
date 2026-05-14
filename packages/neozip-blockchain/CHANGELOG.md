@@ -7,9 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Email verification delivery** — `registerEmail` and `TokenServiceClient.register` support `verificationDelivery`: `browser` (default) or `app`, matching NeoZip Token Service `POST /auth/register`. Optional env `TOKEN_SERVICE_VERIFICATION_DELIVERY`; `yarn verify-email` accepts `--browser`, `--app`, or `--delivery=…`. Helper `parseVerificationDeliveryInput` exported from `neozip-blockchain/token-service`.
+
 ### Breaking
 
-- **NeoZip Token Service client** — The HTTP client module lives at [`src/token-service/`](src/token-service/) with exports such as `TokenServiceClient`, `getTokenServiceUrl`, and `DEFAULT_TOKEN_SERVICE_URL`. The npm subpath is `neozip-blockchain/token-service`. Configuration uses `TOKEN_SERVICE_URL`, `TOKEN_SERVICE_EMAIL`, `TOKEN_SERVICE_CHAIN_ID`, and `TOKEN_SERVICE_DEBUG` only. The library default base URL is `https://testnet.token-service.neozip.io`.
+- **NeoZip Token Service client** — The HTTP client module lives at [`src/token-service/`](src/token-service/) with exports such as `TokenServiceClient`, `getTokenServiceUrl`, and `DEFAULT_TOKEN_SERVICE_URL`. The npm subpath is `neozip-blockchain/token-service`. Configuration uses `TOKEN_SERVICE_URL`, `TOKEN_SERVICE_EMAIL`, `TOKEN_SERVICE_CHAIN_ID`, `TOKEN_SERVICE_VERIFICATION_DELIVERY` (optional register email layout), and `TOKEN_SERVICE_DEBUG` only. The library default base URL is `https://testnet.token-service.neozip.io`.
 - **REST paths unchanged** — HTTP routes (`/stamp`, `/verify`, `/auth/register`, etc.) match the current NeoZip Token Service; update the client when the service publishes new paths.
 - **Examples** — The yarn script `example:token-srv` was renamed to `example:token-service` (`token-create.ts` flow).
 - **Examples** — `example:token-direct` / `examples/token-direct.ts` renamed to `example:token` / `examples/token.ts`; default output is `examples/output/token.nzip`.

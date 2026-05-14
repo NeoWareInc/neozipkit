@@ -1,23 +1,28 @@
 #!/usr/bin/env node
 
 /**
- * Verify Email - Register and verify email for NeoZip Token Service
+ * Verify Email — Register with NeoZip Token Service and save `TOKEN_SERVICE_EMAIL`
  *
- * Tasks that use the NeoZip Token Service (stamp-zip, upgrade-zip, mint-nft) require
- * a verified email. This script registers your email; the server sends a
- * verification link. After you click the link, run this script again with your
- * email to save it to .env.local.
+ * Stamp/upgrade/mint examples need a verified email. This script calls `POST /auth/register`,
+ * which sends a **6-digit code** and either:
+ * - **`browser`** (default): web confirmation link + code (scripts, curl, IDEs)
+ * - **`app`**: NeoZip deep link + code only (no web link; finish in desktop app)
  *
  * Usage:
- *   yarn verify-email [email]
- *   ts-node examples/verify-email.ts [email]
+ *   yarn verify-email [email] [--browser | --app | --delivery=browser|app]
+ *   ts-node examples/verify-email.ts [email] [--browser | --app | --delivery=browser|app]
  *
- * If <email> is omitted, you will be prompted. After first run, click the
- * verification link in the email, then run again with your email to save.
+ * Env (optional, same values as token service):
+ *   TOKEN_SERVICE_VERIFICATION_DELIVERY=browser   # default when unset
+ *   TOKEN_SERVICE_VERIFICATION_DELIVERY=app
+ *
+ * After you complete verification (link and/or code), run again with the same email to
+ * write `TOKEN_SERVICE_EMAIL` to `.env.local`.
  *
  * Examples:
  *   yarn verify-email
- *   yarn verify-email user@example.com
+ *   yarn verify-email user@example.com --app
+ *   yarn verify-email user@example.com --delivery=browser
  *
  * PREREQUISITES:
  * - NeoZip Token Service (default: https://testnet.token-service.neozip.io)
@@ -28,8 +33,12 @@ import { config } from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import * as readline from 'readline';
-import { registerEmail } from '../src/token-service';
-import { getTokenServiceUrl } from '../src/token-service';
+import {
+  registerEmail,
+  parseVerificationDeliveryInput,
+  getTokenServiceUrl,
+  type VerificationDelivery,
+} from '../src/token-service';
 
 const envLocalPath = path.resolve(process.cwd(), '.env.local');
 const envPath = path.resolve(process.cwd(), '.env');
@@ -84,9 +93,78 @@ function saveEmailToEnvLocal(email: string): void {
   setEnvLocalKey('TOKEN_SERVICE_EMAIL', email);
 }
 
+function parseArgv(argv: string[]): {
+  positional: string[];
+  verificationDelivery?: VerificationDelivery;
+} {
+  let explicitBrowser = false;
+  let explicitApp = false;
+  let deliveryEq: string | undefined;
+  const positional: string[] = [];
+
+  for (const a of argv) {
+    if (a === '--browser') explicitBrowser = true;
+    else if (a === '--app') explicitApp = true;
+    else if (a.startsWith('--delivery=')) deliveryEq = a.slice('--delivery='.length);
+    else if (a.startsWith('--')) {
+      console.error(`Unknown flag: ${a}`);
+      process.exit(1);
+    } else positional.push(a);
+  }
+
+  if (explicitBrowser && explicitApp) {
+    console.error('Use only one of --browser and --app.');
+    process.exit(1);
+  }
+
+  let verificationDelivery: VerificationDelivery | undefined;
+  if (explicitApp) verificationDelivery = 'app';
+  else if (explicitBrowser) verificationDelivery = 'browser';
+  else if (deliveryEq !== undefined) {
+    try {
+      verificationDelivery = parseVerificationDeliveryInput(deliveryEq);
+    } catch (e) {
+      console.error(e instanceof Error ? e.message : String(e));
+      process.exit(1);
+    }
+  } else {
+    try {
+      verificationDelivery = parseVerificationDeliveryInput(
+        process.env.TOKEN_SERVICE_VERIFICATION_DELIVERY
+      );
+    } catch (e) {
+      console.error(e instanceof Error ? e.message : String(e));
+      process.exit(1);
+    }
+  }
+
+  return { positional, verificationDelivery };
+}
+
+function printAfterRegisterInstructions(email: string, delivery: VerificationDelivery | undefined): void {
+  const d = delivery ?? 'browser';
+  console.log('');
+  if (d === 'app') {
+    console.log('Delivery: app — email contains a NeoZip deep link and your code (no web confirm link).');
+    console.log('Open NeoZip from that link, or enter the 6-digit code in the app, to finish verification.');
+  } else {
+    console.log('Delivery: browser — email contains a web confirmation link and your code.');
+    console.log('Click the link or complete verification in the app, as described in the email.');
+  }
+  console.log('');
+  console.log('When your email is verified, run again to save it for examples:');
+  console.log(`  yarn verify-email ${email}${d === 'app' ? ' --app' : ''}`);
+  console.log('');
+  console.log('Optional: verify with the 6-digit code from the CLI:');
+  console.log(
+    `  ts-node -r tsconfig-paths/register --project examples/tsconfig.json examples/token-service-auth.ts verify ${email} <code>`
+  );
+  console.log('');
+}
+
 async function main(): Promise<void> {
-  const args = process.argv.slice(2).filter((a) => !a.startsWith('--'));
-  let email = args[0];
+  const { positional, verificationDelivery } = parseArgv(process.argv.slice(2));
+  let email = positional[0];
 
   const serverUrl = getTokenServiceUrl();
 
@@ -104,12 +182,19 @@ async function main(): Promise<void> {
 
   const normalizedEmail = email.toLowerCase().trim();
 
-  // Register or check status (server sends verification link; if already verified, we save)
-  console.log(`Registering ${normalizedEmail}...`);
-  const regResult = await registerEmail(normalizedEmail, { serverUrl });
+  const regLabel =
+    verificationDelivery === undefined
+      ? 'browser (server default)'
+      : verificationDelivery;
+  console.log(`Registering ${normalizedEmail} (verification delivery: ${regLabel})...`);
+  const regResult = await registerEmail(normalizedEmail, { serverUrl, verificationDelivery });
   if (!regResult.success) {
     console.error('Registration failed:', regResult.error ?? regResult.message);
     process.exit(1);
+  }
+  const effectiveDelivery = regResult.verificationDelivery ?? verificationDelivery;
+  if (effectiveDelivery) {
+    console.log(`Server verification delivery: ${effectiveDelivery}`);
   }
   const msg = (regResult.message ?? '').toLowerCase();
   if (msg.includes('already registered') || msg.includes('already verified') || msg.includes('verified')) {
@@ -119,12 +204,8 @@ async function main(): Promise<void> {
     console.log('Saved to .env.local. You can use stamp-zip, upgrade-zip, and mint-nft without passing --email.');
     process.exit(0);
   }
-  // New registration: server sent a verification link (no code to enter)
-  console.log(regResult.message ?? 'Verification link sent.');
-  console.log('');
-  console.log('Click the verification link in your email, then run:');
-  console.log(`  yarn verify-email ${normalizedEmail}`);
-  console.log('');
+  console.log(regResult.message ?? 'Verification email sent.');
+  printAfterRegisterInstructions(normalizedEmail, effectiveDelivery);
 }
 
 main().catch((err) => {

@@ -34,7 +34,7 @@ NZIP (NeoZip) files are ZIP archives with embedded blockchain proofs. These exam
 
 The recommended flow for timestamping ZIP files:
 
-**Before stamp/upgrade/mint:** Examples that use the NeoZip Token Service (stamp-zip, upgrade-zip, mint-nft) require a verified email. Run `yarn verify-email` once to register and verify your email; the script saves it to `.env.local` as `TOKEN_SERVICE_EMAIL` so you don't need to pass `--email` each time. For a non-interactive register/verify split, use [token-service-auth.ts](token-service-auth.ts).
+**Before stamp/upgrade/mint:** Examples that use the NeoZip Token Service (stamp-zip, upgrade-zip, mint-nft) require a verified email. Run `yarn verify-email` once to register and verify your email; the script saves it to `.env.local` as `TOKEN_SERVICE_EMAIL` so you don't need to pass `--email` each time. Use `--app` or `TOKEN_SERVICE_VERIFICATION_DELIVERY=app` if you want the **app**-style verification email (deep link only; no web confirm link). For a non-interactive register/verify split, use [token-service-auth.ts](token-service-auth.ts).
 
 1. **Stamp** → Create timestamped ZIP with pending proof (TS-SUBMIT.NZIP)
 2. **Upgrade** → Once batch is confirmed, upgrade to confirmed proof (TIMESTAMP.NZIP)
