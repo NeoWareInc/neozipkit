@@ -16,6 +16,8 @@
     "version:patch": "node scripts/version-sync.js patch",
     "version:minor": "node scripts/version-sync.js minor",
     "version:major": "node scripts/version-sync.js major",
-    "publish:all": "bash scripts/publish-all.sh"
+    "publish:all": "bash scripts/publish-all.sh",
+    "publish:neozipkit": "yarn workspace neozipkit run build && yarn workspace neozipkit exec npx --yes npm@11 publish --access public",
+    "publish:neozip-blockchain": "yarn workspace neozip-blockchain run build && yarn workspace neozip-blockchain exec npx --yes npm@11 publish --access public"
   }
 }

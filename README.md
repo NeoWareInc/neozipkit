@@ -115,6 +115,13 @@ yarn workspace neozipkit run publish:dry-run
 yarn workspace neozip-blockchain run publish:dry-run
 ```
 
+**Publish a single package from anywhere under the repo** (correct cwd is handled for you):
+
+```bash
+yarn publish:neozipkit
+yarn publish:neozip-blockchain
+```
+
 ### Manual fallback
 
 From the monorepo root: `yarn publish:all` (requires local `npm login` / token).
