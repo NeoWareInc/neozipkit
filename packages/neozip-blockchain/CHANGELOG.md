@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **npm publish** — Removed `neozipkit: "workspace:*"` from `dependencies` (npm does not rewrite workspace protocol). Consumers install `neozipkit` via `peerDependencies` (`^0.7.1`); monorepo dev uses `devDependencies` with the same semver range. `prepack` validates the manifest before pack/publish.
+
 ### Added
 
 - **Email verification delivery** — `registerEmail` and `TokenServiceClient.register` support `verificationDelivery`: `browser` (default) or `app`, matching NeoZip Token Service `POST /auth/register`. Optional env `TOKEN_SERVICE_VERIFICATION_DELIVERY`; `yarn verify-email` accepts `--browser`, `--app`, or `--delivery=…`. Helper `parseVerificationDeliveryInput` exported from `neozip-blockchain/token-service`.

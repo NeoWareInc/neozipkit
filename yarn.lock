@@ -3639,14 +3639,14 @@ __metadata:
     jest: "npm:^29.7.0"
     jest-util: "npm:^30.2.0"
     moment-timezone: "npm:^0.6.0"
-    neozipkit: "workspace:*"
+    neozipkit: "npm:^0.7.1"
     opentimestamps: "npm:^0.4.9"
     ts-jest: "npm:^29.1.2"
     ts-node: "npm:^10.9.2"
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:^5.0.0"
   peerDependencies:
-    neozipkit: ^0.7.0
+    neozipkit: ^0.7.1
   peerDependenciesMeta:
     neozipkit:
       optional: false
@@ -3659,7 +3659,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"neozipkit@workspace:*, neozipkit@workspace:packages/neozipkit":
+"neozipkit@npm:^0.7.1, neozipkit@workspace:packages/neozipkit":
   version: 0.0.0-use.local
   resolution: "neozipkit@workspace:packages/neozipkit"
   dependencies:

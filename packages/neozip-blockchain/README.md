@@ -29,6 +29,8 @@ For full NZIP creation and verification you typically use **neozipkit** together
 npm install neozipkit neozip-blockchain
 ```
 
+`neozipkit` is a **peer dependency** (not bundled). Install both packages in your app; Yarn/npm will not resolve `workspace:*` from the registry.
+
 ## NeoZip Token Service (separate application)
 
 The **NeoZip Token Service** is a **separate application** (not part of this repo). It runs the backend that batches digest submissions and writes timestamps to the blockchain. This library provides the **NeoZip Token Service API client and helpers** (`src/token-service/`) used by your app to:

@@ -6,7 +6,7 @@
  * Updates the version in:
  *   - Root package.json
  *   - packages/neozipkit/package.json
- *   - packages/neozip-blockchain/package.json  (version + peerDependencies.neozipkit)
+ *   - packages/neozip-blockchain/package.json  (version + peer/dev neozipkit ranges)
  *
  * Usage:
  *   node scripts/version-sync.js patch        # 0.7.0 → 0.7.1
@@ -85,9 +85,13 @@ for (const filePath of PACKAGE_FILES) {
   const pkg = readJson(filePath);
   pkg.version = newVersion;
 
-  // Update peerDependencies.neozipkit in neozip-blockchain
-  if (pkg.peerDependencies && pkg.peerDependencies.neozipkit !== undefined) {
-    pkg.peerDependencies.neozipkit = `^${newVersion}`;
+  // Keep neozip-blockchain peer + dev ranges in sync (never workspace:* — breaks npm consumers)
+  const neozipRange = `^${newVersion}`;
+  if (pkg.peerDependencies?.neozipkit !== undefined) {
+    pkg.peerDependencies.neozipkit = neozipRange;
+  }
+  if (pkg.devDependencies?.neozipkit !== undefined) {
+    pkg.devDependencies.neozipkit = neozipRange;
   }
 
   writeJson(filePath, pkg);
