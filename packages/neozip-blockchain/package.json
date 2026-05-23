@@ -1,6 +1,6 @@
 {
   "name": "neozip-blockchain",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "Blockchain functionality for NeoZip and companion to neozipkit — NFT minting, verification, wallet management, OpenTimestamps",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -102,14 +102,14 @@
     "dotenv-cli": "^7.4.2",
     "jest": "^29.7.0",
     "jest-util": "^30.2.0",
-    "neozipkit": "^0.7.1",
+    "neozipkit": "^0.7.2",
     "ts-jest": "^29.1.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.0.0"
   },
   "peerDependencies": {
-    "neozipkit": "^0.7.1"
+    "neozipkit": "^0.7.2"
   },
   "peerDependenciesMeta": {
     "neozipkit": {
