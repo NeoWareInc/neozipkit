@@ -2,7 +2,12 @@
 
 Blockchain functionality for NeoZip: **NeoZip Token Service timestamping** (stamp, upgrade, mint, verify), NFT minting, verification, and wallet management. Part of the [neozipkit monorepo](../../README.md).
 
-> **Pre-1.0:** This package is under active development. The API may change before 1.0; use in production with caution.
+> **⚠️ Beta Version Warning**: This package is currently in **beta** status. This means:
+> - The API may change before the stable 1.0 release
+> - Some features may still be evolving
+> - Use in production with caution and thorough testing
+>
+> We welcome feedback on [GitHub](https://github.com/NeoWareInc/neozipkit/issues). This package is part of the [neozipkit monorepo](../../README.md).
 
 This package provides the client-side API and utilities that work with the sibling **[neozipkit](../neozipkit/)** package for full NZIP (NeoZip) workflows. The **NeoZip Token Service** is a **separate application**; this library contains the **NeoZip Token Service API client and helpers** used to communicate with that server (submit digests, poll for confirmations, fetch proofs, etc.). Run the NeoZip Token Service separately when using timestamping features.
 
