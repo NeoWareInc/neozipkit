@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-06-30
+
+### Added
+
+- **Token Service account/funding/identity HTTP clients** — New stateless modules under [`src/token-service/`](src/token-service/), re-exported from `neozip-blockchain/token-service`:
+  - `TokenServiceAccountAuth` — `registerEmail{App,Cli,WithDelivery}`, `verifyEmailAndExtractToken`, `exchangeMagicLinkToken`, silent SIWE-style `requestWalletLoginChallenge` / `walletLogin` (with `WalletLoginUnavailableError`), and phone OTP (`requestPhoneOtp` / `verifyPhoneOtp`).
+  - `TokenServiceFunding` — native-gas grants for the primary Data Wallet: `getFundingPolicy`, `getFundingStatus`, `requestFundingGrant` (with `FundingUnavailableError`).
+  - `TokenServiceIdentity` — wallet linking and encrypted identity-key registration HTTP primitives: `requestWalletEnsureChallenge`, `completeWalletEnsure`, `requestWalletAttachChallenge`, `completeWalletAttach`, `getIdentityKeyBundle`, `requestIdentityKeyInitChallenge`, `completeIdentityKeyInit`, `fetchCoordinatorConfig` (with `IdentityKeyConflictError`, `WrapBundle`, `IdentityKeyBundleBody`, `DEFAULT_RECIPIENT_SUITE`).
+  - `http` — shared utilities: `normalizeServerUrl`, `safeJson`, `pickString`, `extractError`, `genericAuthErrorMessage`, `parseAccessTokenExpiry`, `formatTokenServiceFetchError`. The authenticated clients (funding/identity/phone) attach their own `Authorization: Bearer` headers.
+  - These functions are persistence-free and product-agnostic: callers own token storage and may map 401/403 auth failures to their own recovery guidance (the library emits generic auth messages only).
+
 ### Fixed
 
 - **npm publish** — Removed `neozipkit: "workspace:*"` from `dependencies` (npm does not rewrite workspace protocol). Consumers install `neozipkit` via `peerDependencies` (`^0.7.1`); monorepo dev uses `devDependencies` with the same semver range. `prepack` validates the manifest before pack/publish.

@@ -124,3 +124,61 @@ export {
   type VerifyResult,
   type MultiCalendarOptions,
 } from './CalendarManager';
+
+// Low-level HTTP utilities shared by the account/funding/identity clients.
+// Applications own token storage and may map auth failures to their own guidance.
+export {
+  normalizeServerUrl,
+  safeJson,
+  pickString,
+  genericAuthErrorMessage,
+  extractError,
+  parseAccessTokenExpiry,
+  formatTokenServiceFetchError,
+} from './http';
+
+// Account authentication: email/code, magic link, silent wallet-login, phone OTP.
+export {
+  registerEmailWithDelivery,
+  registerEmailApp,
+  registerEmailCli,
+  verifyEmailAndExtractToken,
+  exchangeMagicLinkToken,
+  WalletLoginUnavailableError,
+  requestWalletLoginChallenge,
+  walletLogin,
+  requestPhoneOtp,
+  verifyPhoneOtp,
+  type AccountVerificationDelivery,
+  type RegisterEmailResult,
+  type AccessTokenResult,
+} from './TokenServiceAccountAuth';
+
+// Native-gas funding for the user's primary Data Wallet.
+export {
+  FundingUnavailableError,
+  getFundingPolicy,
+  getFundingStatus,
+  requestFundingGrant,
+  type FundingPolicy,
+  type FundingPolicyResult,
+  type FundingGrantSummary,
+  type FundingStatusResult,
+  type FundingRequestResult,
+} from './TokenServiceFunding';
+
+// Wallet linking and encrypted identity-key registration (HTTP primitives).
+export {
+  DEFAULT_RECIPIENT_SUITE,
+  IdentityKeyConflictError,
+  fetchCoordinatorConfig,
+  requestWalletEnsureChallenge,
+  completeWalletEnsure,
+  requestWalletAttachChallenge,
+  completeWalletAttach,
+  getIdentityKeyBundle,
+  requestIdentityKeyInitChallenge,
+  completeIdentityKeyInit,
+  type WrapBundle,
+  type IdentityKeyBundleBody,
+} from './TokenServiceIdentity';
