@@ -1,6 +1,6 @@
 {
   "name": "neozip-blockchain",
-  "version": "0.7.2",
+  "version": "0.8.0",
   "description": "Blockchain functionality for NeoZip and companion to neozipkit — NFT minting, verification, wallet management, OpenTimestamps",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -109,7 +109,7 @@
     "typescript": "^5.0.0"
   },
   "peerDependencies": {
-    "neozipkit": "^0.7.2"
+    "neozipkit": "^0.8.0"
   },
   "peerDependenciesMeta": {
     "neozipkit": {

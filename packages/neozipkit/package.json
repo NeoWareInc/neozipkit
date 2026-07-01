@@ -1,6 +1,6 @@
 {
   "name": "neozipkit",
-  "version": "0.7.2",
+  "version": "0.8.0",
   "description": "NeoZipKit - Advanced ZIP file creation, compression, and encryption",
   "main": "index.js",
   "types": "index.d.ts",
