@@ -6,11 +6,11 @@
  * Creates a timestamped ZIP file from input files (supports wildcards).
  * 
  * Usage:
- *   yarn example:timestamp <output.zip> <input-file-pattern> [input-file-pattern2] ...
+ *   pnpm example:timestamp <output.zip> <input-file-pattern> [input-file-pattern2] ...
  *   ts-node examples/stamp-zip.ts <output.zip> <input-file-pattern> [input-file-pattern2] ...
  * 
  * Examples:
- *   yarn example:timestamp examples/output/stamp.nzip examples/test-files/*
+ *   pnpm example:timestamp examples/output/stamp.nzip examples/test-files/*
  *   ts-node examples/stamp-zip.ts examples/output/stamp.nzip examples/test-files/*
  *   ts-node examples/stamp-zip.ts examples/output/stamp.nzip *.txt
  *   ts-node examples/stamp-zip.ts examples/output/stamp.nzip file1.txt file2.txt file3.txt
@@ -155,7 +155,7 @@ export async function createTimestampedZip(
   const submitEmail = email || process.env.TOKEN_SERVICE_EMAIL;
   if (!submitEmail) {
     console.error('No email set. NeoZip Token Service requires a verified email.');
-    console.error('Run: yarn verify-email');
+    console.error('Run: pnpm verify-email');
     console.error('Then run this example again, or set TOKEN_SERVICE_EMAIL in .env.local');
     process.exit(1);
   }
@@ -230,7 +230,7 @@ export async function createTimestampedZip(
       console.warn('⚠️  Warning: Failed to submit digest to NeoZip Token Service');
       console.warn(`   ${errMsg}`);
       if (isEmailVerifyError(errMsg)) {
-        console.warn(`\n💡 Register and verify your email first: yarn verify-email`);
+        console.warn(`\n💡 Register and verify your email first: pnpm verify-email`);
       } else {
         console.warn(`\n💡 Make sure the NeoZip Token Service is running at ${tokenServiceUrl}`);
       }
@@ -243,7 +243,7 @@ export async function createTimestampedZip(
       const errMsg = submitResult.error || 'Failed to submit digest';
       console.warn(`⚠️  Warning: ${errMsg}`);
       if (isEmailVerifyError(errMsg)) {
-        console.warn(`\n💡 Register and verify your email first: yarn verify-email`);
+        console.warn(`\n💡 Register and verify your email first: pnpm verify-email`);
       }
       console.warn('   ZIP file will be created without timestamp metadata.\n');
       submissionFailed = true;

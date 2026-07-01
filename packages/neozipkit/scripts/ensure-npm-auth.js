@@ -23,7 +23,7 @@ if (!npmWhoami()) {
   console.error('  1. Run:  npm login');
   console.error('  2. Enter your npm username, password, and (if asked) email.');
   console.error('  3. If you use 2FA, enter the one-time code when prompted.');
-  console.error('  4. Then run:  yarn release');
+  console.error('  4. Then run:  pnpm release');
   console.error('');
   console.error('Or run:  npm login   then  npm publish --access public');
   console.error('');

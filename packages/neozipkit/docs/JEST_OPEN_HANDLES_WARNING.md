@@ -2,7 +2,7 @@
 
 ## Issue
 
-When running tests with `yarn test:unit`, Jest may show warnings about worker processes not exiting gracefully:
+When running tests with `pnpm test:unit`, Jest may show warnings about worker processes not exiting gracefully:
 
 ```
 A worker process has failed to exit gracefully and has been force exited.
@@ -51,10 +51,10 @@ This appears to be a Yarn module resolution issue. However, you can run `--detec
 
 ```bash
 # Run with open handles detection
-yarn test:unit --detectOpenHandles
+pnpm test:unit --detectOpenHandles
 
 # Or for a specific test file
-yarn exec jest tests/unit/node/EncryptionFlag.test.ts --detectOpenHandles
+pnpm exec jest tests/unit/node/EncryptionFlag.test.ts --detectOpenHandles
 ```
 
 This will show detailed information about what resources are keeping Jest from exiting cleanly.

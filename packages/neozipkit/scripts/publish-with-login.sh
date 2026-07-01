@@ -25,7 +25,7 @@ fi
 # Verify dist exists
 if [ ! -d "dist" ]; then
     echo "❌ dist/ directory not found. Building..."
-    yarn build
+    pnpm build
 fi
 
 # Check if version already exists on npm

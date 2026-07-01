@@ -41,8 +41,8 @@ No need to bump. To publish as **0.5.0**, leave it at **0.5.0**.
 ### 2. Build
 
 ```bash
-yarn install
-yarn build
+pnpm install
+pnpm build
 ```
 
 ### 3. Publish to npm
@@ -56,7 +56,7 @@ npm publish --access public
 or (build + publish in one step):
 
 ```bash
-yarn release
+pnpm release
 ```
 
 - npm publishes the version from `package.json` (e.g. **0.5.0**).
@@ -84,7 +84,7 @@ No need to commit anything if you didn’t change the version.
 
 ## When you do want to release a new version later
 
-1. Bump in `package.json`: run `yarn version:patch` (or `version:minor` / `version:major` / `node scripts/update-version.js 0.6.0`).
+1. Bump in `package.json`: run `pnpm version:patch` (or `version:minor` / `version:major` / `node scripts/update-version.js 0.6.0`).
 2. Then follow the same steps above: build → `npm publish --access public`.
 
 ---

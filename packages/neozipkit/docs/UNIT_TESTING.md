@@ -324,7 +324,7 @@ For how WinZip AES is encoded in ZIP headers and how it differs from other encry
 Run the AES-256 cryptographic unit tests (PBKDF2, AES-CTR, HMAC-SHA1, extra field parsing):
 
 ```bash
-yarn test:aes
+pnpm test:aes
 ```
 
 ### Integration Tests
@@ -332,7 +332,7 @@ yarn test:aes
 #### Create and verify a WinZip-compatible AES-256 ZIP
 
 ```bash
-yarn example:test-winzip-aes
+pnpm example:test-winzip-aes
 ```
 
 Creates `examples/output/aes-example.zip` with WinZip-compatible AES-256 (AE-1) encryption, then decrypts each entry and verifies HMAC-SHA1 and CRC-32 without extracting files to disk.
@@ -340,7 +340,7 @@ Creates `examples/output/aes-example.zip` with WinZip-compatible AES-256 (AE-1) 
 #### NeoEncrypt (NeoCrypto) AES-256 (default in examples)
 
 ```bash
-yarn example:test-aes
+pnpm example:test-aes
 ```
 
 Creates `examples/output/neo-aes-example.zip` with NeoEncrypt and verifies entries in one run.

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Token example (`yarn example:token`)
+ * Token example (`pnpm example:token`)
  *
  * Create a NZIP and mint on-chain using the NZIP contract v2.51
  * (no NeoZip Token Service). Default network is Base Sepolia, which uses the v2.51 contract.
@@ -23,7 +23,7 @@
  * - Network configuration (defaults to Base Sepolia testnet, NZIP v2.51)
  * - Gas fees for minting
  *
- * Usage: yarn example:token
+ * Usage: pnpm example:token
  * Output: examples/output/token.nzip
  */
 

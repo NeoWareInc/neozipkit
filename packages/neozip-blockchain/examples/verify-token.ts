@@ -25,11 +25,11 @@
  *   - Use testnet for development and testing
  * 
  * Usage:
- *   yarn example:verify-token [path-to-tokenized.nzip]
+ *   pnpm example:verify-token [path-to-tokenized.nzip]
  *   ts-node examples/verify-token.ts [path-to-tokenized.nzip]
  * 
  * Examples:
- *   yarn example:verify-token examples/output/token.nzip
+ *   pnpm example:verify-token examples/output/token.nzip
  *   ts-node examples/verify-token.ts examples/output/token.nzip
  * 
  * Note: For timestamp verification (pending/confirmed/NFT), use verify-zip.ts instead.
@@ -87,7 +87,7 @@ async function main() {
       console.error('❌ Error: Token metadata not found in ZIP file');
       console.error(`   Expected: ${TOKENIZED_METADATA} (or legacy ${TOKENIZED_METADATA_LEGACY})`);
       console.error('\n💡 This ZIP file does not appear to be tokenized.');
-      console.error('   Use yarn example:token (examples/token.ts) to create a tokenized NZIP file.');
+      console.error('   Use pnpm example:token (examples/token.ts) to create a tokenized NZIP file.');
       await zip.closeFile();
       process.exit(1);
     }

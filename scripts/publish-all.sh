@@ -6,7 +6,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 echo "Building all packages..."
-yarn build
+pnpm build
 
 echo ""
 echo "Publishing neozipkit..."

@@ -14,8 +14,8 @@
  *   ts-node examples/ots-stamp-zip.ts <output.nzip> <input-file> [input-file2] ...
  *
  * Examples:
- *   yarn example:ots-stamp examples/output/ots.nzip examples/test-files/document.txt
- *   yarn example:ots-stamp examples/output/ots.nzip examples/test-files/*
+ *   pnpm example:ots-stamp examples/output/ots.nzip examples/test-files/document.txt
+ *   pnpm example:ots-stamp examples/output/ots.nzip examples/test-files/*
  */
 
 import { ZipkitNode, CompressOptions } from 'neozipkit/node';
@@ -155,7 +155,7 @@ async function createOtsZip(outputZipPath: string, inputPatterns: string[]): Pro
 
     console.log(`\nCreated: ${outputZipPath}`);
     console.log('OpenTimestamps proof included (META-INF/TS-SUBMIT.OTS).');
-    console.log('Verify with: yarn example:ots-verify ' + outputZipPath);
+    console.log('Verify with: pnpm example:ots-verify ' + outputZipPath);
   } catch (err) {
     try {
       await zip.closeFile();
@@ -170,7 +170,7 @@ async function main() {
   const args = process.argv.slice(2);
   if (args.length < 2) {
     console.error('Usage: ts-node examples/ots-stamp-zip.ts <output.nzip> <input-file> [input-file2] ...');
-    console.error('Example: yarn example:ots-stamp examples/output/ots.nzip examples/test-files/*');
+    console.error('Example: pnpm example:ots-stamp examples/output/ots.nzip examples/test-files/*');
     process.exit(1);
   }
 

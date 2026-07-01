@@ -14,7 +14,7 @@ For more advanced examples including full CLI tools, interactive prompts, and co
 
 - Node.js 16+ 
 - TypeScript (for running with ts-node)
-- This repository checked out (examples are not on npm). In the monorepo, `yarn install` links the workspace `neozipkit` package. In a separate project, add `neozipkit` from npm and copy or adapt example code from GitHub.
+- This repository checked out (examples are not on npm). In the monorepo, `pnpm install` links the workspace `neozipkit` package. In a separate project, add `neozipkit` from npm and copy or adapt example code from GitHub.
 
 ## Running Examples
 
@@ -103,8 +103,8 @@ ts-node examples/list-zip.ts
 
 **Usage:**
 ```bash
-yarn example:test-aes
-yarn example:test-winzip-aes
+pnpm example:test-aes
+pnpm example:test-winzip-aes
 ```
 
 ### 5. Verbose encrypted listing (`list-verbose-encrypted.ts`)
@@ -112,7 +112,7 @@ yarn example:test-winzip-aes
 Dumps central-directory metadata and extra fields for encrypted entries (WinZip AES, NeoEncrypt, ZipCrypto). No password required.
 
 ```bash
-yarn example:list-verbose-encrypted
+pnpm example:list-verbose-encrypted
 ```
 
 ### 6. Blockchain Tokenization (`blockchain-tokenize.ts`)
@@ -250,8 +250,8 @@ For complete security guidelines, see [SECURITY.md](../SECURITY.md).
 ### TypeScript Errors
 
 If you see TypeScript errors, ensure:
-- NeoZipKit is installed: `yarn add neozipkit`
-- TypeScript types are available: `yarn add -D @types/node`
+- NeoZipKit is installed: `pnpm add neozipkit`
+- TypeScript types are available: `pnpm add -D @types/node`
 - tsconfig.json is properly configured
 
 ### Module Resolution Errors

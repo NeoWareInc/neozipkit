@@ -2,8 +2,7 @@
 #   • Actions → Publish → "Run workflow" = rehearse: build, test, optional npm --dry-run (no upload, no release).
 #   • Push tag v* = real publish + GitHub release (uses environment npm-publish).
 #
-# If logs show "➤ YN0000" / Yarn security-key prompts: GitHub ran an OLD workflow that used
-# `yarn npm publish`. This file must use `npx npm@11 publish` only — merge to default branch & re-run.
+# Registry upload uses `npx npm@11 publish` only — not the package manager's publish wrapper.
 # "Re-run" on an old workflow run does NOT pick up edits to this file; start a NEW run (new tag or Run workflow).
 #
 # Authentication (pick one):
@@ -45,18 +44,21 @@ jobs:
     steps:
       - uses: actions/checkout@v6.0.2
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - uses: actions/setup-node@v6.3.0
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
+          cache: pnpm
 
-      - run: corepack enable && corepack prepare yarn@4.12.0 --activate
+      - run: pnpm install --frozen-lockfile
 
-      - run: yarn install --immutable
+      - run: pnpm build
 
-      - run: yarn build
-
-      - run: yarn test:quick
+      - run: pnpm test:quick
 
       - name: Show package versions (would publish)
         run: |
@@ -66,13 +68,11 @@ jobs:
       - name: Preview neozipkit (npm publish --dry-run)
         if: inputs.npm_dry_run
         working-directory: packages/neozipkit
-        # Use npm (not `yarn npm publish`) so the file list matches the real npm tarball.
         run: npm publish --access public --dry-run
 
       - name: Preview neozip-blockchain (npm publish --dry-run)
         if: inputs.npm_dry_run
         working-directory: packages/neozip-blockchain
-        # Use npm here (not `yarn npm publish`): Yarn's dry-run can list extra README paths; npm matches the real tarball.
         run: npm publish --access public --dry-run
 
   publish:
@@ -90,18 +90,21 @@ jobs:
     steps:
       - uses: actions/checkout@v6.0.2
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - uses: actions/setup-node@v6.3.0
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
+          cache: pnpm
 
-      - run: corepack enable && corepack prepare yarn@4.12.0 --activate
+      - run: pnpm install --frozen-lockfile
 
-      - run: yarn install --immutable
+      - run: pnpm build
 
-      - run: yarn build
-
-      - run: yarn test:quick
+      - run: pnpm test:quick
 
       - name: Verify tag matches package versions
         run: |
@@ -114,10 +117,7 @@ jobs:
           fi
           echo "Tag v$TAG matches both package versions."
 
-      # Registry upload MUST use the npm CLI via npx — never `yarn npm publish`.
-      # Yarn Berry prints ➤ YN0000 and can open WebAuthn / interactive login → exit 42 on GitHub runners.
-      # `npx npm@11` forces the published npm package (OIDC + provenance need npm 11.5+ anyway).
-      - name: Preflight (npm CLI for publish, not Yarn)
+      - name: Preflight (npm CLI for publish)
         run: npx --yes npm@11 --version
 
       # Auth: (1) Classic — NPM_TOKEN on npm-publish environment or repo secrets.

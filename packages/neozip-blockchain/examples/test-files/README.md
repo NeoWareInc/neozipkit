@@ -18,7 +18,7 @@ The `neozipkit` package must be installed:
 ```bash
 npm install neozipkit
 # or
-yarn add neozipkit
+pnpm add neozipkit
 ```
 
 **Note**: 
@@ -34,7 +34,7 @@ The NeoZip Token Service (default: `https://testnet.token-service.neozip.io`) mu
 To start the NeoZip Token Service:
 ```bash
 cd /path/to/neozip-token-service
-yarn dev
+pnpm dev
 ```
 
 ### Development Tools
@@ -65,10 +65,10 @@ tsx stamp-zip/verify-zip.ts [path-to-stamped.zip]
 
 ```bash
 # Run timestamping example
-yarn stamp:zip
+pnpm stamp:zip
 
 # Run verification example
-yarn verify:zip [path-to-stamped.zip]
+pnpm verify:zip [path-to-stamped.zip]
 ```
 
 ### Option 3: Compile and Run

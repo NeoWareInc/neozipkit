@@ -23,9 +23,9 @@
  *    - Works offline with --offline flag
  * 
  * Usage:
- *   yarn example:verify-timestamp <path-to-stamped.nzip>    # Verify pending
- *   yarn example:verify-upgrade <path-to-stamped.nzip>      # Verify confirmed
- *   yarn example:verify-nft <path-to-stamped.nzip>          # Verify NFT
+ *   pnpm example:verify-timestamp <path-to-stamped.nzip>    # Verify pending
+ *   pnpm example:verify-upgrade <path-to-stamped.nzip>      # Verify confirmed
+ *   pnpm example:verify-nft <path-to-stamped.nzip>          # Verify NFT
  *   ts-node examples/verify-zip.ts <path-to-stamped.nzip>
  *   ts-node examples/verify-zip.ts <path-to-stamped.nzip> --offline
  * 
@@ -33,9 +33,9 @@
  *   --offline    Skip NeoZip Token Service check (only works for TIMESTAMP.NZIP or TOKEN.NZIP / legacy NZIP.TOKEN)
  * 
  * Examples:
- *   yarn example:verify-timestamp examples/output/stamp.nzip
- *   yarn example:verify-upgrade examples/output/stamp-upgrade.nzip
- *   yarn example:verify-nft examples/output/stamp-upgrade-nft.nzip
+ *   pnpm example:verify-timestamp examples/output/stamp.nzip
+ *   pnpm example:verify-upgrade examples/output/stamp-upgrade.nzip
+ *   pnpm example:verify-nft examples/output/stamp-upgrade-nft.nzip
  *   ts-node examples/verify-zip.ts examples/output/stamp.nzip --offline
  */
 
@@ -85,19 +85,19 @@ function printMissingZipFileHints(zipPath: string): void {
   const base = path.basename(zipPath);
   console.error('\n💡 Example outputs are gitignored. From packages/neozip-blockchain, run:');
   if (base === 'stamp-upgrade.nzip' || zipPath.endsWith(`${path.sep}stamp-upgrade.nzip`)) {
-    console.error('   1. yarn example:timestamp   → examples/output/stamp.nzip');
-    console.error('   2. yarn example:upgrade     → examples/output/stamp-upgrade.nzip');
-    console.error('   3. yarn example:verify-upgrade  (may run stamp then yarn example:upgrade -- --wait)');
+    console.error('   1. pnpm example:timestamp   → examples/output/stamp.nzip');
+    console.error('   2. pnpm example:upgrade     → examples/output/stamp-upgrade.nzip');
+    console.error('   3. pnpm example:verify-upgrade  (may run stamp then pnpm example:upgrade -- --wait)');
   } else if (base === 'stamp-upgrade-nft.nzip' || zipPath.endsWith(`${path.sep}stamp-upgrade-nft.nzip`)) {
-    console.error('   1. yarn example:timestamp');
-    console.error('   2. yarn example:upgrade');
-    console.error('   3. yarn example:mint-nft    → examples/output/stamp-upgrade-nft.nzip');
-    console.error('   4. yarn example:verify-nft');
+    console.error('   1. pnpm example:timestamp');
+    console.error('   2. pnpm example:upgrade');
+    console.error('   3. pnpm example:mint-nft    → examples/output/stamp-upgrade-nft.nzip');
+    console.error('   4. pnpm example:verify-nft');
   } else if (base === 'stamp.nzip' || zipPath.endsWith(`${path.sep}stamp.nzip`)) {
-    console.error('   yarn example:timestamp      → examples/output/stamp.nzip');
-    console.error('   yarn example:verify-timestamp');
+    console.error('   pnpm example:timestamp      → examples/output/stamp.nzip');
+    console.error('   pnpm example:verify-timestamp');
   } else {
-    console.error('   yarn example:timestamp → yarn example:upgrade → yarn example:verify-upgrade');
+    console.error('   pnpm example:timestamp → pnpm example:upgrade → pnpm example:verify-upgrade');
     console.error('   Or pass the path to any stamped .nzip you already have.');
   }
 }
@@ -785,12 +785,12 @@ async function main() {
   if (nonFlagArgs.length === 0) {
     console.error('❌ Error: ZIP file path is required');
     console.error('\nUsage:');
-    console.error('  yarn example:verify-timestamp|verify-upgrade|verify-nft');
+    console.error('  pnpm example:verify-timestamp|verify-upgrade|verify-nft');
     console.error(`  ${TS_NODE_VERIFY} <path-to-stamped.nzip> [--offline]`);
     console.error('\nOptions:');
     console.error('  --offline    Skip NeoZip Token Service (only for confirmed timestamps)');
     console.error('\nExamples:');
-    console.error('  yarn example:verify-timestamp');
+    console.error('  pnpm example:verify-timestamp');
     console.error(`  ${TS_NODE_VERIFY} examples/output/stamp.nzip --offline`);
     process.exit(1);
   }
@@ -800,7 +800,7 @@ async function main() {
   if (!fs.existsSync(zipPath)) {
     console.error(`❌ Error: ZIP file not found: ${zipPath}`);
     console.error('\nUsage:');
-    console.error('  yarn example:verify-timestamp|verify-upgrade|verify-nft');
+    console.error('  pnpm example:verify-timestamp|verify-upgrade|verify-nft');
     console.error(`  ${TS_NODE_VERIFY} <path-to-stamped.nzip> [--offline]`);
     printMissingZipFileHints(zipPath);
     process.exit(1);
@@ -848,7 +848,7 @@ async function main() {
       console.error('❌ Error: No metadata found in ZIP file');
       console.error(`   Expected: TOKEN.NZIP (or legacy NZIP.TOKEN), or ${getMetadataFileNames().join(', ')}`);
       console.error('\n💡 This ZIP file does not appear to be timestamped or tokenized.');
-      console.error('   Use yarn example:timestamp (examples/stamp-zip.ts) to create a timestamped ZIP.');
+      console.error('   Use pnpm example:timestamp (examples/stamp-zip.ts) to create a timestamped ZIP.');
       await zip.closeFile();
       process.exit(1);
     }

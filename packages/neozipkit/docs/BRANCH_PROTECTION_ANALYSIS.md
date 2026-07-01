@@ -16,8 +16,8 @@ The current branch protection system is **too restrictive** for a public library
 ### **Option 1: CI-Only Protection (Recommended)**
 ```bash
 # Allow local builds on any branch
-yarn build        # ✅ Works everywhere locally
-yarn dev:build    # ✅ Works everywhere locally
+pnpm build        # ✅ Works everywhere locally
+pnpm dev:build    # ✅ Works everywhere locally
 
 # Protect only in CI/CD
 # - Only main branch can publish to npm
@@ -28,15 +28,15 @@ yarn dev:build    # ✅ Works everywhere locally
 ### **Option 2: Soft Protection**
 ```bash
 # Warn but don't block
-yarn build        # ⚠️  Warning on non-main, but still works
-yarn dev:build    # ✅ Always works
+pnpm build        # ⚠️  Warning on non-main, but still works
+pnpm dev:build    # ✅ Always works
 ```
 
 ### **Option 3: Environment-Based**
 ```bash
 # Different behavior based on environment
-yarn build        # Local: works, CI: protected
-yarn dev:build    # Always works
+pnpm build        # Local: works, CI: protected
+pnpm dev:build    # Always works
 ```
 
 ## 🎯 **Best Practices for Public Libraries**
@@ -101,16 +101,16 @@ The CI-Only Protection approach has been implemented:
    - `.github/workflows/publish.yml` - Only publishes from main branch
 
 4. **Package.json Scripts** - Updated
-   - `yarn build` - ✅ Works locally on any branch
-   - `yarn build:ci` - ✅ Enforces branch protection in CI only
+   - `pnpm build` - ✅ Works locally on any branch
+   - `pnpm build:ci` - ✅ Enforces branch protection in CI only
 
 ### How It Works:
 
 **Local Development:**
 ```bash
 # Works on any branch locally
-yarn build        # ✅ Always works
-yarn dev:build    # ✅ Always works
+pnpm build        # ✅ Always works
+pnpm dev:build    # ✅ Always works
 ```
 
 **CI/CD:**

@@ -12,7 +12,7 @@
  * - The upgraded ZIP can be verified directly against the blockchain without the NeoZip Token Service
  * 
  * Usage:
- *   yarn example:upgrade <input.nzip> [output.nzip]
+ *   pnpm example:upgrade <input.nzip> [output.nzip]
  *   ts-node examples/upgrade-zip.ts <input.nzip> [output.nzip]
  *   ts-node examples/upgrade-zip.ts <input.nzip> --wait
  * 
@@ -20,7 +20,7 @@
  *   --wait    Poll until the batch is confirmed (default: check once and report status)
  * 
  * Examples:
- *   yarn example:upgrade examples/output/stamp.nzip
+ *   pnpm example:upgrade examples/output/stamp.nzip
  *     # Creates: examples/output/stamp-upgrade.nzip
  *   ts-node examples/upgrade-zip.ts examples/output/stamp.nzip custom-name.nzip
  *     # Creates: custom-name.nzip

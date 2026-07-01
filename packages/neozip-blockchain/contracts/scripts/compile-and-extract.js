@@ -11,7 +11,7 @@
  * Usage:
  *   node scripts/compile-and-extract.js
  *   or
- *   yarn compile:extract
+ *   pnpm compile:extract
  */
 
 const hre = require("hardhat");

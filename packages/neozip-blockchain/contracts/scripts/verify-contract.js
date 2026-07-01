@@ -9,7 +9,7 @@
  * Usage:
  *   node scripts/verify-contract.js <contractAddress> <network>
  *   or
- *   yarn verify <contractAddress> <network>
+ *   pnpm verify <contractAddress> <network>
  * 
  * Examples:
  *   node scripts/verify-contract.js 0x1234...5678 arbitrumSepolia
@@ -194,7 +194,7 @@ async function main() {
       console.error("   3. The deployed bytecode doesn't match the source");
       console.error();
       console.error("   Solution:");
-      console.error("   1. Recompile the contract: yarn compile:extract");
+      console.error("   1. Recompile the contract: pnpm compile:extract");
       console.error("   2. Redeploy with the new bytecode");
       console.error("   3. Or verify using the exact compiler settings used for deployment");
     } else {

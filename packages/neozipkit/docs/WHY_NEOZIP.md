@@ -230,7 +230,7 @@ NeoZipKit represents the evolution of archive technology—combining the reliabi
 Install NeoZipKit (v0.3.0 - alpha) and begin building blockchain-verified archive applications:
 
 ```bash
-yarn add neozipkit
+pnpm add neozipkit
 ```
 
 Or with npm:

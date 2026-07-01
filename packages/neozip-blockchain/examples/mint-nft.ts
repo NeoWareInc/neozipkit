@@ -12,7 +12,7 @@
  * 5. Creates a new ZIP with TOKEN.NZIP containing extended metadata
  * 
  * Usage:
- *   yarn example:mint-nft <input.nzip> [output.nzip]
+ *   pnpm example:mint-nft <input.nzip> [output.nzip]
  *   ts-node examples/mint-nft.ts <input.nzip> [output.nzip] --private-key 0x...
  *   ts-node examples/mint-nft.ts <input.nzip> --private-key 0x... --chain-id 84532
  * 
@@ -25,7 +25,7 @@
  *   USER_PRIVATE_KEY  Alternative to --private-key flag
  * 
  * Examples:
- *   USER_PRIVATE_KEY=0x... yarn example:mint-nft examples/output/stamp-upgrade.nzip
+ *   USER_PRIVATE_KEY=0x... pnpm example:mint-nft examples/output/stamp-upgrade.nzip
  *   ts-node examples/mint-nft.ts examples/output/stamp-upgrade.nzip --private-key 0x...
  */
 

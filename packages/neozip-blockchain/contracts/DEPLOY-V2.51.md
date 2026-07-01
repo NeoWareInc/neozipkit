@@ -16,11 +16,11 @@ From the **repository root** (so the lockfile is used):
 
 ```bash
 cd contracts
-yarn install   # or: npm install (if lockfile allows)
-yarn compile   # compiles NZIP-NFT-v2.51.sol and others
+pnpm install   # or: npm install (if lockfile allows)
+pnpm compile   # compiles NZIP-NFT-v2.51.sol and others
 ```
 
-If you use a different package manager or need to update the lockfile, run the equivalent of `npm install` / `yarn install` in `contracts`, then:
+If you use a different package manager or need to update the lockfile, run the equivalent of `npm install` / `pnpm install` in `contracts`, then:
 
 ```bash
 npx hardhat compile

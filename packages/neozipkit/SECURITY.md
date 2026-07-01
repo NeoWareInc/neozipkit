@@ -37,7 +37,7 @@ await zip.createZipFromFiles(files, 'out.zip', { password });
 ## General practices
 
 - **Secrets**: Do not commit `.env`, keys, or credentials. Use `.gitignore` and `.npmignore` (this repo already excludes `.env`, `wallet/`, `*.key`, `*.pem`, `secrets/`).
-- **Dependencies**: Keep dependencies up to date and run `yarn npm audit` (or `npm audit`) regularly; fix high/critical issues before release.
+- **Dependencies**: Keep dependencies up to date and run `pnpm audit` (or `npm audit`) regularly; fix high/critical issues before release.
 - **Inputs**: Validate paths and options when creating or extracting archives (e.g. path traversal, very large inputs) in your application layer.
 - **Integrity**: Use the library’s hash/CRC options where appropriate to verify archive contents after extraction.
 

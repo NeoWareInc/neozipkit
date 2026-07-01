@@ -7,11 +7,11 @@
  * and adds TOKEN.NZIP metadata to the ZIP file.
  * 
  * Usage:
- *   yarn example:token-service <output.nzip> <input-files...>
+ *   pnpm example:token-service <output.nzip> <input-files...>
  *   ts-node examples/token-create.ts <output.nzip> <input-files...> --private-key <key> [--chain-id <id>]
  * 
  * Examples:
- *   USER_PRIVATE_KEY=0x... yarn example:token-service examples/output/token-test.nzip examples/test-files/*
+ *   USER_PRIVATE_KEY=0x... pnpm example:token-service examples/output/token-test.nzip examples/test-files/*
  *   ts-node examples/token-create.ts examples/output/token-test.nzip examples/test-files/* --private-key $USER_PRIVATE_KEY
  *   ts-node examples/token-create.ts examples/output/token-test.nzip examples/test-files/* --private-key $USER_PRIVATE_KEY --chain-id 84532
  * 

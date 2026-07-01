@@ -146,7 +146,7 @@ foundryup
 ### Setup (one time):
 
 ```bash
-yarn add --dev hardhat @nomicfoundation/hardhat-toolbox
+pnpm add --dev hardhat @nomicfoundation/hardhat-toolbox
 ```
 
 ### Create `hardhat.config.js`:

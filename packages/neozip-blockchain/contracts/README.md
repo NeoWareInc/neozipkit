@@ -49,7 +49,7 @@ Gas-efficient registry for batch merkle roots (inspired by OpenTimestamps).
 
 ```bash
 cd contracts
-yarn install
+pnpm install
 npx hardhat compile
 ```
 

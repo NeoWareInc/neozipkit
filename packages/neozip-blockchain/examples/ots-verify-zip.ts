@@ -14,7 +14,7 @@
  *   ts-node examples/ots-verify-zip.ts <path-to.zip>
  *
  * Example:
- *   yarn example:ots-verify examples/output/myfile.nzip
+ *   pnpm example:ots-verify examples/output/myfile.nzip
  */
 
 import { ZipkitNode } from 'neozipkit/node';
@@ -28,7 +28,7 @@ async function main() {
   const zipPath = process.argv[2];
   if (!zipPath) {
     console.error('Usage: ts-node examples/ots-verify-zip.ts <path-to.zip>');
-    console.error('Example: yarn example:ots-verify examples/output/myfile.nzip');
+    console.error('Example: pnpm example:ots-verify examples/output/myfile.nzip');
     process.exit(1);
   }
 

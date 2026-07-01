@@ -25,7 +25,7 @@ This package provides the client-side API and utilities that work with the sibli
 ```bash
 npm install neozip-blockchain
 # or
-yarn add neozip-blockchain
+pnpm add neozip-blockchain
 ```
 
 For full NZIP creation and verification you typically use **neozipkit** together with this package:
@@ -185,24 +185,24 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 The npm tarball is intentionally minimal: compiled **`dist/`**, the **package root [`README.md`](README.md)**, and **[`LICENSE`](LICENSE)** only (`package.json` `"files"`). **`examples/`**, **`contracts/`**, and other repo docs are **not** on npm; use this repository for those.
 
-Preview what will ship: run **`yarn publish:dry-run`** (it uses **`npm publish --dry-run`**, which matches npm’s file list). Avoid **`yarn npm publish --dry-run`** for previews—Yarn can print extra paths such as nested `README.md` files that are **not** in the published package.
+Preview what will ship: run **`pnpm publish:dry-run`** (it uses **`npm publish --dry-run`**, which matches npm’s file list).
 
 ## Development
 
 This package is part of the [neozipkit monorepo](../../README.md). From the **repository root**:
 
 ```bash
-yarn install
-yarn build        # builds neozipkit first, then neozip-blockchain
-yarn test:unit
+pnpm install
+pnpm build        # builds neozipkit first, then neozip-blockchain
+pnpm test:unit
 ```
 
 To work on this package alone:
 
 ```bash
 cd packages/neozip-blockchain
-yarn build
-yarn test
+pnpm build
+pnpm test
 ```
 
 See the [monorepo README](../../README.md) for version management and release workflow.

@@ -22,31 +22,31 @@ neozipkit/
 ### Production Builds
 ```bash
 # Clean and build production version (works on any branch)
-yarn build
+pnpm build
 
 # Watch mode for production
-yarn watch
+pnpm watch
 
 # CI-protected build (main branch only in CI)
-yarn build:ci
+pnpm build:ci
 ```
 
 ### Development Builds (recommended)
 ```bash
 # Clean and build development version
-yarn dev:build
+pnpm dev:build
 
 # Watch mode for development
-yarn dev:watch
+pnpm dev:watch
 
 # Clean dev build only
-yarn dev:clean
+pnpm dev:clean
 ```
 
 ### Smart Build (recommended)
 ```bash
 # Automatically chooses appropriate build based on branch and environment
-yarn build:auto
+pnpm build:auto
 ```
 
 ## ⚙️ **Configuration**
@@ -78,7 +78,7 @@ yarn build:auto
 ### For Development
 ```bash
 # Start development with watch mode
-yarn dev:watch
+pnpm dev:watch
 
 # Your changes will be compiled to dev-dist/
 # You can test against dev-dist/ without affecting dist/
@@ -87,7 +87,7 @@ yarn dev:watch
 ### For Production
 ```bash
 # Build production version
-yarn build
+pnpm build
 
 # This creates the final dist/ for publishing
 ```
@@ -102,8 +102,8 @@ The following are automatically ignored by git:
 
 ## 💡 **Best Practices**
 
-1. **Use `yarn dev:watch`** for active development
-2. **Use `yarn build`** only when ready for production
+1. **Use `pnpm dev:watch`** for active development
+2. **Use `pnpm build`** only when ready for production
 3. **Never commit `dist/` or `dev-dist/`** - they're automatically ignored
 4. **Test against `dev-dist/`** during development
 5. **Test against `dist/`** before publishing
@@ -113,7 +113,7 @@ The following are automatically ignored by git:
 
 ```bash
 # 1. Start development
-yarn dev:watch
+pnpm dev:watch
 
 # 2. Make changes to src/
 # 3. Changes auto-compile to dev-dist/
@@ -122,7 +122,7 @@ yarn dev:watch
 node -e "console.log(require('./dev-dist/index.js'))"
 
 # 5. When ready, build production
-yarn build
+pnpm build
 
 # 6. Test production build
 node -e "console.log(require('./dist/index.js'))"

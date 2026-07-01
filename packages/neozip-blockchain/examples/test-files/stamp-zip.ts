@@ -143,7 +143,7 @@ export async function createTimestampedZip(
   const submitEmail = email || process.env.TOKEN_SERVICE_EMAIL;
   if (!submitEmail) {
     console.error('No email set. NeoZip Token Service requires a verified email.');
-    console.error('Run: yarn verify-email');
+    console.error('Run: pnpm verify-email');
     console.error('Then run this example again, or set TOKEN_SERVICE_EMAIL in .env.local');
     process.exit(1);
   }

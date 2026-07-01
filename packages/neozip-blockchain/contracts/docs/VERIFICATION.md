@@ -20,7 +20,7 @@ All verification uses **Etherscan API V2**, which is the unified API for Ethersc
 2. **Hardhat Setup**: Ensure you've installed dependencies:
    ```bash
    cd contracts
-   yarn install
+   pnpm install
    ```
 
 3. **Environment Variable**: Set your Etherscan API key:
@@ -46,7 +46,7 @@ Before deploying, compile the contract to generate compiled ABI and bytecode:
 
 ```bash
 cd contracts
-yarn compile:extract
+pnpm compile:extract
 ```
 
 This will:
@@ -73,19 +73,19 @@ After deployment, verify the contract:
 
 ```bash
 cd contracts
-yarn verify <contractAddress> <network>
+pnpm verify <contractAddress> <network>
 ```
 
 **Examples:**
 ```bash
 # Verify on Arbitrum Sepolia
-yarn verify 0x2716c4609fD97DaEdF429BC4B4Ec2faa81e2cC60 arbitrumSepolia
+pnpm verify 0x2716c4609fD97DaEdF429BC4B4Ec2faa81e2cC60 arbitrumSepolia
 
 # Verify on Ethereum Sepolia
-yarn verify 0x2716c4609fD97DaEdF429BC4B4Ec2faa81e2cC60 sepolia
+pnpm verify 0x2716c4609fD97DaEdF429BC4B4Ec2faa81e2cC60 sepolia
 
 # Verify on Base Sepolia
-yarn verify 0x2716c4609fD97DaEdF429BC4B4Ec2faa81e2cC60 baseSepolia
+pnpm verify 0x2716c4609fD97DaEdF429BC4B4Ec2faa81e2cC60 baseSepolia
 ```
 
 ## Supported Networks
@@ -142,7 +142,7 @@ etherscan: {
 
 ```bash
 cd contracts
-yarn verify <contractAddress> <network>
+pnpm verify <contractAddress> <network>
 ```
 
 The script will:
@@ -173,11 +173,11 @@ This error means the deployed bytecode doesn't match the compiled source code.
 1. **Recompile and redeploy:**
    ```bash
    cd contracts
-   yarn compile:extract
+   pnpm compile:extract
    # Redeploy with new bytecode
    node deploy-interactive.js
    # Verify again
-   yarn verify <address> <network>
+   pnpm verify <address> <network>
    ```
 
 2. **Match exact compiler settings:**
@@ -251,7 +251,7 @@ If automatic verification fails, you can verify manually on the explorer:
 
 1. **Always compile before deploying:**
    ```bash
-   yarn compile:extract
+   pnpm compile:extract
    ```
 
 2. **Verify immediately after deployment:**

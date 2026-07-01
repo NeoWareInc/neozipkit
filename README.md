@@ -18,14 +18,14 @@ ZIP-focused sample scripts live under [`packages/neozipkit/examples/`](packages/
 ## Getting started
 
 ```bash
-# Install all dependencies (Yarn 4 workspaces)
-yarn install
+# Install all dependencies (pnpm workspaces)
+pnpm install
 
 # Build all packages (topological order: neozipkit first)
-yarn build
+pnpm build
 
 # Run unit tests for all packages
-yarn test:unit
+pnpm test:unit
 ```
 
 ## Version management
@@ -33,10 +33,10 @@ yarn test:unit
 Both packages share the same version number. Use the root scripts to bump:
 
 ```bash
-yarn version:patch   # 0.7.0 → 0.7.1
-yarn version:minor   # 0.7.0 → 0.8.0
-yarn version:major   # 0.7.0 → 1.0.0
-yarn version:set 1.0.0
+pnpm version:patch   # 0.7.0 → 0.7.1
+pnpm version:minor   # 0.7.0 → 0.8.0
+pnpm version:major   # 0.7.0 → 1.0.0
+pnpm version:set 1.0.0
 ```
 
 ## Release (automated npm publish)
@@ -65,7 +65,7 @@ Publishing is handled by [`.github/workflows/publish.yml`](.github/workflows/pub
    - Store it in GitHub in **one** of these places (the publish job uses `environment: npm-publish`, so either works):
      - **Recommended:** **Settings** → **Environments** → **`npm-publish`** → **Environment secrets** → **Add secret** → name **`NPM_TOKEN`** → paste the token.  
      - **Alternative:** **Settings** → **Secrets and variables** → **Actions** → **Repository secrets** → **New repository secret** → name **`NPM_TOKEN`** → paste the token.  
-   - The **Publish** workflow uses **`npx --yes npm@11 publish`** (never `yarn npm publish`). Yarn prints **`➤ YN0000`** and can open WebAuthn / security-key login → **exit 42** on GitHub runners. If you still see **`YN0000`** in Actions, the run is using an **old workflow file** on GitHub—merge the latest `publish.yml` to your default branch and start a **new** run (do not rely on an old re-run).  
+   - The **Publish** workflow uses **`npx --yes npm@11 publish`** for registry uploads (not the package manager’s publish wrapper).  
    - **`NODE_AUTH_TOKEN`** is set only when `NPM_TOKEN` is non-empty (so an empty secret does not block OIDC).  
    - If you add `NPM_TOKEN`, you are using classic auth; you do not need Trusted Publishing configured for CI (you can still use it later and then remove the secret).
 
@@ -79,7 +79,7 @@ Publishing is handled by [`.github/workflows/publish.yml`](.github/workflows/pub
 
 ### Release steps
 
-1. Bump both package versions: `yarn version:patch` (or `version:minor` / `version:major`).
+1. Bump both package versions: `pnpm version:patch` (or `version:minor` / `version:major`).
 2. Commit and tag: `git commit -am "release: v0.7.1" && git tag v0.7.1`.
 3. Push branch and tags: `git push origin <branch> && git push origin v0.7.1`.
 4. The tag **must** match `version` in both `packages/neozipkit/package.json` and `packages/neozip-blockchain/package.json` (the workflow enforces this).
@@ -112,21 +112,21 @@ Use the **Actions** item in the **top repository navigation bar** (same row as *
 **Locally (same checks, no GitHub UI):**
 
 ```bash
-yarn install --immutable && yarn build && yarn test:quick
-yarn workspace neozipkit run publish:dry-run
-yarn workspace neozip-blockchain run publish:dry-run
+pnpm install --frozen-lockfile && pnpm build && pnpm test:quick
+pnpm --filter neozipkit publish:dry-run
+pnpm --filter neozip-blockchain publish:dry-run
 ```
 
 **Publish a single package from anywhere under the repo** (correct cwd is handled for you):
 
 ```bash
-yarn publish:neozipkit
-yarn publish:neozip-blockchain
+pnpm publish:neozipkit
+pnpm publish:neozip-blockchain
 ```
 
 ### Manual fallback
 
-From the monorepo root: `yarn publish:all` (requires local `npm login` / token).
+From the monorepo root: `pnpm publish:all` (requires local `npm login` / token).
 
 ### GitHub Actions: “Node.js 20 actions are deprecated” / still mentions `@v4`
 

@@ -83,7 +83,7 @@ Updated `package.json` test scripts to use direct Jest binary path instead of re
 ### ✅ All Tests Passing
 
 ```bash
-$ yarn test:all
+$ pnpm test:all
 
 Test Suites: 3 passed, 3 total
 Tests:       71 passed, 71 total

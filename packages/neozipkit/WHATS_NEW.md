@@ -66,9 +66,9 @@ This release adds **full support for AES-256 encryption** in ZIP archives, in ad
 ### Examples and tests
 
 - **Examples:** `examples/test-aes.ts` (NeoEncrypt, default) and `examples/test-winzip-aes.ts` (WinZip-compatible) create and verify AES-256 ZIPs in one run.  
-  Run: `yarn example:test-aes`, `yarn example:test-winzip-aes`.
+  Run: `pnpm example:test-aes`, `pnpm example:test-winzip-aes`.
 - **Unit tests:** AES-256 key derivation, CTR, HMAC, and extra-field handling are covered.  
-  Run: `yarn test:aes`.
+  Run: `pnpm test:aes`.
 
 ### Compatibility
 

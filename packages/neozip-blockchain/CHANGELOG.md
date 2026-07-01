@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Email verification delivery** — `registerEmail` and `TokenServiceClient.register` support `verificationDelivery`: `browser` (default) or `app`, matching NeoZip Token Service `POST /auth/register`. Optional env `TOKEN_SERVICE_VERIFICATION_DELIVERY`; `yarn verify-email` accepts `--browser`, `--app`, or `--delivery=…`. Helper `parseVerificationDeliveryInput` exported from `neozip-blockchain/token-service`.
+- **Email verification delivery** — `registerEmail` and `TokenServiceClient.register` support `verificationDelivery`: `browser` (default) or `app`, matching NeoZip Token Service `POST /auth/register`. Optional env `TOKEN_SERVICE_VERIFICATION_DELIVERY`; `pnpm verify-email` accepts `--browser`, `--app`, or `--delivery=…`. Helper `parseVerificationDeliveryInput` exported from `neozip-blockchain/token-service`.
 
 ### Breaking
 

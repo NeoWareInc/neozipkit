@@ -106,13 +106,13 @@
     "dev:watch": "tsc --project tsconfig.dev.json --watch",
     "build:auto": "node scripts/auto-build.js",
     "build:ci": "node scripts/check-branch.js && npm run clean && npm run compile && npm run create-browser-entry",
-    "test": "yarn exec jest",
-    "test:unit": "yarn exec jest tests/unit",
-    "test:examples": "yarn exec ts-node scripts/test-examples.ts",
+    "test": "jest",
+    "test:unit": "jest tests/unit",
+    "test:examples": "pnpm exec ts-node scripts/test-examples.ts",
     "test:all": "npm run test:unit && npm run test:examples",
-    "test:watch": "yarn exec jest --watch",
-    "test:coverage": "yarn exec jest --coverage",
-    "audit": "yarn npm audit",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "audit": "pnpm audit",
     "publish:dry-run": "npm publish --access public --dry-run",
     "example:create-zip": "npx ts-node examples/create-zip.ts",
     "example:extract-zip": "npx ts-node examples/extract-zip.ts",
@@ -121,7 +121,7 @@
     "example:test-aes": "npx ts-node examples/test-aes.ts",
     "example:test-winzip-aes": "npx ts-node examples/test-winzip-aes.ts",
     "example:list-verbose-encrypted": "npx ts-node examples/list-verbose-encrypted.ts",
-    "test:aes": "yarn exec jest tests/unit/core/encryption/AesCrypto.test.ts"
+    "test:aes": "jest tests/unit/core/encryption/AesCrypto.test.ts"
   },
   "keywords": [
     "zip",

@@ -27,8 +27,8 @@ function main() {
   // Locally: allow builds on any branch
   if (isCI && !isMainBranch(currentBranch)) {
     console.log('🔧 Non-main branch in CI - building to /dev-dist');
-    console.log('🚀 Running: yarn dev:build');
-    execSync('yarn dev:build', { stdio: 'inherit' });
+    console.log('🚀 Running: pnpm dev:build');
+    execSync('pnpm dev:build', { stdio: 'inherit' });
   } else {
     // Local builds or main branch: build to /dist
     if (isMainBranch(currentBranch)) {
@@ -37,8 +37,8 @@ function main() {
       console.log('🔧 Local build on feature branch - building to /dist');
       console.log('💡 In CI, non-main branches would build to /dev-dist');
     }
-    console.log('🚀 Running: yarn build');
-    execSync('yarn build', { stdio: 'inherit' });
+    console.log('🚀 Running: pnpm build');
+    execSync('pnpm build', { stdio: 'inherit' });
   }
 }
 

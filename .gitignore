@@ -7,17 +7,8 @@ dist/
 dev-dist/
 dev-build/
 
-# Yarn Berry (v2+) local state
-.yarn/install-state.gz
-.yarn/cache/
-.yarn/unplugged/
-.yarn/build-state.yml
-.yarn/*.pnp.*
-
 # Logs
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 pnpm-debug.log*
 *.log
 

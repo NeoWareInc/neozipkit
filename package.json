@@ -2,22 +2,20 @@
   "private": true,
   "name": "neozipkit-monorepo",
   "version": "0.7.2",
-  "packageManager": "yarn@4.12.0",
-  "workspaces": [
-    "packages/*"
-  ],
+  "packageManager": "pnpm@9.15.9",
   "scripts": {
-    "build": "yarn workspaces foreach -A -t run build",
-    "test": "yarn workspaces foreach -A run test",
-    "test:quick": "yarn workspace neozipkit run test && yarn workspace neozip-blockchain run test",
-    "test:unit": "yarn workspaces foreach -A run test:unit",
-    "clean": "yarn workspaces foreach -A run clean",
+    "build": "pnpm -r --sort run build",
+    "test": "pnpm -r run test",
+    "test:quick": "pnpm --filter neozipkit run test && pnpm --filter neozip-blockchain run test",
+    "test:unit": "pnpm -r run test:unit",
+    "clean": "pnpm -r run clean",
     "version:set": "node scripts/version-sync.js",
     "version:patch": "node scripts/version-sync.js patch",
     "version:minor": "node scripts/version-sync.js minor",
     "version:major": "node scripts/version-sync.js major",
     "publish:all": "bash scripts/publish-all.sh",
-    "publish:neozipkit": "yarn workspace neozipkit run build && yarn workspace neozipkit exec npx --yes npm@11 publish --access public",
-    "publish:neozip-blockchain": "yarn workspace neozip-blockchain run build && yarn workspace neozip-blockchain exec npx --yes npm@11 publish --access public"
+    "publish:dry-run": "pnpm --filter neozipkit publish:dry-run && pnpm --filter neozip-blockchain publish:dry-run",
+    "publish:neozipkit": "pnpm --filter neozipkit run build && pnpm --filter neozipkit exec npx --yes npm@11 publish --access public",
+    "publish:neozip-blockchain": "pnpm --filter neozip-blockchain run build && pnpm --filter neozip-blockchain exec npx --yes npm@11 publish --access public"
   }
 }

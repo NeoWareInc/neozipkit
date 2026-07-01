@@ -9,7 +9,7 @@
  * - **`app`**: NeoZip deep link + code only (no web link; finish in desktop app)
  *
  * Usage:
- *   yarn verify-email [email] [--browser | --app | --delivery=browser|app]
+ *   pnpm verify-email [email] [--browser | --app | --delivery=browser|app]
  *   ts-node examples/verify-email.ts [email] [--browser | --app | --delivery=browser|app]
  *
  * Env (optional, same values as token service):
@@ -20,9 +20,9 @@
  * write `TOKEN_SERVICE_EMAIL` to `.env.local`.
  *
  * Examples:
- *   yarn verify-email
- *   yarn verify-email user@example.com --app
- *   yarn verify-email user@example.com --delivery=browser
+ *   pnpm verify-email
+ *   pnpm verify-email user@example.com --app
+ *   pnpm verify-email user@example.com --delivery=browser
  *
  * PREREQUISITES:
  * - NeoZip Token Service (default: https://testnet.token-service.neozip.io)
@@ -153,7 +153,7 @@ function printAfterRegisterInstructions(email: string, delivery: VerificationDel
   }
   console.log('');
   console.log('When your email is verified, run again to save it for examples:');
-  console.log(`  yarn verify-email ${email}${d === 'app' ? ' --app' : ''}`);
+  console.log(`  pnpm verify-email ${email}${d === 'app' ? ' --app' : ''}`);
   console.log('');
   console.log('Optional: verify with the 6-digit code from the CLI:');
   console.log(

@@ -45,7 +45,7 @@ function main() {
     console.error('');
     console.error('💡 Solutions:');
     console.error('   1. Switch to main branch: git checkout main');
-    console.error('   2. Use dev build: yarn dev:build');
+    console.error('   2. Use dev build: pnpm dev:build');
     console.error('   3. Unstage dist files: git reset HEAD dist/');
     process.exit(1);
   }

@@ -25,7 +25,7 @@ Advanced ZIP file creation, compression, and encryption library for Node.js and 
 ## Installation
 
 ```bash
-yarn add neozipkit
+pnpm add neozipkit
 ```
 
 Or with npm:
@@ -67,7 +67,7 @@ Runnable examples live **only in this repository**—they are **not** shipped in
 On GitHub: [`packages/neozipkit/examples/`](https://github.com/NeoWareInc/neozipkit/tree/main/packages/neozipkit/examples) — see [`examples/README.md`](examples/README.md) for scripts (create/extract/list/copy ZIP, AES demos, encrypted listing) and how to run them from a checkout.
 
 ```bash
-# From monorepo root, after yarn install
+# From monorepo root, after pnpm install
 cd packages/neozipkit
 npx ts-node examples/create-zip.ts
 ```
@@ -85,7 +85,7 @@ All blockchain code lives in the sibling **[neozip-blockchain](../neozip-blockch
 
 ## Publishing (npm)
 
-The published tarball includes **`dist/`**, **`src/`** (for `neozipkit/src` conditional exports), and the **package root [`README.md`](README.md)** only. **`examples/`** and other repo-only folders are excluded—use **`yarn publish:dry-run`** (`npm publish --dry-run`) to preview the file list.
+The published tarball includes **`dist/`**, **`src/`** (for `neozipkit/src` conditional exports), and the **package root [`README.md`](README.md)** only. **`examples/`** and other repo-only folders are excluded—use **`pnpm publish:dry-run`** (`npm publish --dry-run`) to preview the file list.
 
 ## Development
 
@@ -93,21 +93,21 @@ This package is part of the [neozipkit monorepo](../../README.md). From the **re
 
 ```bash
 # Install all dependencies
-yarn install
+pnpm install
 
 # Build all packages (topological order)
-yarn build
+pnpm build
 
 # Run all unit tests
-yarn test:unit
+pnpm test:unit
 ```
 
 To work on this package alone:
 
 ```bash
 cd packages/neozipkit
-yarn build
-yarn test
+pnpm build
+pnpm test
 ```
 
 See [`docs/DEV_BUILD.md`](docs/DEV_BUILD.md) for the development build system and the [monorepo README](../../README.md) for version management and release workflow.

@@ -34,7 +34,7 @@ NZIP (NeoZip) files are ZIP archives with embedded blockchain proofs. These exam
 
 The recommended flow for timestamping ZIP files:
 
-**Before stamp/upgrade/mint:** Examples that use the NeoZip Token Service (stamp-zip, upgrade-zip, mint-nft) require a verified email. Run `yarn verify-email` once to register and verify your email; the script saves it to `.env.local` as `TOKEN_SERVICE_EMAIL` so you don't need to pass `--email` each time. Use `--app` or `TOKEN_SERVICE_VERIFICATION_DELIVERY=app` if you want the **app**-style verification email (deep link only; no web confirm link). For a non-interactive register/verify split, use [token-service-auth.ts](token-service-auth.ts).
+**Before stamp/upgrade/mint:** Examples that use the NeoZip Token Service (stamp-zip, upgrade-zip, mint-nft) require a verified email. Run `pnpm verify-email` once to register and verify your email; the script saves it to `.env.local` as `TOKEN_SERVICE_EMAIL` so you don't need to pass `--email` each time. Use `--app` or `TOKEN_SERVICE_VERIFICATION_DELIVERY=app` if you want the **app**-style verification email (deep link only; no web confirm link). For a non-interactive register/verify split, use [token-service-auth.ts](token-service-auth.ts).
 
 1. **Stamp** → Create timestamped ZIP with pending proof (TS-SUBMIT.NZIP)
 2. **Upgrade** → Once batch is confirmed, upgrade to confirmed proof (TIMESTAMP.NZIP)
@@ -72,14 +72,14 @@ Creates a timestamped ZIP file by submitting the merkle root to the NeoZip Token
 
 **Usage:**
 ```bash
-# Using yarn script (recommended)
-yarn example:timestamp examples/output/stamp.nzip examples/test-files/*
+# Using pnpm script (recommended)
+pnpm example:timestamp examples/output/stamp.nzip examples/test-files/*
 
 # Using ts-node directly
 ts-node examples/stamp-zip.ts examples/output/stamp.nzip examples/test-files/*
 
 # With custom NeoZip Token Service URL
-TOKEN_SERVICE_URL=https://testnet.token-service.neozip.io yarn example:timestamp examples/output/stamp.nzip examples/test-files/*
+TOKEN_SERVICE_URL=https://testnet.token-service.neozip.io pnpm example:timestamp examples/output/stamp.nzip examples/test-files/*
 ```
 
 **Requirements:**
@@ -103,8 +103,8 @@ Upgrades a pending timestamp (TS-SUBMIT.NZIP) to a confirmed timestamp (TIMESTAM
 
 **Usage:**
 ```bash
-# Using yarn script (recommended)
-yarn example:upgrade examples/output/stamp.nzip
+# Using pnpm script (recommended)
+pnpm example:upgrade examples/output/stamp.nzip
 
 # Using ts-node directly
 ts-node examples/upgrade-zip.ts examples/output/stamp.nzip
@@ -138,8 +138,8 @@ Mints an NFT proof token for a timestamped ZIP file. The NFT proves ownership an
 
 **Usage:**
 ```bash
-# Using yarn script (recommended)
-USER_PRIVATE_KEY=0x... yarn example:mint-nft examples/output/stamp-upgrade.nzip
+# Using pnpm script (recommended)
+USER_PRIVATE_KEY=0x... pnpm example:mint-nft examples/output/stamp-upgrade.nzip
 
 # Using ts-node directly
 ts-node examples/mint-nft.ts examples/output/stamp-upgrade.nzip --private-key 0x...
@@ -184,13 +184,13 @@ Universal verifier that supports three modes:
 **Usage:**
 ```bash
 # Verify pending timestamp (requires NeoZip Token Service)
-yarn example:verify-timestamp examples/output/stamp.nzip
+pnpm example:verify-timestamp examples/output/stamp.nzip
 
 # Verify confirmed timestamp (offline, no NeoZip Token Service needed)
-yarn example:verify-upgrade examples/output/stamp-upgrade.nzip
+pnpm example:verify-upgrade examples/output/stamp-upgrade.nzip
 
 # Verify NFT token (offline, no NeoZip Token Service needed)
-yarn example:verify-nft examples/output/stamp-upgrade-nft.nzip
+pnpm example:verify-nft examples/output/stamp-upgrade-nft.nzip
 
 # Using ts-node directly
 ts-node examples/verify-zip.ts examples/output/stamp.nzip
@@ -226,8 +226,8 @@ Creates a tokenized NZIP file using the core `ZipkitMinter` API and the **NZIP c
 
 **Usage:**
 ```bash
-# Using yarn script
-USER_PRIVATE_KEY=0x... yarn example:token
+# Using pnpm script
+USER_PRIVATE_KEY=0x... pnpm example:token
 
 # Using ts-node directly
 USER_PRIVATE_KEY=0x... ts-node examples/token.ts
@@ -257,8 +257,8 @@ Creates a tokenized ZIP file using the UnifiedNFT contract directly.
 
 **Usage:**
 ```bash
-# Using yarn script
-USER_PRIVATE_KEY=0x... yarn example:token-service examples/output/token-test.nzip examples/test-files/*
+# Using pnpm script
+USER_PRIVATE_KEY=0x... pnpm example:token-service examples/output/token-test.nzip examples/test-files/*
 
 # Using ts-node directly
 ts-node examples/token-create.ts examples/output/token-test.nzip examples/test-files/* --private-key 0x...
@@ -286,8 +286,8 @@ Simpler verifier for tokenized ZIP files (TOKEN.NZIP; legacy NZIP.TOKEN accepted
 
 **Usage:**
 ```bash
-# Using yarn script
-yarn example:verify-token examples/output/token.nzip
+# Using pnpm script
+pnpm example:verify-token examples/output/token.nzip
 
 # Using ts-node directly
 ts-node examples/verify-token.ts examples/output/token.nzip
@@ -313,8 +313,8 @@ Creates a ZIP file with OpenTimestamps proof.
 
 **Usage:**
 ```bash
-# Using yarn script
-yarn example:ots-stamp examples/output/ots.nzip examples/test-files/*
+# Using pnpm script
+pnpm example:ots-stamp examples/output/ots.nzip examples/test-files/*
 
 # Using ts-node directly
 ts-node examples/ots-stamp-zip.ts examples/output/ots.nzip examples/test-files/*
@@ -334,8 +334,8 @@ Verifies OpenTimestamps proof in a ZIP file.
 
 **Usage:**
 ```bash
-# Using yarn script
-yarn example:ots-verify examples/output/ots.nzip
+# Using pnpm script
+pnpm example:ots-verify examples/output/ots.nzip
 
 # Using ts-node directly
 ts-node examples/ots-verify-zip.ts examples/output/ots.nzip
@@ -358,7 +358,7 @@ The `neozipkit` package must be installed:
 ```bash
 npm install neozipkit
 # or
-yarn add neozipkit
+pnpm add neozipkit
 ```
 
 **Note**: 
@@ -409,7 +409,7 @@ The NeoZip Token Service flow examples require a NeoZip Token Service to be runn
 
 3. **Run timestamp examples**:
    ```bash
-   yarn example:timestamp examples/output/stamp.nzip examples/test-files/*
+   pnpm example:timestamp examples/output/stamp.nzip examples/test-files/*
    ```
 
 ### NeoZip Token Service Configuration

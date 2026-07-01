@@ -1,10 +1,10 @@
 /**
  * Ensures examples/output/stamp-upgrade.nzip exists before verify-upgrade runs.
  * - Creates examples/output if needed
- * - Runs yarn example:timestamp when stamp.nzip is missing
- * - Runs yarn example:upgrade -- --wait when stamp-upgrade.nzip is still missing
+ * - Runs pnpm example:timestamp when stamp.nzip is missing
+ * - Runs pnpm example:upgrade -- --wait when stamp-upgrade.nzip is still missing
  *
- * Invoked from package.json only; keep logic minimal (no dotenv here — child yarn scripts load .env).
+ * Invoked from package.json only; keep logic minimal (no dotenv here — child pnpm scripts load .env).
  */
 const fs = require('fs');
 const path = require('path');
@@ -15,9 +15,11 @@ const outDir = path.join(pkgRoot, 'examples', 'output');
 const stampPath = path.join(outDir, 'stamp.nzip');
 const upgradePath = path.join(outDir, 'stamp-upgrade.nzip');
 
-function runYarn(script, forwardedArgs = []) {
-  const argv = forwardedArgs.length ? [script, '--', ...forwardedArgs] : [script];
-  const r = spawnSync('yarn', argv, {
+function runPnpm(script, forwardedArgs = []) {
+  const args = forwardedArgs.length
+    ? ['run', script, '--', ...forwardedArgs]
+    : ['run', script];
+  const r = spawnSync('pnpm', args, {
     cwd: pkgRoot,
     stdio: 'inherit',
     env: process.env,
@@ -33,15 +35,15 @@ if (fs.existsSync(upgradePath)) {
 }
 
 if (!fs.existsSync(stampPath)) {
-  console.log('examples/output/stamp.nzip not found — running yarn example:timestamp first.\n');
-  runYarn('example:timestamp');
+  console.log('examples/output/stamp.nzip not found — running pnpm example:timestamp first.\n');
+  runPnpm('example:timestamp');
 }
 
 if (!fs.existsSync(upgradePath)) {
   console.log(
-    '\nexamples/output/stamp-upgrade.nzip not found — running yarn example:upgrade -- --wait (polls until the batch confirms).\n'
+    '\nexamples/output/stamp-upgrade.nzip not found — running pnpm example:upgrade -- --wait (polls until the batch confirms).\n'
   );
-  runYarn('example:upgrade', ['--wait']);
+  runPnpm('example:upgrade', ['--wait']);
 }
 
 if (!fs.existsSync(upgradePath)) {

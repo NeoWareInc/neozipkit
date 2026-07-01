@@ -112,7 +112,7 @@ async function cmdStamp(digest: string): Promise<void> {
   const email = process.env.TOKEN_SERVICE_EMAIL;
   if (!email) {
     console.error('\n❌ TOKEN_SERVICE_EMAIL environment variable not set.');
-    console.error('Stamping requires a verified email. Run: yarn verify-email');
+    console.error('Stamping requires a verified email. Run: pnpm verify-email');
     process.exit(1);
   }
 

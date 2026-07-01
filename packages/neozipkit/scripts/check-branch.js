@@ -55,8 +55,8 @@ function main() {
     console.error('   Only main/master branches can build to /dist in CI');
     console.error('');
     console.error('💡 Use dev build instead:');
-    console.error('   yarn dev:build    # Builds to dev-dist/');
-    console.error('   yarn dev:watch    # Watch mode for dev-dist/');
+    console.error('   pnpm dev:build    # Builds to dev-dist/');
+    console.error('   pnpm dev:watch    # Watch mode for dev-dist/');
     process.exit(1);
   }
 
