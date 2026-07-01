@@ -37,8 +37,8 @@ if (problems.length > 0) {
     console.error(`   - ${p}`);
   }
   console.error(
-    '\nUse a semver range (e.g. "^0.7.1") in peerDependencies and devDependencies only.\n' +
-      'Monorepo dev should use devDependencies with the same range; Yarn links the local workspace.\n'
+    '\nUse a semver range (e.g. "^0.8.0") in peerDependencies; devDependencies may use the same range.\n' +
+      'pnpm links the local workspace when versions match (see root .npmrc link-workspace-packages).\n'
   );
   process.exit(1);
 }

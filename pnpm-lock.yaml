@@ -39,7 +39,7 @@ importers:
         specifier: ^30.2.0
         version: 30.4.1
       neozipkit:
-        specifier: workspace:^
+        specifier: ^0.8.0
         version: link:../neozipkit
       ts-jest:
         specifier: ^29.1.2

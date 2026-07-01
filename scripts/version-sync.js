@@ -91,7 +91,7 @@ for (const filePath of PACKAGE_FILES) {
     pkg.peerDependencies.neozipkit = neozipRange;
   }
   if (pkg.devDependencies?.neozipkit !== undefined) {
-    pkg.devDependencies.neozipkit = 'workspace:^';
+    pkg.devDependencies.neozipkit = neozipRange;
   }
 
   writeJson(filePath, pkg);
