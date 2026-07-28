@@ -1,18 +1,23 @@
 # What’s New in NeoZipKit
 
+Release notes for people who install and use **`neozipkit`** from npm. For blockchain timestamping and NFTs, see the sibling package [`neozip-blockchain`](https://www.npmjs.com/package/neozip-blockchain).
+
 ## 1.0.0 (2026-07-28)
 
-### First stable (non-beta) release
+### First stable release
 
-NeoZipKit **1.0.0** is the first non-beta publish. SemVer applies from here: breaking API changes will bump the major version.
+**1.0.0** is the first non-beta release. From here on, NeoZipKit follows [Semantic Versioning](https://semver.org/): breaking API changes bump the major version.
 
-### Native Zstandard (Node.js) — WASM codec removed
+### Zstandard compression (Node.js)
 
-Zstd (ZIP method **93**) now uses **Node.js native `zlib` Transform streaming** only (`ZstdNode`). The old `@oneidentity/zstd-js` WASM path and `ZstdManager` queue are **gone**.
+Zstd (ZIP method **93**) now uses **Node.js built-in `zlib` streaming**. The previous WASM-based codec is removed.
 
-- **Requires** Node.js **≥ 22.15** or **≥ 23.8** (for `zlib.createZstdCompress` / `createZstdDecompress`).
-- Frames are standard **libzstd**-compatible (interop with other tools that speak method 93).
-- Create/extract feed chunked readers through zlib streams — memory scales with `bufferSize` (~512 KiB default), not full entry size.
+**What this means for you:**
+
+- Use Zstd only on **Node.js ≥ 22.15** or **≥ 23.8**.
+- Archives are compatible with other tools that support ZIP method 93 / libzstd.
+- Large files stay memory-efficient (chunked streaming, default buffer ~512 KiB).
+- **Browsers do not support Zstd.** Use Deflate (or Stored) in the browser, or create/extract Zstd archives in Node.
 
 ```ts
 import { ZipkitNode } from 'neozipkit/node';
@@ -24,120 +29,84 @@ await zip.createZipFromFiles(['file1.txt', 'file2.txt'], 'output.zip', {
 });
 ```
 
-- **Browser:** no zstd codec. ESM/UMD builds stub `ZstdNode`; `useZstd: true` throws. Use Deflate in the browser, or create/extract zstd archives in Node.
-- **Legacy WASM archives** from older NeoZipKit releases can still be detected and extracted (output truncated to the ZIP `uncompressed_size` to drop the historical +18 zero pad):
+**Upgrading from older NeoZipKit Zstd archives:** Older releases wrote frames with a small padding quirk. Extract still works; you can also scan an archive:
 
 ```ts
 const hits = await zip.detectLegacyZstdEntries('old-archive.zip');
+for (const { entry, detection } of hits) {
+  if (detection.isLegacyWasm) {
+    console.log(entry.filename, detection.confidence, detection.reason);
+  }
+}
 ```
 
-See [docs/ZSTD_USAGE.md](docs/ZSTD_USAGE.md).
+### Streaming-first I/O (Node)
 
-### Streaming I/O model (aligned with Rust NeoZipKit)
+Node create/extract/list paths are **streaming** (read → hash → compress/encrypt → write in chunks). There is no separate “load the whole archive into a VM” mode.
 
-The Node / CLI product path is **one streaming engine**: read → hash → compress/encrypt → write in ~512 KiB buffers. There is no separate full-archive “VM / in-memory” mode. Small entries may still use an in-API buffer fast path inside the same APIs.
+- Prefer `ZipkitNode` file APIs for disk workflows.
+- Buffer APIs remain for the browser and small in-process use cases.
 
-| Surface | Behavior |
-|---------|----------|
-| `ZipkitNode` create / extract / list | File streaming (`loadZipFile`, `writeZipEntry`, `extractToFile`, …) |
-| Core `Zipkit.loadZip(Buffer)` / browser | Buffer APIs kept for browser and small in-process buffers |
-| Zstd (method 93) | Node native `zlib` streams only |
+### Compatibility snapshot
 
-### Packaging
-
-- Monorepo installs with **pnpm**; published packages remain plain npm tarballs (`dist/`, `src/`, `README.md`).
-- Sibling blockchain features stay in **`neozip-blockchain@^1.0.0`** (peer on `neozipkit`).
-
----
-
-## 0.8.0 / 0.7.x (2026-06 → 2026-07)
-
-Packaging and monorepo releases leading up to 1.0:
-
-- **0.8.0** — Version alignment across the monorepo; workspace tooling moved to **pnpm**.
-- **0.7.2** — Fixed npm publish for workspace consumers: `neozipkit` is a **peer** (not a `workspace:*` runtime dependency).
-- **0.7.1 / 0.7.0** — Monorepo layout and publish workflow hardening (`neozipkit` + `neozip-blockchain`).
-
-No breaking ZIP API changes for typical Node/browser create/extract usage in these patch/minor bumps; see GitHub tags `v0.7.0`–`v0.8.0` for full commit history.
+| Environment | Deflate / Stored | Zstd | AES-256 / NeoEncrypt / ZipCrypto |
+|-------------|------------------|------|-----------------------------------|
+| Node.js (see version above for Zstd) | Yes | Yes | Yes |
+| Browser (ESM / UMD) | Yes | No | Yes |
 
 ---
 
 ## 0.6.1 (2026-03-30)
 
-### ZipkitNode: read `FileHandle` lifecycle (Node.js)
+### More reliable file handle reuse (Node.js)
 
-- **`loadZipFile()`** now **closes any previously opened read handle** before resetting state and opening a new path. Calling `loadZipFile()` again on the **same** `ZipkitNode` used to assign `this.fileHandle = null` without closing the underlying `fs.promises.FileHandle`, which could leak descriptors and trigger Node’s **DEP0137** warning (closing `FileHandle` during garbage collection is deprecated).
-- **Failed loads:** If opening or parsing fails after the handle is created, the handle is closed and file state is reset so the instance is not left with a dangling handle.
-- **`closeFile()`** now also clears **`filePath`** and **`fileSize`** so “closed” matches “no archive loaded” metadata.
+If you call `loadZipFile()` more than once on the same `ZipkitNode` instance, NeoZipKit now **closes the previous read handle** before opening the next file. Failed loads also clean up so handles are not left open. `closeFile()` clears path/size metadata so “closed” means no archive is loaded.
 
-See [README.md — ZipkitNode and file handles](README.md#zipkitnode-and-file-handles-nodejs) for usage notes.
+This avoids descriptor leaks and Node’s `FileHandle` GC deprecation warning when reusing a `ZipkitNode`.
 
 ---
 
 ## 0.6.0 (2025-01-27)
 
-### AES-256 encryption support
+### AES-256 encryption
 
-This release adds **full support for AES-256 encryption** in ZIP archives, in addition to the existing ZIP (Legacy) encryption.
+Full **WinZip-compatible AES-256 (AE-1/AE-2)** support, in addition to legacy ZIP encryption.
 
-- **WinZip-compatible AES-256 (AE-1/AE-2)**  
-  Archives use the same format as WinZip AES encryption. You can create encrypted ZIPs in NeoZipKit and open them in WinZip, 7-Zip, The Unarchiver (`unar`/`lsar`), and other tools that support the [WinZip AES specification](https://www.winzip.com/en/support/aes-encryption/).
+- Create and extract encrypted ZIPs in **Node and the browser**.
+- Interop with WinZip, 7-Zip, The Unarchiver (`unar`/`lsar`), and other AE-1/AE-2 tools.
 
-- **Create AES-256 encrypted ZIPs**  
-  Pass a password and `encryptionMethod: 'aes256'` in your compress options:
+**Create:**
 
-  ```ts
-  const zip = new ZipkitNode();
-  await zip.createZipFromFiles(
-    ['file1.txt', 'file2.txt'],
-    'secure.zip',
-    {
-      password: 'YourStrongPassword',
-      encryptionMethod: 'aes256',
-      level: 6,
-    }
-  );
-  ```
+```ts
+const zip = new ZipkitNode();
+await zip.createZipFromFiles(
+  ['file1.txt', 'file2.txt'],
+  'secure.zip',
+  {
+    password: 'YourStrongPassword',
+    encryptionMethod: 'aes256',
+    level: 6,
+  }
+);
+```
 
-- **Extract AES-256 encrypted ZIPs**  
-  Pass the same password when extracting; decryption is automatic when the archive uses AES:
+**Extract:**
 
-  ```ts
-  await zip.extractZipFile('secure.zip', './out', { password: 'YourStrongPassword' });
-  ```
+```ts
+await zip.extractZipFile('secure.zip', './out', {
+  password: 'YourStrongPassword',
+});
+```
 
-- **Cryptography**  
-  - **Key derivation:** PBKDF2-HMAC-SHA1 (1000 iterations) with a 16-byte random salt per entry.  
-  - **Encryption:** AES-256 in CTR mode (little-endian counter, WinZip convention).  
-  - **Integrity:** HMAC-SHA1 over the ciphertext (10-byte authentication code per entry).
+**How it works (summary):** PBKDF2-HMAC-SHA1 (1000 iterations), AES-256-CTR (WinZip little-endian counter), HMAC-SHA1 over ciphertext (10-byte auth code per entry).
 
-- **Browser support**  
-  The browser bundle includes a crypto shim so AES-256 works in environments without Node’s `crypto` module (e.g. ESM/UMD in the browser). No extra dependencies are required.
+Also in this release:
 
-- **API**  
-  - **`EncryptionMethod.AES_256`** – Use with `EncryptionManager` and encryption options.  
-  - **`AesCrypto`** – Static helpers `encryptBuffer` / `decryptBuffer` for WinZip AES-256; used internally by compress/decompress.  
-  - **Compress options:** `password` and `encryptionMethod: 'aes256'` for file-based and buffer-based creation.
+- Encryption bit set correctly on all encrypted local headers (including the last entry).
+- Copy/append helpers for building archives by copying entries then finalizing the central directory.
 
-### Other changes
-
-- **Encryption flag fix** – Local file headers now set the encryption bit correctly for all encrypted entries (including the last file), so central directory and local headers stay in sync (see `docs/ENCRYPTION_FLAG_BUG_FIX.md`).
-- **Copy/append API** – `ZipCopyNode` and core `ZipCopy` support copy-entries-only plus finalize (central directory + EOCD) for building archives by copying then appending.
-- **Scripts and docs** – Scripts reviewed and documented (`docs/SCRIPTS_REVIEW.md`); unused buffer shim removed from the browser build.
-
-### Examples and tests
-
-- **Examples:** `examples/test-aes.ts` (NeoEncrypt, default) and `examples/test-winzip-aes.ts` (WinZip-compatible) create and verify AES-256 ZIPs in one run.  
-  Run: `pnpm example:test-aes`, `pnpm example:test-winzip-aes`.
-- **Unit tests:** AES-256 key derivation, CTR, HMAC, and extra-field handling are covered.  
-  Run: `pnpm test:aes`.
-
-### Compatibility
-
-- **Node.js:** Unchanged (e.g. Node 16+).
-- **Browser:** AES-256 is supported in the ESM and UMD bundles via the built-in crypto shim.
-- **Interop:** AES-256 ZIPs created with NeoZipKit open in WinZip, 7-Zip, and other AE-1/AE-2–compatible tools. Legacy ZIP crypto remains supported for create and extract.
+**NeoEncrypt** (NeoZip-specific AES via extra field `0x024E`, normal compression method in headers) is available with `encryptionMethod: 'neo-aes256'`. See the package README for details.
 
 ---
 
-For security considerations and password handling, see [SECURITY.md](SECURITY.md).
+For password handling and security notes, see the [SECURITY.md](https://github.com/NeoWareInc/neozipkit/blob/main/packages/neozipkit/SECURITY.md) in the repository.

@@ -88,7 +88,8 @@
   "files": [
     "dist/",
     "src/",
-    "README.md"
+    "README.md",
+    "WHATS_NEW.md"
   ],
   "scripts": {
     "clean": "node scripts/clean.js",
