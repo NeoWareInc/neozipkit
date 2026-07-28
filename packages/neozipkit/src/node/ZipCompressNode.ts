@@ -22,10 +22,10 @@ import { HashCalculator } from '../core/components/HashCalculator';
 import { ZipCrypto } from '../core/encryption/ZipCrypto';
 import { AesCrypto } from '../core/encryption/AesCrypto';
 import { NeoCrypto, NEO_CRYPTO_ALGORITHM_AES256_V1 } from '../core/encryption/NeoCrypto';
-import { ZstdManager } from '../core/ZstdManager';
 import Errors from '../core/constants/Errors';
 import * as fs from 'fs';
 import * as path from 'path';
+import { ZstdNode } from './ZstdNode';
 
 const pako = require('pako');
 
@@ -339,16 +339,23 @@ export class ZipCompressNode {
   }
 
   /**
-   * Compresses data using Zstandard (zstd) algorithm
-   * @param input - Buffer to compress OR chunked reader object with totalSize and readChunk callback
+   * Compresses data using Zstandard via Node native zlib chunked streaming.
+   *
+   * @param input - Buffer OR chunked reader (`onReadChunk` preferred; `readChunk` accepted)
    * @param options - Compression options
-   * @param bufferSize - Size of buffer to read if using chunked reader (default: 512KB)
-   * @param entry - Optional ZIP entry for hash calculation
-   * @param onOutputBuffer - Optional callback for streaming output
-   * @returns Compressed data buffer
+   * @param bufferSize - Chunk size for streaming reads (default: 512KB)
+   * @param entry - Optional ZIP entry for hash / compressedSize
+   * @param onOutputBuffer - Optional callback for streaming compressed output
+   * @returns Compressed buffer, or empty buffer when streamed via onOutputBuffer
    */
   async zstdCompress(
-    input: Buffer | { totalSize: number, readChunk: (position: number, size: number) => Buffer },
+    input:
+      | Buffer
+      | {
+          totalSize: number;
+          onReadChunk?: (position: number, size: number) => Buffer;
+          readChunk?: (position: number, size: number) => Buffer;
+        },
     options?: CompressOptions,
     bufferSize?: number,
     entry?: ZipEntry,
@@ -357,66 +364,112 @@ export class ZipCompressNode {
     const effectiveBufferSize = bufferSize || options?.bufferSize || this.zipkitNode.getBufferSize();
     const isBuffer = Buffer.isBuffer(input);
     const totalSize = isBuffer ? input.length : input.totalSize;
-    
-    if (options?.level == 0) {
-      // For store mode, return as-is
-      if (isBuffer) {
-        return input;
-      } else {
-        // Read all chunks
-        const chunks: Buffer[] = [];
-        let position = 0;
-        while (position < totalSize) {
-          const size = Math.min(effectiveBufferSize, totalSize - position);
-          const chunk = input.readChunk(position, size);
-          chunks.push(chunk);
-          position += size;
-        }
-        return Buffer.concat(chunks);
-      }
-    }
-    
-    try {
-      // Zstd compression levels range from 1 (fastest) to 22 (highest compression)
-      // Map our 1-9 level to a reasonable zstd range (1-19)
-      const level = options?.level ?? 6;
-      const zstdLevel = Math.min(Math.max(1, Math.floor(level * 2.1)), 19);
 
-      // Get the full buffer (zstd doesn't support true streaming compression)
-      const inbuf = isBuffer ? input : (() => {
-        const chunks: Buffer[] = [];
-        let position = 0;
-        while (position < totalSize) {
-          const size = Math.min(effectiveBufferSize, totalSize - position);
-          const chunk = input.readChunk(position, size);
-          chunks.push(chunk);
-          position += size;
+    const needsHashCalculation =
+      entry && ((!entry.crc || entry.crc === 0) || (options?.useSHA256 && !entry.sha256));
+    const hashCalculator = needsHashCalculation
+      ? new HashCalculator({ useSHA256: !!(options?.useSHA256 && entry && !entry.sha256) })
+      : null;
+
+    if (options?.level == 0) {
+      if (isBuffer) {
+        if (hashCalculator && entry) {
+          hashCalculator.update(input);
+          if (!entry.crc || entry.crc === 0) {
+            entry.crc = hashCalculator.finalizeCRC32();
+          }
+          if (options?.useSHA256 && !entry.sha256) {
+            entry.sha256 = hashCalculator.finalizeSHA256();
+          }
         }
-        return Buffer.concat(chunks);
-      })();
-      
-      // Validate input
-      if (!inbuf || inbuf.length === 0) {
+        return input;
+      }
+
+      const chunks: Buffer[] = [];
+      const read = input.onReadChunk ?? input.readChunk;
+      if (!read) {
+        throw new Error('ZSTD store mode: chunked reader missing read callback');
+      }
+      let position = 0;
+      while (position < totalSize) {
+        const size = Math.min(effectiveBufferSize, totalSize - position);
+        const chunk = read(position, size);
+        if (hashCalculator) {
+          hashCalculator.update(chunk);
+        }
+        if (onOutputBuffer) {
+          await onOutputBuffer(chunk);
+        } else {
+          chunks.push(chunk);
+        }
+        position += chunk.length;
+      }
+      if (hashCalculator && entry) {
+        if (!entry.crc || entry.crc === 0) {
+          entry.crc = hashCalculator.finalizeCRC32();
+        }
+        if (options?.useSHA256 && !entry.sha256) {
+          entry.sha256 = hashCalculator.finalizeSHA256();
+        }
+      }
+      return onOutputBuffer ? Buffer.alloc(0) : Buffer.concat(chunks);
+    }
+
+    try {
+      const level = options?.level ?? 6;
+
+      const read = isBuffer
+        ? (position: number, size: number) => input.subarray(position, position + size)
+        : (input.onReadChunk ?? input.readChunk);
+      if (!read) {
+        throw new Error('ZSTD compression: chunked reader missing read callback');
+      }
+      if (!totalSize) {
         throw new Error('ZSTD compression: empty input buffer');
       }
-      
-      // Convert Buffer to Uint8Array for WASM module
-      const inputArray = new Uint8Array(inbuf.buffer, inbuf.byteOffset, inbuf.byteLength);
-      
-      // Compress the data with zstd using global ZstdManager
-      const compressedData = await ZstdManager.compress(inputArray, zstdLevel);
-      const compressedBuffer = Buffer.from(compressedData);
-      
-      // Set the compressed size in the entry for ZIP file structure
+
+      if (isBuffer && hashCalculator && entry) {
+        hashCalculator.update(input);
+        entry.crc = hashCalculator.finalizeCRC32();
+        if (options?.useSHA256 && !entry.sha256) {
+          entry.sha256 = hashCalculator.finalizeSHA256();
+        }
+      }
+
+      const collected: Buffer[] = [];
+      const compressedSize = await ZstdNode.compressChunks(
+        read,
+        totalSize,
+        effectiveBufferSize,
+        level,
+        isBuffer
+          ? undefined
+          : (plain) => {
+              hashCalculator?.update(plain);
+            },
+        async (compressed) => {
+          if (onOutputBuffer) {
+            await onOutputBuffer(compressed);
+          } else {
+            collected.push(compressed);
+          }
+        }
+      );
+
+      if (!isBuffer && hashCalculator && entry) {
+        entry.crc = hashCalculator.finalizeCRC32();
+        if (options?.useSHA256 && !entry.sha256) {
+          entry.sha256 = hashCalculator.finalizeSHA256();
+        }
+      }
       if (entry) {
-        entry.compressedSize = compressedBuffer.length;
+        entry.compressedSize = compressedSize;
       }
-      
+
       if (onOutputBuffer) {
-        await onOutputBuffer(compressedBuffer);
+        return Buffer.alloc(0);
       }
-      
-      return compressedBuffer;
+      return Buffer.concat(collected);
     } catch (e) {
       Logger.error('Error during zstd compression:', e);
       throw new Error(Errors.COMPRESSION_ERROR);
@@ -591,9 +644,8 @@ export class ZipCompressNode {
       const fileData = fs.readFileSync(filePath);
       return await this.compressData(entry, fileData, options, onOutputBuffer);
     } else if (compressionMethod === 'ZSTD') {
-      // ZSTD requires full buffer, so read file first
-      const fileData = fs.readFileSync(filePath);
-      return await this.compressData(entry, fileData, options, onOutputBuffer);
+      // Native Node zstd chunked streaming
+      return await this.zstdCompress(chunkedReader, options, bufferSize, entry, onOutputBuffer);
     } else {
       // DEFLATED: Use deflateCompress with chunked reader
       return await this.deflateCompress(chunkedReader, options, bufferSize, entry, onOutputBuffer);

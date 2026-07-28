@@ -29,6 +29,10 @@ const cryptoPlugin = {
     build.onResolve({ filter: /^crypto$/ }, () => {
       return { path: resolve(ROOT_DIR, 'src/browser/crypto-browser-shim.js') };
     });
+    // ZSTD is Node zlib only — never ship the removed WASM codec in browser bundles
+    build.onResolve({ filter: /[/\\]node[/\\]ZstdNode(\.ts)?$/ }, () => {
+      return { path: resolve(ROOT_DIR, 'src/browser/zstd-browser-shim.ts') };
+    });
   },
 };
 

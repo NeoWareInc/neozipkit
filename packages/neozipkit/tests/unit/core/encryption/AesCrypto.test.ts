@@ -235,4 +235,65 @@ describe('AesCrypto', () => {
       expect(decrypted.equals(data)).toBe(true);
     });
   });
+
+  describe('streaming AE-1/AE-2 helpers', () => {
+    it('should match encryptBuffer when updated in odd-sized chunks', () => {
+      const entry = new ZipEntry('stream.txt');
+      const data = Buffer.alloc(1000);
+      for (let i = 0; i < data.length; i++) {
+        data[i] = (i * 17) & 0xff;
+      }
+      const password = 'StreamPassword';
+
+      // Force identical salt by using streaming encryptor and comparing decrypt of both paths
+      const enc = AesCrypto.createEncryptor(password);
+      const parts: Buffer[] = [enc.header()];
+      for (let i = 0; i < data.length; i += 7) {
+        parts.push(enc.update(data.subarray(i, Math.min(i + 7, data.length))));
+      }
+      parts.push(enc.finish());
+      const streamed = Buffer.concat(parts);
+
+      const decrypted = AesCrypto.decryptBuffer(entry, streamed, password);
+      expect(decrypted.equals(data)).toBe(true);
+
+      // Streaming decrypt in chunks
+      const dec = AesCrypto.createDecryptor(password, streamed.length);
+      const outChunks: Buffer[] = [];
+      for (let i = 0; i < streamed.length; i += 13) {
+        const plain = dec.push(streamed.subarray(i, Math.min(i + 13, streamed.length)));
+        if (plain.length) {
+          outChunks.push(plain);
+        }
+      }
+      dec.end();
+      expect(Buffer.concat(outChunks).equals(data)).toBe(true);
+    });
+
+    it('decryptStream should round-trip async chunks', async () => {
+      const entry = new ZipEntry('async.bin');
+      const data = Buffer.from('async streaming payload for AE-1');
+      const password = 'AsyncPw';
+      const encrypted = AesCrypto.encryptBuffer(entry, data, password);
+
+      async function* chunks() {
+        for (let i = 0; i < encrypted.length; i += 5) {
+          yield encrypted.subarray(i, Math.min(i + 5, encrypted.length));
+        }
+      }
+
+      const out: Buffer[] = [];
+      for await (const part of AesCrypto.decryptStream(password, encrypted.length, chunks())) {
+        out.push(part);
+      }
+      expect(Buffer.concat(out).equals(data)).toBe(true);
+    });
+
+    it('streaming decrypt should reject wrong password', () => {
+      const entry = new ZipEntry('x.txt');
+      const encrypted = AesCrypto.encryptBuffer(entry, Buffer.from('data'), 'right');
+      const dec = AesCrypto.createDecryptor('wrong', encrypted.length);
+      expect(() => dec.push(encrypted)).toThrow('wrong password');
+    });
+  });
 });

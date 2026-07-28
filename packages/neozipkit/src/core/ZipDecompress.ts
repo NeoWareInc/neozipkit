@@ -14,7 +14,8 @@
 //
 
 const pako = require('pako');
-import { ZstdManager } from './ZstdManager';
+import { ZstdNode } from '../node/ZstdNode';
+import { repairLegacyWasmZstdPlaintext } from '../node/LegacyZstd';
 import Zipkit from './Zipkit';
 import { Logger } from './components/Logger';
 import ZipEntry from './ZipEntry';
@@ -128,18 +129,28 @@ class ZipDecompress {
 
 
   /**
-   * Synchronous zstd decompress method for in-memory mode
-   * ZSTD codec is guaranteed to be initialized via factory method
-   * Internal method only
+   * Zstd decompress via Node native zlib, repairing legacy WASM +18 padding when present.
    */
-  private async zstdDecompressSync(data: Buffer): Promise<Buffer> {
+  private async zstdDecompressSync(data: Buffer, entry?: ZipEntry): Promise<Buffer> {
     this.log(`zstdDecompressSync() called with ${data.length} bytes`);
-    
+
     try {
-      // Use global ZstdManager for decompression (handles queuing and initialization)
-      const decompressed = await ZstdManager.decompress(data);
+      let decompressed = await ZstdNode.decompress(data);
+      if (entry && entry.uncompressedSize > 0) {
+        const { repaired, wasLegacy } = repairLegacyWasmZstdPlaintext(
+          decompressed,
+          entry.uncompressedSize,
+          entry.crc
+        );
+        if (wasLegacy) {
+          this.log(
+            `Legacy WASM zstd padding repaired: ${decompressed.length} -> ${repaired.length} bytes`
+          );
+        }
+        decompressed = repaired;
+      }
       this.log(`ZSTD decompression successful: ${data.length} bytes -> ${decompressed.length} bytes`);
-      return Buffer.from(decompressed);
+      return decompressed;
     } catch (error) {
       this.log(`ZSTD decompression failed: ${error}`);
       throw new Error(`ZSTD decompression failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -173,7 +184,7 @@ class ZipDecompress {
     } else if (method === CMP_METHOD.DEFLATED) {
       outBuf = this.inflate(compressedData);
     } else if (method === CMP_METHOD.ZSTD) {
-      outBuf = await this.zstdDecompressSync(compressedData);
+      outBuf = await this.zstdDecompressSync(compressedData, entry);
     } else {
       throw new Error(`Unsupported compression method: ${method}`);
     }

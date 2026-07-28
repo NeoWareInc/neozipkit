@@ -14,7 +14,7 @@
 //
 
 const pako = require('pako');
-import { ZstdManager } from './ZstdManager';
+import { ZstdNode } from '../node/ZstdNode';
 import Zipkit from './Zipkit';
 import { Logger } from './components/Logger';
 import ZipEntry from './ZipEntry';
@@ -275,13 +275,8 @@ export class ZipCompress {
   }
 
   /**
-   * Compress data using Zstandard (zstd) algorithm
-   * @param input - Input data to compress (Buffer or chunked reader)
-   * @param options - Compression options
-   * @param bufferSize - Buffer size for chunked processing
-   * @param entry - ZIP entry being compressed
-   * @param onOutputBuffer - Optional callback for streaming output
-   * @returns Buffer containing compressed data
+   * Compress data using Zstandard via Node native zlib chunked streaming.
+   * Not available in browser builds (throws).
    */
   async zstdCompress(
     input: Buffer | { totalSize: number, readChunk: (position: number, size: number) => Buffer },
@@ -291,33 +286,66 @@ export class ZipCompress {
     onOutputBuffer?: (data: Buffer) => Promise<void>
   ): Promise<Buffer> {
     this.log(`zstdCompress() called - entry: ${entry?.filename ?? 'unknown'}, bufferSize: ${bufferSize}, level: ${options?.level ?? 6}`);
-    
+
     const effectiveBufferSize = bufferSize || this.zipkit.getBufferSize();
     const level = options?.level ?? 6;
-    
-    // Handle chunked reader
-    if (typeof input === 'object' && 'totalSize' in input && 'readChunk' in input) {
-      // Chunked reader mode - not implemented in simplified version
-      throw new Error('Chunked reader mode not supported in ZipCompress');
-    }
-    
-    // Validate input
-    if (!input || input.length === 0) {
+    const isBuffer = Buffer.isBuffer(input);
+    const totalSize = isBuffer ? input.length : input.totalSize;
+
+    if (!totalSize) {
       throw new Error('ZSTD compression: empty input buffer');
     }
-    
-    // Convert Buffer to Uint8Array for WASM module
-    const inputArray = new Uint8Array(input.buffer, input.byteOffset, input.byteLength);
-    
-    // Use global ZstdManager for compression (handles queuing and initialization)
-    const compressed = await ZstdManager.compress(inputArray, level);
-    const compressedBuffer = Buffer.from(compressed);
-    
-    if (onOutputBuffer) {
-      await onOutputBuffer(compressedBuffer);
+
+    if (options?.level === 0) {
+      if (isBuffer) {
+        if (onOutputBuffer) {
+          await onOutputBuffer(input);
+        }
+        return input;
+      }
+      const chunks: Buffer[] = [];
+      let position = 0;
+      while (position < totalSize) {
+        const size = Math.min(effectiveBufferSize, totalSize - position);
+        const chunk = input.readChunk(position, size);
+        if (onOutputBuffer) {
+          await onOutputBuffer(chunk);
+        } else {
+          chunks.push(chunk);
+        }
+        position += chunk.length;
+      }
+      return onOutputBuffer ? Buffer.alloc(0) : Buffer.concat(chunks);
     }
-    
-    return compressedBuffer;
+
+    const readChunk = isBuffer
+      ? (position: number, size: number) => input.subarray(position, position + size)
+      : input.readChunk.bind(input);
+
+    const collected: Buffer[] = [];
+    const compressedSize = await ZstdNode.compressChunks(
+      readChunk,
+      totalSize,
+      effectiveBufferSize,
+      level,
+      undefined,
+      async (compressed) => {
+        if (onOutputBuffer) {
+          await onOutputBuffer(compressed);
+        } else {
+          collected.push(compressed);
+        }
+      }
+    );
+
+    if (entry) {
+      entry.compressedSize = compressedSize;
+    }
+
+    if (onOutputBuffer) {
+      return Buffer.alloc(0);
+    }
+    return Buffer.concat(collected);
   }
 
   /**

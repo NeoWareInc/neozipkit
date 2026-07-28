@@ -14,8 +14,9 @@
 //
 
 const pako = require('pako');
-import { ZstdManager } from '../core/ZstdManager';
 import ZipkitNode from './ZipkitNode';
+import { ZstdNode } from './ZstdNode';
+import { repairLegacyWasmZstdPlaintext } from './LegacyZstd';
 import { Logger } from '../core/components/Logger';
 import ZipEntry from '../core/ZipEntry';
 import Errors from '../core/constants/Errors';
@@ -126,6 +127,18 @@ export class ZipDecompressNode {
   }
 
   /**
+   * Read the raw compressed payload for an entry (no decrypt / decompress).
+   */
+  async readCompressedPayload(entry: ZipEntry): Promise<Buffer> {
+    const fileHandle = (this.zipkitNode as any).getFileHandle();
+    const chunks: Buffer[] = [];
+    for await (const chunk of this.readCompressedDataStream(fileHandle, entry)) {
+      chunks.push(chunk);
+    }
+    return Buffer.concat(chunks);
+  }
+
+  /**
    * Test entry integrity without extracting to disk
    * Validates CRC-32 or SHA-256 hash without writing decompressed data
    * 
@@ -228,19 +241,15 @@ export class ZipDecompressNode {
         entry.aesVersion > 0 || entry.cmpMethod === CMP_METHOD.AES_ENCRYPT || entry.neoCryptoAlgorithm > 0;
 
       if (isEncrypted && isFullPayloadCrypto) {
-        // WinZip AES or NeoEncrypt: read full payload, decrypt in one shot (HMAC must be verified first)
+        // WinZip AES / NeoEncrypt: stream decrypt (HMAC verified at end of ciphertext)
         const dataStream = this.readCompressedDataStream(fileHandle, entry);
-        const chunks: Buffer[] = [];
-        for await (const chunk of dataStream) {
-          chunks.push(chunk);
-        }
-        const fullPayload = Buffer.concat(chunks);
-        const decrypted = AesCrypto.decryptBuffer(entry, fullPayload, (this.zipkitNode as any).password);
-
-        // Wrap decrypted data as a single-item generator for the decompression pipeline
+        const decrypted = AesCrypto.decryptStream(
+          (this.zipkitNode as any).password,
+          entry.compressedSize,
+          dataStream
+        );
         const skipHash = entry.aesVersion === 2 ? true : options?.skipHashCheck;
-        async function* singleChunk() { yield decrypted; }
-        await this.unCompressToFile(singleChunk(), entry, writeStream, {
+        await this.unCompressToFile(decrypted, entry, writeStream, {
           skipHashCheck: skipHash,
           onProgress: options?.onProgress,
           outputPath
@@ -297,16 +306,13 @@ export class ZipDecompressNode {
 
       if (isEncrypted && isFullPayloadCrypto) {
         const dataStream = this.readCompressedDataStream(fileHandle, entry);
-        const chunks: Buffer[] = [];
-        for await (const chunk of dataStream) {
-          chunks.push(chunk);
-        }
-        const fullPayload = Buffer.concat(chunks);
-        const decrypted = AesCrypto.decryptBuffer(entry, fullPayload, (this.zipkitNode as any).password);
-
+        const decrypted = AesCrypto.decryptStream(
+          (this.zipkitNode as any).password,
+          entry.compressedSize,
+          dataStream
+        );
         const skipHash = entry.aesVersion === 2 ? true : options?.skipHashCheck;
-        async function* singleChunk() { yield decrypted; }
-        return await this.unCompressToBuffer(singleChunk(), entry, {
+        return await this.unCompressToBuffer(decrypted, entry, {
           skipHashCheck: skipHash,
           onProgress: options?.onProgress
         });
@@ -357,16 +363,13 @@ export class ZipDecompressNode {
 
       if (isEncrypted && isFullPayloadCrypto) {
         const dataStream = this.readCompressedDataStream(fileHandle, entry);
-        const chunks: Buffer[] = [];
-        for await (const chunk of dataStream) {
-          chunks.push(chunk);
-        }
-        const fullPayload = Buffer.concat(chunks);
-        const decrypted = AesCrypto.decryptBuffer(entry, fullPayload, (this.zipkitNode as any).password);
-
+        const decrypted = AesCrypto.decryptStream(
+          (this.zipkitNode as any).password,
+          entry.compressedSize,
+          dataStream
+        );
         const skipHash = entry.aesVersion === 2 ? true : options?.skipHashCheck;
-        async function* singleChunk() { yield decrypted; }
-        return await this.unCompressToTest(singleChunk(), entry, {
+        return await this.unCompressToTest(decrypted, entry, {
           skipHashCheck: skipHash,
           onProgress: options?.onProgress
         });
@@ -662,8 +665,8 @@ export class ZipDecompressNode {
       // Use pako streaming inflate - maintains state across chunks
       yield* this.inflateStream(compressedStream);
     } else if (method === CMP_METHOD.ZSTD) {
-      // Use ZSTD streaming decompression - note: ZSTD requires full buffer
-      yield* this.zstdDecompressStream(compressedStream);
+      // Native Node zstd; bound output to entry size (repairs legacy WASM +18 padding)
+      yield* this.zstdDecompressStream(compressedStream, entry?.uncompressedSize ?? 0);
     } else {
       throw new Error(`Unsupported compression method: ${method}`);
     }
@@ -707,36 +710,32 @@ export class ZipDecompressNode {
   }
 
   /**
-   * Streaming ZSTD decompression
+   * Streaming ZSTD decompression via Node zlib (native).
+   * When maxOut > 0, truncates output (legacy WASM emitted +18 zero bytes).
    */
   private async *zstdDecompressStream(
-    compressedStream: AsyncGenerator<Buffer>
+    compressedStream: AsyncGenerator<Buffer>,
+    maxOut: number = 0
   ): AsyncGenerator<Buffer> {
-    // ZSTD is guaranteed to be initialized via factory method
-    
-    // Collect all compressed chunks first (ZSTD needs complete data)
-    const compressedChunks: Buffer[] = [];
-    for await (const chunk of compressedStream) {
-      compressedChunks.push(chunk);
-    }
-    
-    const compressedData = Buffer.concat(compressedChunks);
-    
     try {
-      // Use global ZstdManager for decompression
-      const decompressed = await ZstdManager.decompress(compressedData);
-      const decompressedBuffer = Buffer.from(decompressed);
-      
-      // Yield decompressed data in chunks using ZipkitServer's bufferSize
-      const chunkSize = this.zipkitNode.getBufferSize();
-      let offset = 0;
-      while (offset < decompressedBuffer.length) {
-        const end = Math.min(offset + chunkSize, decompressedBuffer.length);
-        yield decompressedBuffer.slice(offset, end);
-        offset = end;
+      let remaining = maxOut > 0 ? maxOut : Number.POSITIVE_INFINITY;
+      for await (const chunk of ZstdNode.decompressStream(compressedStream)) {
+        if (remaining <= 0) {
+          break;
+        }
+        if (chunk.length <= remaining) {
+          remaining -= chunk.length;
+          yield chunk;
+        } else {
+          yield chunk.subarray(0, remaining);
+          remaining = 0;
+          break;
+        }
       }
     } catch (error) {
-      throw new Error(`ZSTD streaming decompression failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `ZSTD streaming decompression failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -750,20 +749,35 @@ export class ZipDecompressNode {
   }
 
   /**
-   * Zstd decompress method (now async with ZstdManager)
-   * Internal method only
+   * Zstd decompress via Node zlib (native), repairing legacy WASM +18 padding when present.
    */
-  private async zstdDecompressSync(data: Buffer): Promise<Buffer> {
+  private async zstdDecompressSync(data: Buffer, entry?: ZipEntry): Promise<Buffer> {
     this.log(`zstdDecompressSync() called with ${data.length} bytes`);
-    
+
     try {
-      // Use global ZstdManager for decompression
-      const decompressed = await ZstdManager.decompress(data);
-      this.log(`ZSTD decompression successful: ${data.length} bytes -> ${decompressed.length} bytes`);
-      return Buffer.from(decompressed);
+      let decompressed = await ZstdNode.decompress(data);
+      if (entry && entry.uncompressedSize > 0) {
+        const { repaired, wasLegacy } = repairLegacyWasmZstdPlaintext(
+          decompressed,
+          entry.uncompressedSize,
+          entry.crc
+        );
+        if (wasLegacy) {
+          this.log(
+            `Legacy WASM zstd padding repaired: ${decompressed.length} -> ${repaired.length} bytes`
+          );
+        }
+        decompressed = repaired;
+      }
+      this.log(
+        `ZSTD decompression successful: ${data.length} bytes -> ${decompressed.length} bytes`
+      );
+      return decompressed;
     } catch (error) {
       this.log(`ZSTD decompression failed: ${error}`);
-      throw new Error(`ZSTD decompression failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `ZSTD decompression failed: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -794,7 +808,7 @@ export class ZipDecompressNode {
     } else if (method === CMP_METHOD.DEFLATED) {
       outBuf = this.inflate(compressedData);
     } else if (method === CMP_METHOD.ZSTD) {
-      outBuf = await this.zstdDecompressSync(compressedData);
+      outBuf = await this.zstdDecompressSync(compressedData, entry);
     } else {
       throw new Error(`Unsupported compression method: ${method}`);
     }

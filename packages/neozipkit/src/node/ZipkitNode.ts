@@ -19,6 +19,11 @@ import {
   ENCRYPT_HDR_SIZE
 } from '../core/constants/Headers';
 import { NEO_CRYPTO_ALGORITHM_AES256_V1 } from '../core/encryption/NeoCrypto';
+import { AesCrypto } from '../core/encryption/AesCrypto';
+import {
+  detectLegacyWasmZstd,
+  type LegacyZstdDetectResult,
+} from './LegacyZstd';
 import * as fs from 'fs';
 import * as path from 'path';
 import { minimatch } from 'minimatch';
@@ -346,6 +351,75 @@ export default class ZipkitNode extends Zipkit {
   }
 
   /**
+   * Scan the loaded archive (or `archivePath`) for entries compressed with the
+   * legacy NeoZipKit WASM zstd codec (`@oneidentity/zstd-js`).
+   *
+   * Encrypted entries are skipped unless you only need a header check after
+   * decrypting externally — this API inspects raw stored payloads.
+   */
+  async detectLegacyZstdEntries(
+    archivePath?: string,
+    options?: { verify?: boolean }
+  ): Promise<Array<{ entry: ZipEntry; detection: LegacyZstdDetectResult }>> {
+    if (archivePath && !this.filePath) {
+      await this.loadZipFile(archivePath);
+    }
+    if (!this.filePath) {
+      throw new Error('Archive not loaded. Call loadZipFile() first or provide archivePath parameter.');
+    }
+
+    const verify = options?.verify !== false;
+    const results: Array<{ entry: ZipEntry; detection: LegacyZstdDetectResult }> = [];
+    const entries = this.getDirectory();
+
+    for (const entry of entries) {
+      if (entry.isDirectory) {
+        continue;
+      }
+      const method =
+        entry.cmpMethod === CMP_METHOD.AES_ENCRYPT && entry.realCmpMethod >= 0
+          ? entry.realCmpMethod
+          : entry.cmpMethod;
+      if (method !== CMP_METHOD.ZSTD) {
+        continue;
+      }
+      if (entry.isEncrypted || (entry.bitFlags & GP_FLAG.ENCRYPTED)) {
+        results.push({
+          entry,
+          detection: {
+            isLegacyWasm: false,
+            confidence: 'none',
+            frameContentSize: null,
+            expectedUncompressedSize: entry.uncompressedSize,
+            paddingBytes: 18,
+            reason: 'Encrypted zstd entry — decrypt before detecting legacy WASM frames',
+          },
+        });
+        continue;
+      }
+
+      const compressed = await this.getZipDecompressNode().readCompressedPayload(entry);
+
+      if (!verify) {
+        const detection = await detectLegacyWasmZstd(compressed, entry.uncompressedSize, {
+          verify: false,
+          crc: entry.crc,
+        });
+        results.push({ entry, detection });
+        continue;
+      }
+
+      const detection = await detectLegacyWasmZstd(compressed, entry.uncompressedSize, {
+        verify: true,
+        crc: entry.crc,
+      });
+      results.push({ entry, detection });
+    }
+
+    return results;
+  }
+
+  /**
    * Test entry integrity without extracting to disk
    * Validates CRC-32 or SHA-256 hash without writing decompressed data
    * 
@@ -578,8 +652,12 @@ export default class ZipkitNode extends Zipkit {
     // For AES encryption, pre-configure the entry so the initial local header
     // includes the 0x9901 extra field and method 99. The actual compression
     // method is preserved in realCmpMethod for the AES extra field.
-    const isAesRequested = options?.password && options?.encryptionMethod === 'aes256';
-    const isNeoRequested = options?.password && options?.encryptionMethod === 'neo-aes256';
+    // Default password encryption is WinZip AES-256 (matches compressData).
+    const encMethod = options?.password
+      ? (options.encryptionMethod || 'aes256')
+      : undefined;
+    const isAesRequested = encMethod === 'aes256';
+    const isNeoRequested = encMethod === 'neo-aes256';
     if (isAesRequested) {
       entry.cmpMethod = CMP_METHOD.AES_ENCRYPT;
       entry.aesVersion = 1;
@@ -615,55 +693,87 @@ export default class ZipkitNode extends Zipkit {
       });
     });
 
-    // Step 3: Compress file and write data
+    // Step 3: Compress file and write data (chunked when large).
+    // ZipCrypto still uses the buffer path (legacy header needs CRC up front).
+    // AES / NeoEncrypt use AesEncryptor so ciphertext is written in chunks.
     const bufferSize = options?.bufferSize || this.getBufferSize();
-    const useZstd = options?.useZstd !== false;
-    // Never use the chunked/streaming path when encrypting: the streaming path writes
-    // compressed data to the writer via onOutputBuffer BEFORE encryption can be applied.
-    // Encryption requires the full compressed buffer to create the 12-byte header and
-    // encrypt all data in one pass, so we must use the buffer path (compressFile).
-    const shouldUseChunked = !useZstd && !options?.password && entry.uncompressedSize && entry.uncompressedSize > bufferSize;
+    const useZipCrypto = encMethod === 'zipcrypto';
+    const shouldUseChunked =
+      !!entry.uncompressedSize &&
+      entry.uncompressedSize > bufferSize &&
+      !useZipCrypto;
 
-    if (shouldUseChunked) {
-      // Use streaming compression for large files
-      // Data is written directly via onOutputBuffer callback
-      const onOutputBuffer = async (data: Buffer) => {
-        await new Promise<void>((resolve, reject) => {
-          writer.outputStream.write(data, (error) => {
-            if (error) {
-              reject(error);
-            } else {
-              writer.currentPosition += data.length;
-              if (callbacks?.onProgress) {
-                callbacks.onProgress(entry, data.length);
-              }
-              resolve();
-            }
-          });
-        });
-      };
-
-      // compressFileStream will set entry.compressedSize and entry.crc
-      await this.compressFileStream(filePath, entry, options, onOutputBuffer);
-    } else {
-      // Use regular buffer compression for small files
-      // compressFile will set entry.compressedSize and entry.crc
-      const compressedData = await this.compressFile(filePath, entry, options);
-      
-      // Write compressed data to file
+    const writeChunk = async (data: Buffer): Promise<void> => {
+      if (data.length === 0) {
+        return;
+      }
       await new Promise<void>((resolve, reject) => {
-        writer.outputStream.write(compressedData, (error) => {
+        writer.outputStream.write(data, (error) => {
           if (error) {
             reject(error);
           } else {
-            writer.currentPosition += compressedData.length;
+            writer.currentPosition += data.length;
             if (callbacks?.onProgress) {
-              callbacks.onProgress(entry, compressedData.length);
+              callbacks.onProgress(entry, data.length);
             }
             resolve();
           }
         });
       });
+    };
+
+    if (shouldUseChunked) {
+      const useAesStream = isAesRequested || isNeoRequested;
+      const encryptor = useAesStream
+        ? AesCrypto.createEncryptor(options!.password!)
+        : null;
+      let streamedBytes = 0;
+
+      if (encryptor) {
+        const hdr = encryptor.header();
+        await writeChunk(hdr);
+        streamedBytes += hdr.length;
+        entry.isEncrypted = true;
+        entry.bitFlags |= GP_FLAG.ENCRYPTED;
+      }
+
+      // Compress without applying buffer encrypt — we stream-encrypt below.
+      const streamOptions: CompressOptions = encryptor
+        ? { ...options, password: undefined, encryptionMethod: undefined }
+        : { ...options };
+
+      const onOutputBuffer = async (data: Buffer) => {
+        const out = encryptor ? encryptor.update(data) : data;
+        await writeChunk(out);
+        streamedBytes += out.length;
+      };
+
+      await this.compressFileStream(filePath, entry, streamOptions, onOutputBuffer);
+
+      if (encryptor) {
+        const auth = encryptor.finish();
+        await writeChunk(auth);
+        streamedBytes += auth.length;
+        entry.compressedSize = streamedBytes;
+        entry.isEncrypted = true;
+        entry.bitFlags |= GP_FLAG.ENCRYPTED;
+        // compressFileStream overwrites cmpMethod with the real codec — restore AES/Neo metadata
+        if (isAesRequested) {
+          entry.realCmpMethod = realCmpMethod;
+          entry.cmpMethod = CMP_METHOD.AES_ENCRYPT;
+          entry.aesVersion = 1;
+          entry.aesStrength = 3;
+        } else if (isNeoRequested) {
+          entry.cmpMethod = realCmpMethod;
+          entry.neoCryptoPayloadVersion = 1;
+          entry.neoCryptoAlgorithm = NEO_CRYPTO_ALGORITHM_AES256_V1;
+          entry.neoCryptoFlags = 0;
+        }
+      }
+    } else {
+      // Small files / ZipCrypto: buffer compression (may encrypt inside compressFile)
+      const compressedData = await this.compressFile(filePath, entry, options);
+      await writeChunk(compressedData);
     }
 
     // Step 4: Patch local header in-place with final compressed size, CRC, and flags

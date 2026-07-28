@@ -160,7 +160,6 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@oneidentity/zstd-js": "^1.0.3",
     "buffer": "^6.0.3",
     "pako": "^2.1.0",
     "uuid": "^9.0.0"

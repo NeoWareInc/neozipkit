@@ -21,6 +21,16 @@ export default ZipkitNodeDefault;
 export type { ZipFileWriter } from './ZipkitNode';
 export { ZipCompressNode } from './ZipCompressNode';
 export { ZipDecompressNode } from './ZipDecompressNode';
+export { ZstdNode, isNativeZstdAvailable } from './ZstdNode';
+export {
+  LegacyZstd,
+  LEGACY_WASM_ZSTD_PADDING,
+  parseZstdFrameContentSize,
+  looksLikeLegacyWasmZstd,
+  detectLegacyWasmZstd,
+  repairLegacyWasmZstdPlaintext,
+} from './LegacyZstd';
+export type { LegacyZstdDetectResult, LegacyZstdConfidence, DetectLegacyZstdOptions } from './LegacyZstd';
 
 // Efficient ZIP copying using ZipEntry directly
 export { ZipCopyNode } from './ZipCopyNode';
