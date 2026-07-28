@@ -83,6 +83,19 @@ All blockchain code lives in the sibling **[neozip-blockchain](../neozip-blockch
 - **`neozipkit/browser`** – Browser-only (ZipkitBrowser, Blob API)
 - **`neozipkit/browser-esm`** – Browser ESM bundle (tree-shaking)
 
+## I/O model (aligned with Rust NeoZipKit)
+
+**Node / CLI product path:** one streaming (chunked) engine — read → hash → compress/encrypt → write in ~512 KiB buffers. There is no separate full-archive “VM / in-memory” mode. Small entries may still use an in-API buffer fast path inside the same APIs.
+
+| Surface | Behavior |
+|---------|----------|
+| `ZipkitNode` create / extract / list | File streaming (`loadZipFile`, `writeZipEntry`, `extractToFile`, …) |
+| Core `Zipkit.loadZip(Buffer)` / browser | Buffer APIs kept for browser and small in-process buffers |
+| Zstd (method 93) | Node native `zlib` Transform streams only (no WASM). Requires Node ≥ 22.15 |
+| Legacy WASM zstd archives | Detect with `detectLegacyWasmZstd` / `ZipkitNode.detectLegacyZstdEntries`; extract truncates +18 zero padding |
+
+See also: [docs/ZSTD_USAGE.md](docs/ZSTD_USAGE.md) and the Rust crate notes in `neozip-rust` (`crates/neozipkit/src/limits.rs`).
+
 ## Publishing (npm)
 
 The published tarball includes **`dist/`**, **`src/`** (for `neozipkit/src` conditional exports), and the **package root [`README.md`](README.md)** only. **`examples/`** and other repo-only folders are excluded—use **`pnpm publish:dry-run`** (`npm publish --dry-run`) to preview the file list.
