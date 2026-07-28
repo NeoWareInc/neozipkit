@@ -1,5 +1,67 @@
 # What’s New in NeoZipKit
 
+## 1.0.0 (2026-07-28)
+
+### First stable (non-beta) release
+
+NeoZipKit **1.0.0** is the first non-beta publish. SemVer applies from here: breaking API changes will bump the major version.
+
+### Native Zstandard (Node.js) — WASM codec removed
+
+Zstd (ZIP method **93**) now uses **Node.js native `zlib` Transform streaming** only (`ZstdNode`). The old `@oneidentity/zstd-js` WASM path and `ZstdManager` queue are **gone**.
+
+- **Requires** Node.js **≥ 22.15** or **≥ 23.8** (for `zlib.createZstdCompress` / `createZstdDecompress`).
+- Frames are standard **libzstd**-compatible (interop with other tools that speak method 93).
+- Create/extract feed chunked readers through zlib streams — memory scales with `bufferSize` (~512 KiB default), not full entry size.
+
+```ts
+import { ZipkitNode } from 'neozipkit/node';
+
+const zip = new ZipkitNode();
+await zip.createZipFromFiles(['file1.txt', 'file2.txt'], 'output.zip', {
+  useZstd: true,
+  level: 6,
+});
+```
+
+- **Browser:** no zstd codec. ESM/UMD builds stub `ZstdNode`; `useZstd: true` throws. Use Deflate in the browser, or create/extract zstd archives in Node.
+- **Legacy WASM archives** from older NeoZipKit releases can still be detected and extracted (output truncated to the ZIP `uncompressed_size` to drop the historical +18 zero pad):
+
+```ts
+const hits = await zip.detectLegacyZstdEntries('old-archive.zip');
+```
+
+See [docs/ZSTD_USAGE.md](docs/ZSTD_USAGE.md).
+
+### Streaming I/O model (aligned with Rust NeoZipKit)
+
+The Node / CLI product path is **one streaming engine**: read → hash → compress/encrypt → write in ~512 KiB buffers. There is no separate full-archive “VM / in-memory” mode. Small entries may still use an in-API buffer fast path inside the same APIs.
+
+| Surface | Behavior |
+|---------|----------|
+| `ZipkitNode` create / extract / list | File streaming (`loadZipFile`, `writeZipEntry`, `extractToFile`, …) |
+| Core `Zipkit.loadZip(Buffer)` / browser | Buffer APIs kept for browser and small in-process buffers |
+| Zstd (method 93) | Node native `zlib` streams only |
+
+### Packaging
+
+- Monorepo installs with **pnpm**; published packages remain plain npm tarballs (`dist/`, `src/`, `README.md`).
+- Sibling blockchain features stay in **`neozip-blockchain@^1.0.0`** (peer on `neozipkit`).
+
+---
+
+## 0.8.0 / 0.7.x (2026-06 → 2026-07)
+
+Packaging and monorepo releases leading up to 1.0:
+
+- **0.8.0** — Version alignment across the monorepo; workspace tooling moved to **pnpm**.
+- **0.7.2** — Fixed npm publish for workspace consumers: `neozipkit` is a **peer** (not a `workspace:*` runtime dependency).
+- **0.7.1 / 0.7.0** — Monorepo layout and publish workflow hardening (`neozipkit` + `neozip-blockchain`).
+
+No breaking ZIP API changes for typical Node/browser create/extract usage in these patch/minor bumps; see GitHub tags `v0.7.0`–`v0.8.0` for full commit history.
+
+---
+
 ## 0.6.1 (2026-03-30)
 
 ### ZipkitNode: read `FileHandle` lifecycle (Node.js)

@@ -4,6 +4,8 @@ Blockchain functionality for NeoZip: **NeoZip Token Service timestamping** (stam
 
 > **Stable 1.0:** This package **1.0.0** is the first non-beta release. Please report issues on [GitHub](https://github.com/NeoWareInc/neozipkit/issues). This package is part of the [neozipkit monorepo](../../README.md).
 
+See [WHATS_NEW.md](WHATS_NEW.md) for release notes.
+
 This package provides the client-side API and utilities that work with the sibling **[neozipkit](../neozipkit/)** package for full NZIP (NeoZip) workflows. The **NeoZip Token Service** is a **separate application**; this library contains the **NeoZip Token Service API client and helpers** used to communicate with that server (submit digests, poll for confirmations, fetch proofs, etc.). Run the NeoZip Token Service separately when using timestamping features.
 
 ## Features
@@ -178,7 +180,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Publishing (npm)
 
-The npm tarball is intentionally minimal: compiled **`dist/`**, the **package root [`README.md`](README.md)**, and **[`LICENSE`](LICENSE)** only (`package.json` `"files"`). **`examples/`**, **`contracts/`**, and other repo docs are **not** on npm; use this repository for those.
+The npm tarball is intentionally minimal: compiled **`dist/`**, the **package root [`README.md`](README.md)**, **[`WHATS_NEW.md`](WHATS_NEW.md)**, and **[`LICENSE`](LICENSE)** (`package.json` `"files"`). **`examples/`**, **`contracts/`**, and other repo docs are **not** on npm; use this repository for those.
 
 Preview what will ship: run **`pnpm publish:dry-run`** (it uses **`npm publish --dry-run`**, which matches npm’s file list).
 
