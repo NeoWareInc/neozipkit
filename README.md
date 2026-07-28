@@ -2,7 +2,7 @@
 
 Monorepo for NeoZip packages — advanced ZIP file creation, compression, encryption, and blockchain integration.
 
-> **Stable 1.0:** [`neozipkit`](packages/neozipkit/) and [`neozip-blockchain`](packages/neozip-blockchain/) are published as **1.0.0** (first non-beta release). See each package README for details.
+> **Stable 1.0:** [`neozipkit`](packages/neozipkit/) and [`neozip-blockchain`](packages/neozip-blockchain/) are published as **1.0.2** (first non-beta release). See each package README for details.
 
 ## Packages
 

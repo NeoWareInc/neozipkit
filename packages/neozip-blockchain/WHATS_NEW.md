@@ -2,16 +2,16 @@
 
 Release notes for people who install and use **`neozip-blockchain`** from npm (alongside [`neozipkit`](https://www.npmjs.com/package/neozipkit)).
 
-## 1.0.0 (2026-07-28)
+## 1.0.2 (2026-07-28)
 
 ### First stable release
 
-**1.0.0** is the first non-beta release. From here on, this package follows [Semantic Versioning](https://semver.org/).
+**1.0.2** is the first non-beta release. From here on, this package follows [Semantic Versioning](https://semver.org/).
 
 Install with a matching NeoZipKit:
 
 ```bash
-npm install neozipkit@^1.0.0 neozip-blockchain@^1.0.0
+npm install neozipkit@^1.0.2 neozip-blockchain@^1.0.2
 ```
 
 ---

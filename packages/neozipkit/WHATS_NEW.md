@@ -2,11 +2,13 @@
 
 Release notes for people who install and use **`neozipkit`** from npm. For blockchain timestamping and NFTs, see the sibling package [`neozip-blockchain`](https://www.npmjs.com/package/neozip-blockchain).
 
-## 1.0.0 (2026-07-28)
+## 1.0.2 (2026-07-28)
 
 ### First stable release
 
-**1.0.0** is the first non-beta release. From here on, NeoZipKit follows [Semantic Versioning](https://semver.org/): breaking API changes bump the major version.
+**1.0.2** is the first non-beta release. From here on, NeoZipKit follows [Semantic Versioning](https://semver.org/): breaking API changes bump the major version.
+
+*(Versions `1.0.0` / `1.0.1` were reserved earlier on npm and are not used for this stable line.)*
 
 ### Zstandard compression (Node.js)
 
