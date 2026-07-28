@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-07-28
+
+### Changed
+
+- **First stable (non-beta) release** — Package version aligned to **1.0.0** with `neozipkit@^1.0.0` as the peer/dev dependency range.
+- Monorepo package manager is **pnpm** (workspace + lockfile); publish still uses `npm publish` for registry uploads.
+
 ## [0.8.0] - 2026-06-30
 
 ### Added
