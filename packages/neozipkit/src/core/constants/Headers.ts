@@ -11,9 +11,19 @@ export const ZIP64_CENTRAL_DIRECTORY_LOCATOR = 'PK\x06\x07';
 export const ZIP64_CENTRAL_DIRECTORY_END = 'PK\x06\x06';
 export const DATA_DESCRIPTOR = 'PK\x07\x08';
 
-export const TIMESTAMP_SUBMITTED = 'META-INF/TS-SUBMIT.OTS';
-export const TIMESTAMP_METADATA = 'META-INF/TIMESTAMP.OTS';
-export const TOKENIZED_METADATA = 'META-INF/NZIP.TOKEN';
+// Reserved META-INF paths — see constants/MetaPaths.ts and NEOZIP_APPNOTE.md §2
+export {
+  META_TOKEN_NZIP,
+  META_TOKEN_NZIP_LEGACY,
+  META_TS_SUBMIT_NZIP,
+  META_TIMESTAMP_NZIP,
+  META_TS_SUBMIT_OTS,
+  META_TIMESTAMP_OTS,
+  META_MANIFEST_JSON,
+  TIMESTAMP_SUBMITTED,
+  TIMESTAMP_METADATA,
+  TOKENIZED_METADATA,
+} from './MetaPaths';
 
 // Local file header
 export const LOCAL_HDR = {
@@ -176,7 +186,7 @@ export const HDR_ID = {
   x509PKCS7RL:     0x0019,    // X.509 Certificate Revocation List (PKCS#7)
   IBM1:            0x0065,    // IBM S/390 (Z390) - Attribute
   IBM2:            0x0066,    // IBM S/390 (Z390) - Attribute
-  SHA256:          0x014E,    // SHA256 "N\01" with 64 bytes (256 bit) of SHA256 hash data
+  SHA256:          0x014E,    // NeoZip Extra Field: 32-byte SHA-256 of uncompressed payload (APPNOTE §5)
   NEO_CRYPTO:      0x024E,    // NeoEncrypt metadata (see docs/NEO_CRYPTO_FORMAT.md); LE on wire: 4E 02
   POSZIP:          0x4690,    // POSZIP 4690
   UNV_TIME:        0x5455,    // Universal Time (UT) (32-bit) 5 data bytes

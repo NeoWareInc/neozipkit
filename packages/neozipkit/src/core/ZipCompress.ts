@@ -33,7 +33,7 @@ export interface CompressOptions {
   password?: string | null;   // Password for encryption
   encryptionMethod?: 'aes256' | 'zipcrypto' | 'neo-aes256'; // default WinZip AES when password set; 'neo-aes256' = NeoEncrypt extra 0x024E
   useSHA256?: boolean;        // Whether to calculate SHA256 hash default is false
-  useZstd?: boolean;          // Whether to use Zstandard compression default is true
+  useZstd?: boolean;          // Use Zstandard (method 93); default false (Deflate). Node ≥ 22.15 required when true.
   bufferSize?: number;        // Override default buffer size
 }
 

@@ -20,6 +20,7 @@
 import moment from 'moment-timezone';
 import type { ZipkitLike, ZipEntryLike } from '../types';
 import { TS_SUBMIT_OTS, TIMESTAMP_OTS } from '../constants/metadata';
+import { findReservedMetaEntry, asciiPathEqualsIgnoreCase } from 'neozipkit';
 
 // Re-export OTS metadata filenames (single source: src/constants/metadata.ts)
 export const TIMESTAMP_SUBMITTED = TS_SUBMIT_OTS;
@@ -226,20 +227,11 @@ export function bufferToArrayBuffer(buf: Buffer): ArrayBuffer {
  */
 export function getOtsEntry(zip: ZipkitLike): ZipEntryLike | null {
   try {
-    // Include metadata entries in the directory
     const entries = zip.getDirectory?.(true) || [];
-
-    // Prefer upgraded metadata entry first
-    let entry = entries.find((e: ZipEntryLike) => e && e.filename === TIMESTAMP_METADATA);
-    if (entry) return entry;
-
-    // Fallback to submitted proof entry
-    entry = entries.find((e: ZipEntryLike) => e && e.filename === TIMESTAMP_SUBMITTED);
-    if (entry) return entry;
+    return findReservedMetaEntry(entries, [TIMESTAMP_METADATA, TIMESTAMP_SUBMITTED]);
   } catch {
     return null;
   }
-  return null;
 }
 
 /**
@@ -503,8 +495,10 @@ export async function upgradeOTS(
 
     // Process existing entries, excluding old timestamp entries
     for (const entry of zipEntries) {
-      if (entry.filename === TIMESTAMP_METADATA || 
-          entry.filename === TIMESTAMP_SUBMITTED) {
+      if (
+        asciiPathEqualsIgnoreCase(entry.filename || '', TIMESTAMP_METADATA) ||
+        asciiPathEqualsIgnoreCase(entry.filename || '', TIMESTAMP_SUBMITTED)
+      ) {
         // Skip old timestamp entries - they will be replaced
         continue;
       }

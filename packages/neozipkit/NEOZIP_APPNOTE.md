@@ -2,7 +2,7 @@
 
 **Format:** `.nzip` (ZIP profile)  
 **Version:** 0.1.0-draft  
-**Status:** Draft — extends PKWARE APPNOTE 6.3.10  
+**Status:** Draft — foundations shipped in NeoZipKit / neozip-blockchain **1.0.3** (Extra Field `0x014E`, method 93, META-INF sidecars, case-insensitive reserved-path discovery). Full L1 (`META-INF/manifest.json`) is not required yet.  
 **Date:** 2026-08-02  
 **Base specification:** PKWARE [APPNOTE.TXT](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT) (`.ZIP` File Format Specification, Version 6.3.10)  
 **Scope:** Compression, encryption, integrity, and blockchain / Token Service extensions used by NeoZip (NeoZipKit, NeoZip CLI, and companions). AI/knowledge-bundle (ZipCodex) conventions are out of scope for this distribution note.
@@ -232,6 +232,7 @@ Readers that do not understand method 93 **MUST** report a clear unsupported-met
 | None | default for many workflows | Allowed |
 | AES-256 | `-e` / `--aes256` | NeoZip strong default for confidential archives |
 | Traditional PKZIP | `--pkzip` | Legacy interoperability only |
+| NeoEncrypt | `encryptionMethod: 'neo-aes256'` | NeoZip-specific Extra Field **`0x024E`** (not WinZip method 99). See package `docs/NEO_CRYPTO_FORMAT.md`. Distinct from integrity Extra Field `0x014E`. |
 
 Encryption of `META-INF/manifest.json` is **DISCOURAGED** when discovery matters (tools cannot find digests/proofs). Prefer encrypting content entries while leaving `META-INF/manifest.json` and public proofs readable, unless the entire archive is confidential.
 
@@ -278,10 +279,20 @@ Provide a single digest for the archive’s protected content so Token Service t
 
 ### 6.2 v0 algorithm (content leaves)
 
+**Implementation profile `neozipkit-1.0` (locked for chain compatibility):** NeoZipKit’s `HashCalculator` / `getMerkleRoot()` currently:
+
+1. Collects every ZIP entry **outside** `META-INF/**` that has a per-entry SHA-256 (Extra Field `0x014E` when present).
+2. Sorts leaves by **hash** (byte order), not by path.
+3. Builds a binary merkle tree with SHA-256; odd levels **duplicate the last leaf**; sibling pairs are also sorted before hashing (`sortPairs`).
+
+Archives that must interoperate with tokens already minted against this root **MUST** keep this profile. A future `specVersion` / `merkleProfile` may introduce path-sorted Bitcoin-style trees without breaking existing roots.
+
+**Target APPNOTE algorithm (not yet the default library behavior):**
+
 1. Collect each **content** entry listed in `manifest.json` `content[]` (exclude `META-INF/**` unless a future profile opts in).
 2. For each entry, take SHA-256 of uncompressed bytes (= Extra Field `0x014E` value when present).
 3. Sort leaves by `path` (UTF-8 byte order).
-4. Build a binary merkle tree with SHA-256. **Odd-leaf rule (locked):** when a level has an odd count, **duplicate the last leaf** before pairing (Bitcoin-style).
+4. Build a binary merkle tree with SHA-256. **Odd-leaf rule:** when a level has an odd count, **duplicate the last leaf** before pairing (Bitcoin-style).
 5. Store hex root in `manifest.json` `merkleRoot` and in token/timestamp payloads.
 
 For a single content entry, `merkleRoot` **MAY** equal that entry’s SHA-256 (single-leaf tree).
@@ -379,10 +390,12 @@ Archives declare `specVersion` in `META-INF/manifest.json`. Readers **SHOULD** b
 
 ## 12. Open items (draft)
 
-1. Align merkle odd-leaf rule with NeoZip sources if they diverge from duplicate-last (§6.2).
+1. ~~Align merkle odd-leaf rule with NeoZip sources~~ — Documented: library uses profile `neozipkit-1.0` (hash-sorted leaves + `sortPairs`); path-sorted tree deferred to a future profile.
 2. Publish formal JSON Schema for `META-INF/manifest.json`, `TOKEN.NZIP`, and `TIMESTAMP.NZIP`.
-3. Decide whether to always emit the optional Java `MANIFEST.MF` stub.
-4. Register additional Extra Field IDs with PKWARE only after the entry-name convention proves itself in the field.
+3. Implement L1 writer/reader for `META-INF/manifest.json` (first entry, STORED recommended).
+4. Decide whether to always emit the optional Java `MANIFEST.MF` stub.
+5. Register additional Extra Field IDs with PKWARE only after the entry-name convention proves itself in the field.
+6. Optional: default Zstd (`useZstd: true`) on Node create paths once CLI/product defaults are aligned (browser has no Zstd codec).
 
 ---
 
@@ -390,6 +403,7 @@ Archives declare `specVersion` in `META-INF/manifest.json`. Readers **SHOULD** b
 
 | Date | Version | Change |
 | :---- | :---- | :---- |
+| 2026-08-02 | 0.1.0-draft | NeoZipKit **1.0.3**: case-insensitive reserved META-INF discovery; merkle profile `neozipkit-1.0` documented; NeoEncrypt `0x024E` noted; L1 manifest still open. |
 | 2026-08-02 | 0.1.0-draft | Packaged with NeoZipKit npm distribution (same note as NeoZip CLI).
 | 2026-08-02 | 0.1.0-draft | §2.2–§2.3: reserved meta-path discovery is ASCII case-insensitive (**MUST** for NeoZip-aware readers); writers remain strict on canonical spellings. |
 | 2026-08-02 | 0.1.0-draft | §4.1: Zstd method 93 documented as official PKWARE APPNOTE 6.3.8+ (not a NeoZip assignment); compatibility matrix and open items updated. |

@@ -2,6 +2,23 @@
 
 Release notes for people who install and use **`neozipkit`** from npm. For blockchain timestamping and NFTs, see the sibling package [`neozip-blockchain`](https://www.npmjs.com/package/neozip-blockchain).
 
+## 1.0.3 (2026-08-02)
+
+### NeoZip Application Note foundations
+
+Ships **[NEOZIP_APPNOTE.md](./NEOZIP_APPNOTE.md)** in the npm package (also linked from the README). This release aligns the library with the profile’s **wire foundations** — not full L1 (`META-INF/manifest.json` is still forthcoming).
+
+**What you get:**
+
+- Extra Field **`0x014E`** — per-entry SHA-256 of uncompressed payload (when `useSHA256: true`)
+- Zstd method **93** when you opt in with `useZstd: true` (Node ≥ 22.15; Deflate remains the library default)
+- **ASCII case-insensitive** discovery of reserved `META-INF/` paths (`TOKEN.NZIP`, `TIMESTAMP.NZIP`, `TS-SUBMIT.NZIP`, OTS twins, `manifest.json`)
+- Merkle leaves exclude all **`META-INF/**`** entries; current root algorithm is profile **`neozipkit-1.0`** (documented in the APPNOTE — kept for on-chain compatibility)
+
+Helpers: `findReservedMetaEntry`, `isMetaInfPath`, `isReservedMetaPath`, `asciiPathEqualsIgnoreCase`.
+
+---
+
 ## 1.0.2 (2026-07-28)
 
 ### First stable release

@@ -7,6 +7,7 @@
 import { TokenMetadata, ZipEntryLike, ZipkitLike } from '../types';
 import { NZIP_CONTRACT_ABI, getContractConfig, validateContractAddress, TOKENIZED_METADATA, TOKENIZED_METADATA_LEGACY } from '../core/contracts';
 import { ethers } from 'ethers';
+import { findReservedMetaEntry } from 'neozipkit';
 
 export interface TokenVerificationOptions {
   skipHash?: boolean;
@@ -56,15 +57,16 @@ export class TokenVerifierBrowser {
     zipEntries: ZipEntryLike[],
     options: TokenVerificationOptions = {}
   ): Promise<TokenVerificationResult> {
-    // Look for the tokenized metadata file (check new standard first, then legacy)
-    let tokenEntry = zipEntries.find(entry => entry.filename === TOKENIZED_METADATA);
-    
-    // Fallback to legacy NZIP.TOKEN for backward compatibility
-    if (!tokenEntry) {
-      tokenEntry = zipEntries.find(entry => entry.filename === TOKENIZED_METADATA_LEGACY);
-      if (tokenEntry && typeof console !== 'undefined' && console.warn) {
-        console.warn('[TokenVerifierBrowser] Reading legacy NZIP.TOKEN. Write new files as TOKEN.NZIP.');
-      }
+    // Look for the tokenized metadata file (canonical TOKEN.NZIP, then legacy; case-insensitive)
+    let tokenEntry = findReservedMetaEntry(zipEntries, [TOKENIZED_METADATA, TOKENIZED_METADATA_LEGACY]);
+    if (
+      tokenEntry &&
+      tokenEntry.filename &&
+      tokenEntry.filename !== TOKENIZED_METADATA &&
+      typeof console !== 'undefined' &&
+      console.warn
+    ) {
+      console.warn('[TokenVerifierBrowser] Reading legacy NZIP.TOKEN. Write new files as TOKEN.NZIP.');
     }
     
     if (!tokenEntry) {

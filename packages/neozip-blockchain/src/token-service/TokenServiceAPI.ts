@@ -24,6 +24,7 @@ import { crc32 } from '../utils/crc32';
 import { ethers } from 'ethers';
 import type { TimestampMetadata } from './TokenServiceHelpers';
 import { submitDigest, verifyDigest } from './TokenServiceHelpers';
+import { findReservedMetaEntry, asciiPathEqualsIgnoreCase } from 'neozipkit';
 
 export const CMP_METHOD = { STORED: 0, DEFLATED: 8 };
 
@@ -115,18 +116,10 @@ function getMerkleRootSafe(zip: ZipkitLike): string | null {
 export function getEthTimestampEntry(zip: ZipkitLike): ZipEntryLike | null {
   try {
     const entries = zip.getDirectory?.(true) || [];
-
-    // Prefer confirmed metadata entry first
-    let entry = entries.find((e: ZipEntryLike) => e && e.filename === TIMESTAMP_NZIP);
-    if (entry) return entry;
-
-    // Fallback to submitted proof entry
-    entry = entries.find((e: ZipEntryLike) => e && e.filename === TS_SUBMIT_NZIP);
-    if (entry) return entry;
+    return findReservedMetaEntry(entries, [TIMESTAMP_NZIP, TS_SUBMIT_NZIP]);
   } catch {
     return null;
   }
-  return null;
 }
 
 /**
@@ -646,20 +639,18 @@ export interface MetadataEntryResult {
  * ```
  */
 export function findMetadataEntry(entries: ZipEntry[]): MetadataEntryResult | null {
-  // Check for confirmed timestamp first
-  const timestampEntry = entries.find((e: any) => e.filename === TIMESTAMP_NZIP);
+  const timestampEntry = findReservedMetaEntry(entries as any[], TIMESTAMP_NZIP);
   if (timestampEntry) {
     return {
-      entry: timestampEntry,
+      entry: timestampEntry as any,
       type: 'confirmed'
     };
   }
 
-  // Fall back to submission metadata
-  const submitEntry = entries.find((e: any) => e.filename === TS_SUBMIT_NZIP);
+  const submitEntry = findReservedMetaEntry(entries as any[], TS_SUBMIT_NZIP);
   if (submitEntry) {
     return {
-      entry: submitEntry,
+      entry: submitEntry as any,
       type: 'pending'
     };
   }
@@ -689,13 +680,13 @@ export function findMetadataEntry(entries: ZipEntry[]): MetadataEntryResult | nu
  * ```
  */
 export function getMetadataType(entry: ZipEntry | null): MetadataType {
-  if (!entry) return null;
-  
-if (entry.filename === TIMESTAMP_NZIP) {
+  if (!entry || typeof entry.filename !== 'string') return null;
+
+  if (asciiPathEqualsIgnoreCase(entry.filename, TIMESTAMP_NZIP)) {
     return 'confirmed';
   }
 
-  if (entry.filename === TS_SUBMIT_NZIP) {
+  if (asciiPathEqualsIgnoreCase(entry.filename, TS_SUBMIT_NZIP)) {
     return 'pending';
   }
   

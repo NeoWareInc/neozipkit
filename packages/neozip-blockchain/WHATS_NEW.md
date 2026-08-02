@@ -2,6 +2,21 @@
 
 Release notes for people who install and use **`neozip-blockchain`** from npm (alongside [`neozipkit`](https://www.npmjs.com/package/neozipkit)).
 
+## 1.0.3 (2026-08-02)
+
+### APPNOTE-aligned META-INF discovery
+
+Requires **`neozipkit@^1.0.3`**. Token, timestamp, and OTS sidecar lookup now follows [NEOZIP_APPNOTE.md](https://github.com/NeoWareInc/neozipkit/blob/main/packages/neozipkit/NEOZIP_APPNOTE.md) §2.3:
+
+- Writers still emit canonical uppercase paths (`META-INF/TOKEN.NZIP`, `TIMESTAMP.NZIP`, `TS-SUBMIT.NZIP`, OTS twins).
+- Readers accept **ASCII case-insensitive** spellings so round-tripped archives on Windows are not missed.
+
+```bash
+npm install neozipkit@^1.0.3 neozip-blockchain@^1.0.3
+```
+
+---
+
 ## 1.0.2 (2026-07-28)
 
 ### First stable release

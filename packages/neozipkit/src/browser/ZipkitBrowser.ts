@@ -8,7 +8,7 @@ import ZipEntry from '../core/ZipEntry';
 import { ZipCompress } from '../core/ZipCompress';
 import Errors from '../core/constants/Errors';
 import * as Headers from '../core/constants/Headers';
-import { TOKENIZED_METADATA, TIMESTAMP_SUBMITTED, TIMESTAMP_METADATA } from '../core/constants/Headers';
+import { isMetaInfPath } from '../core/constants/MetaPaths';
 import { sha256, crc32 } from '../core/encryption/ZipCrypto';
 import { DATATYPE, getTypeOf } from '../core/components/Util';
 import type { FileData } from '../types';
@@ -172,7 +172,7 @@ export default class ZipkitBrowser extends Zipkit {
     for (const entry of zipEntries) {
       if (!entry.isUpdated) {
         // Check for META-INF metadata files even in copy mode
-        if (entry.filename === TOKENIZED_METADATA || entry.filename === TIMESTAMP_SUBMITTED || entry.filename === TIMESTAMP_METADATA) {
+        if (isMetaInfPath(entry.filename || '')) {
           // Force this entry to be processed with special handling instead of copied
           entry.isUpdated = true;
           // Don't continue here - let it fall through to special handling below
@@ -207,7 +207,7 @@ export default class ZipkitBrowser extends Zipkit {
       }
       
       // Special handling for META-INF metadata files - store uncompressed with CRC-32
-      if (entry.filename === TOKENIZED_METADATA || entry.filename === TIMESTAMP_SUBMITTED || entry.filename === TIMESTAMP_METADATA) {
+      if (isMetaInfPath(entry.filename || '')) {
         // For metadata files, use STORED compression (no compression)
         const buffer = Buffer.from(fileBuffer);
         
@@ -266,9 +266,7 @@ export default class ZipkitBrowser extends Zipkit {
    * @returns boolean - True if the file is a metadata file
    */
   private isMetadataFile(filename: string): boolean {
-    return filename === TIMESTAMP_SUBMITTED ||
-           filename === TIMESTAMP_METADATA ||
-           filename === TOKENIZED_METADATA;
+    return isMetaInfPath(filename);
   }
 
   // --------------------------------------

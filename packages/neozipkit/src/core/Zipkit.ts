@@ -28,6 +28,11 @@ import {
   CENTRAL_DIRECTORY_END,
   HDR_ID
 } from './constants/Headers';
+import {
+  findReservedMetaEntry,
+  isMetaInfPath,
+  isReservedMetaPath,
+} from './constants/MetaPaths';
 
 /**
  * Streaming file handle interface
@@ -371,15 +376,22 @@ export default class Zipkit {
 
 
   /**
-   * Get specific ZIP entry by filename from zipEntries[] array
-   * 
+   * Get specific ZIP entry by filename from zipEntries[] array.
+   * Reserved META-INF paths (APPNOTE §2.3) also match ASCII case-insensitively
+   * when an exact spelling is not found.
+   *
    * @param filename - The name/path of the file/directory to find
    * @returns ZipEntry object if found, null if not found
    */
   getZipEntry(filename: string): ZipEntry | null {
     try {
       const centralDir = this.getDirectory();
-      return centralDir.find((entry: ZipEntry) => entry.filename === filename) || null;
+      const exact = centralDir.find((entry: ZipEntry) => entry.filename === filename);
+      if (exact) return exact;
+      if (isReservedMetaPath(filename)) {
+        return findReservedMetaEntry(centralDir, filename);
+      }
+      return null;
     } catch (error) {
       return null;
     }
@@ -712,13 +724,10 @@ export default class Zipkit {
   
     const hashAccumulator = new HashCalculator({ enableAccumulation: true });
     
-    // Filter out metadata files (META-INF) to ensure consistent Merkle Root calculation
-    // Inline check to avoid conflict with ZipkitBrowser's isMetadataFile() method
+    // Filter out META-INF/** (APPNOTE §6.2 content leaves)
     const contentEntries = zipEntries.filter(entry => {
       const filename = entry.filename || '';
-      return filename !== TIMESTAMP_SUBMITTED &&
-             filename !== TIMESTAMP_METADATA &&
-             filename !== TOKENIZED_METADATA;
+      return !isMetaInfPath(filename);
     });
     
     for (const entry of contentEntries) {
@@ -769,13 +778,10 @@ export default class Zipkit {
   
     const hashAccumulator = new HashCalculator({ enableAccumulation: true });
     
-    // Filter out metadata files (META-INF) to ensure consistent Merkle Root calculation
-    // Inline check to avoid conflict with ZipkitBrowser's isMetadataFile() method
+    // Filter out META-INF/** (APPNOTE §6.2 content leaves)
     const contentEntries = zipEntries.filter(entry => {
       const filename = entry.filename || '';
-      return filename !== TIMESTAMP_SUBMITTED &&
-             filename !== TIMESTAMP_METADATA &&
-             filename !== TOKENIZED_METADATA;
+      return !isMetaInfPath(filename);
     });
     
     for (const entry of contentEntries) {

@@ -6,7 +6,19 @@
 
 import Support from "./Support";
 import Errors from "../constants/Errors";
-import { TIMESTAMP_SUBMITTED, TIMESTAMP_METADATA, TOKENIZED_METADATA } from "../constants/Headers";
+import {
+  isMetaInfPath,
+  findReservedMetaEntry,
+  isReservedMetaPath,
+  asciiPathEqualsIgnoreCase,
+} from "../constants/MetaPaths";
+
+export {
+  findReservedMetaEntry,
+  isReservedMetaPath,
+  isMetaInfPath,
+  asciiPathEqualsIgnoreCase,
+} from "../constants/MetaPaths";
 
 export const DATATYPE = {
   STRING: "string",
@@ -80,12 +92,9 @@ export function getTypeOf(input: string|Buffer|Blob|Array<any>|ArrayBuffer|Uint8
 };
 
 /**
- * Check if a filename is a metadata file
- * @param filename The filename to check
- * @returns True if the file is a metadata file (META-INF)
+ * Check if a filename is NeoZip metadata (any META-INF/** path).
+ * Case-insensitive on the META-INF/ prefix (NEOZIP_APPNOTE.md §2.3 / §6.2).
  */
 export const isMetadataFile = (filename: string): boolean => {
-  return filename === TIMESTAMP_SUBMITTED || 
-         filename === TIMESTAMP_METADATA || 
-         filename === TOKENIZED_METADATA;
+  return isMetaInfPath(filename);
 };

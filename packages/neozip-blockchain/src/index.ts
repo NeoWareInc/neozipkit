@@ -32,5 +32,5 @@ export type { LogLevel, LoggerConfig } from './utils/Logger';
 export * from './token-service';
 
 // Export package version (keep in sync with package.json version)
-export const VERSION = '1.0.2';
+export const VERSION = '1.0.3';
 

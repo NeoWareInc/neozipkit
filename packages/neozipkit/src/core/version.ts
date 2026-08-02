@@ -28,6 +28,6 @@ const currentDate = new Date();
 const releaseDate = `${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}-${currentDate.getFullYear()}`;
 
 export const VERSION = {
-  number: '1.0.2', // packageJson.version
+  number: '1.0.3', // packageJson.version
   date: releaseDate
 }; 
