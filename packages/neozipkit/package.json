@@ -89,7 +89,8 @@
     "dist/",
     "src/",
     "README.md",
-    "WHATS_NEW.md"
+    "WHATS_NEW.md",
+    "NEOZIP_APPNOTE.md"
   ],
   "scripts": {
     "clean": "node scripts/clean.js",
