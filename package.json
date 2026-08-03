@@ -14,7 +14,7 @@
     "version:minor": "node scripts/version-sync.js minor",
     "version:major": "node scripts/version-sync.js major",
     "publish:all": "bash scripts/publish-all.sh",
-    "publish:dry-run": "pnpm --filter neozipkit publish:dry-run && pnpm --filter neozip-blockchain publish:dry-run",
+    "publish:dry-run": "bash scripts/publish-dry-run.sh",
     "publish:neozipkit": "pnpm --filter neozipkit run build && pnpm --filter neozipkit exec npx --yes npm@11 publish --access public",
     "publish:neozip-blockchain": "pnpm --filter neozip-blockchain run build && pnpm --filter neozip-blockchain exec npx --yes npm@11 publish --access public"
   }
