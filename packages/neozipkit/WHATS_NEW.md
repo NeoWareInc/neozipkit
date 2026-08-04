@@ -94,7 +94,7 @@ Full **WinZip-compatible AES-256 (AE-1/AE-2)** support, in addition to legacy ZI
 - Create and extract encrypted ZIPs in **Node and the browser**.
 - Interop with WinZip, 7-Zip, The Unarchiver (`unar`/`lsar`), and other AE-1/AE-2 tools.
 
-**Create:**
+**Create (NeoEncrypt — default when only `password` is set):**
 
 ```ts
 const zip = new ZipkitNode();
@@ -103,28 +103,24 @@ await zip.createZipFromFiles(
   'secure.zip',
   {
     password: 'YourStrongPassword',
-    encryptionMethod: 'aes256',
+    // encryptionMethod: 'neo-aes256', // default when password is set
     level: 6,
   }
 );
 ```
 
-**Extract:**
+**Create (explicit WinZip AES write):** pass `encryptionMethod: 'aes256'` (method 99 + `0x9901`).
 
-```ts
-await zip.extractZipFile('secure.zip', './out', {
-  password: 'YourStrongPassword',
-});
-```
+**Extract:** pass the same password; NeoZipKit auto-detects NeoEncrypt (`0x024E`), WinZip AES (method 99), or ZipCrypto.
 
-**How it works (summary):** PBKDF2-HMAC-SHA1 (1000 iterations), AES-256-CTR (WinZip little-endian counter), HMAC-SHA1 over ciphertext (10-byte auth code per entry).
+**How it works (summary):** PBKDF2-HMAC-SHA1 (1000 iterations), AES-256-CTR (WinZip little-endian counter), HMAC-SHA1 over ciphertext (10-byte auth code per entry). NeoEncrypt and WinZip AES-256 share that ciphertext layout; headers differ (`0x024E` + real cmp method vs method 99 + `0x9901`).
 
 Also in this release:
 
 - Encryption bit set correctly on all encrypted local headers (including the last entry).
 - Copy/append helpers for building archives by copying entries then finalizing the central directory.
 
-**NeoEncrypt** (NeoZip-specific AES via extra field `0x024E`, normal compression method in headers) is available with `encryptionMethod: 'neo-aes256'`. See the package README for details.
+**Naming note:** kit API `'aes256'` = WinZip **write**; product CLI `--aes256` / `-e` = **NeoEncrypt**. See [NEOZIP_APPNOTE.md](NEOZIP_APPNOTE.md) §4.2.
 
 ---
 

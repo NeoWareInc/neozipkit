@@ -650,11 +650,10 @@ export default class ZipkitNode extends Zipkit {
     }
 
     // For AES encryption, pre-configure the entry so the initial local header
-    // includes the 0x9901 extra field and method 99. The actual compression
-    // method is preserved in realCmpMethod for the AES extra field.
-    // Default password encryption is WinZip AES-256 (matches compressData).
+    // matches the chosen scheme (WinZip method 99 + 0x9901, or NeoEncrypt + 0x024E).
+    // Default password encryption is NeoEncrypt (matches NeoZip product AES-256).
     const encMethod = options?.password
-      ? (options.encryptionMethod || 'aes256')
+      ? (options.encryptionMethod || 'neo-aes256')
       : undefined;
     const isAesRequested = encMethod === 'aes256';
     const isNeoRequested = encMethod === 'neo-aes256';

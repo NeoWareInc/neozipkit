@@ -227,14 +227,45 @@ Readers that do not understand method 93 **MUST** report a clear unsupported-met
 
 ### 4.2 Encryption
 
-| Method | Flag / option | Notes |
-| :---- | :---- | :---- |
-| None | default for many workflows | Allowed |
-| AES-256 | `-e` / `--aes256` | NeoZip strong default for confidential archives |
-| Traditional PKZIP | `--pkzip` | Legacy interoperability only |
-| NeoEncrypt | `encryptionMethod: 'neo-aes256'` | NeoZip-specific Extra Field **`0x024E`** (not WinZip method 99). See package `docs/NEO_CRYPTO_FORMAT.md`. Distinct from integrity Extra Field `0x014E`. |
+| Method | Flag / option | Wire identification | Notes |
+| :---- | :---- | :---- | :---- |
+| None | default for many workflows | Bit 0 clear | Allowed |
+| NeoEncrypt (NEO AES-256) | `-e` / `--aes256` (NeoZip default AES) | **Normal compression method** (0 / 8 / 93 / …) + Extra Field **`0x024E`** | NeoZip product default for confidential archives. Ciphertext stream matches WinZip AES-256 (PBKDF2, CTR, HMAC); headers do **not** use method 99 or `0x9901`. Stock Info-ZIP often misreads this path. |
+| WinZip AES-256 | library `encryptionMethod: 'aes256'` | **Compression method 99** + Extra Field **`0x9901`** | Industry AE-1/AE-2 encoding. NeoZip **reads** (and may write for interop) this form; it is **not** the NeoZip default for `-e`. |
+| Traditional PKZIP (ZipCrypto) | `--pkzip` | Bit 0 set; no AES extra | Legacy interoperability only; weak by modern standards. Forced by `--legacy` when encrypting. |
 
-Encryption of `META-INF/manifest.json` is **DISCOURAGED** when discovery matters (tools cannot find digests/proofs). Prefer encrypting content entries while leaving `META-INF/manifest.json` and public proofs readable, unless the entire archive is confidential.
+#### 4.2.1 NeoEncrypt (default NeoZip AES-256)
+
+NeoZip’s default AES-256 path is **NeoEncrypt** (see NeoZipKit `docs/NEO_CRYPTO_FORMAT.md`):
+
+1. Local and central directory **compression method** stays the **real** codec (store / deflate / zstd…).
+2. General-purpose **bit 0** (encrypted) is set.
+3. Extra Field **`0x024E`** (`HDR_ID.NEO_CRYPTO`) carries NeoEncrypt metadata (magic `NEZ\0`, format version, algorithm id = AES-256 v1). Distinct from integrity Extra Field **`0x014E`**.
+4. File data payload is the same layout as WinZip AES-256: `salt ‖ password-verifier(2) ‖ AES-CTR ciphertext ‖ HMAC-SHA1(10)`.
+
+NeoZip CLI `-e` / `--encrypt` / `--aes256` **MUST** emit this form. Generic tools that assume ZipCrypto for “encrypted + deflate/zstd” will not extract correctly — use NeoZip / NeoZipKit.
+
+#### 4.2.2 WinZip AES (recognized; different encryption codes)
+
+WinZip AE-x is a separate on-wire profile (PKWARE method **99** + Extra Field **`0x9901`**):
+
+1. LO/CEN compression method is **99** (real method lives inside `0x9901`).
+2. Extra Field **`0x9901`**: vendor version (AE-1 = 1, AE-2 = 2), vendor ID `"AE"`, strength (1/2/3), real compression method.
+3. Ciphertext layout matches NeoEncrypt’s AES-256 stream for strength 3.
+
+| | NeoEncrypt (NeoZip default) | WinZip AES (interop) |
+| :---- | :---- | :---- |
+| Compression method in LO/CEN | Real method (**0**, **8**, **93**, …) | **99** |
+| Extra Field ID | **`0x024E`** | **`0x9901`** |
+| Ciphertext layout | WinZip AES-256 stream | Same (for AES-256) |
+| NeoZip CLI default `-e` | **Yes** | No (kit API `encryptionMethod: 'aes256'` for explicit WinZip write) |
+| NeoZipKit / NeoZip CLI extract | **Yes** | **Yes** (recognized on read) |
+
+Writers **MUST NOT** place both `0x9901` and `0x024E` on the same entry. Readers that support both **MUST** discriminate on Extra Field ID / method 99, not on “encrypted + password” alone.
+
+When optional `manifest.json` is written, writers **SHOULD** set `encryption.method` to `"neo-aes-256"` (default NeoZip AES), `"aes-256"` (WinZip AE), `"pkzip"`, or `"none"`.
+
+Encryption of `META-INF/*.NZIP` public proofs and of optional `META-INF/manifest.json` is **DISCOURAGED** when discovery matters (tools cannot find digests/proofs). Prefer encrypting content entries while leaving `META-INF/` public proofs readable, unless the entire archive is confidential.
 
 ---
 

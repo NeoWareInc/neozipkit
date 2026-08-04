@@ -31,7 +31,7 @@ import { NeoCrypto, NEO_CRYPTO_ALGORITHM_AES256_V1 } from './encryption/NeoCrypt
 export interface CompressOptions {
   level?: number;             // Compression level (1-9, 0=store)
   password?: string | null;   // Password for encryption
-  encryptionMethod?: 'aes256' | 'zipcrypto' | 'neo-aes256'; // default WinZip AES when password set; 'neo-aes256' = NeoEncrypt extra 0x024E
+  encryptionMethod?: 'aes256' | 'zipcrypto' | 'neo-aes256'; // default NeoEncrypt when password set; 'aes256' = WinZip AE (method 99); 'neo-aes256' = Extra Field 0x024E
   useSHA256?: boolean;        // Whether to calculate SHA256 hash default is false
   useZstd?: boolean;          // Use Zstandard (method 93); default false (Deflate). Node ≥ 22.15 required when true.
   bufferSize?: number;        // Override default buffer size
@@ -144,8 +144,9 @@ export class ZipCompress {
     // Encrypt if password provided
     const enc = options?.encryptionMethod;
     const useZipCrypto = enc === 'zipcrypto';
-    const useNeo = enc === 'neo-aes256';
-    const useAes = options?.password && !useZipCrypto && !useNeo;
+    // Explicit WinZip AE only when encryptionMethod is 'aes256'. Otherwise NeoEncrypt (default).
+    const useAes = enc === 'aes256';
+    const useNeo = !!options?.password && !useZipCrypto && !useAes;
     if (options?.password) {
       const label = useZipCrypto ? 'ZipCrypto' : useNeo ? 'NeoEncrypt (AES-256)' : 'WinZip AES-256';
       this.log(`Encrypting compressed data for entry: ${entry.filename} (method: ${label})`);

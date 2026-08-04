@@ -14,7 +14,7 @@ Advanced ZIP file creation, compression, and encryption library for Node.js and 
 
 - **Advanced ZIP compression** with support for multiple compression methods (Deflate, ZStandard, Stored)
 - **Streaming compression** for memory-efficient processing of large files
-- **Encryption** with ZIP (Legacy), **AES-256** (WinZip-compatible AE-1/AE-2), and **NeoEncrypt** (NEO AES-256 via extra field `0x024E`, standard compression method in headers); create and extract in Node and browser
+- **Encryption** with ZIP (Legacy), **NeoEncrypt** (default AES-256 via Extra Field `0x024E`), and **WinZip AES-256** (AE-1/AE-2, method 99 — write with `encryptionMethod: 'aes256'`, always readable on extract); create and extract in Node and browser
 - **Hash-based verification** with Merkle tree support (CRC-32, SHA-256)
 - **Real-time progress tracking** for long-running operations
 - **Browser and Node.js compatibility** with clean platform separation
@@ -172,9 +172,10 @@ As of **v0.6.1**, `loadZipFile()` automatically **closes any prior read handle**
 
 ### Encryption
 
-- **ZIP (Legacy)** – Classic ZIP encryption; use `password` in options (no `encryptionMethod`).
-- **AES-256** – WinZip-compatible (AE-1/AE-2); use `password` and `encryptionMethod: 'aes256'` in compress options. Create and extract supported in Node and browser. See [WHATS_NEW.md](WHATS_NEW.md#060-2025-01-27) for details. For on-disk layout (headers, extra field 0x9901), AE-1 vs AE-2, and how this differs from ZipCrypto and PKWARE strong encryption, see [docs/WINZIP_AES_FORMAT.md](docs/WINZIP_AES_FORMAT.md).
-- **NeoEncrypt (NEO AES-256)** – NeoZip-specific: use `password` and `encryptionMethod: 'neo-aes256'`. The LO/CEN compression method stays a normal ZIP code (e.g. deflate, zstd); encryption is indicated by the encrypted flag plus extra field `0x024E`. Ciphertext layout matches the WinZip AES stream (PBKDF2, CTR, HMAC). Specification: [docs/NEO_CRYPTO_FORMAT.md](docs/NEO_CRYPTO_FORMAT.md).
+- **NeoEncrypt (default AES-256)** – When you pass a `password` and omit `encryptionMethod` (or set `'neo-aes256'`), NeoZipKit writes NeoEncrypt: standard compression method in the header + Extra Field `0x024E`. Spec: [docs/NEO_CRYPTO_FORMAT.md](docs/NEO_CRYPTO_FORMAT.md).  
+  **Note:** kit API name `'aes256'` still means **WinZip write**; product CLI `--aes256` / `-e` means **NeoEncrypt**.
+- **WinZip AES-256 (interop)** – Use `password` and `encryptionMethod: 'aes256'` to **write** AE-1/AE-2 (method 99 + Extra Field `0x9901`). Extract always recognizes WinZip AES when present. Layout: [docs/WINZIP_AES_FORMAT.md](docs/WINZIP_AES_FORMAT.md).
+- **ZIP (Legacy / ZipCrypto)** – Classic ZIP encryption; use `password` with `encryptionMethod: 'zipcrypto'`.
 
 
 

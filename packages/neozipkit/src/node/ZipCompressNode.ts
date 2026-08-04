@@ -148,10 +148,11 @@ export class ZipCompressNode {
       const enc = options.encryptionMethod;
       if (enc === 'zipcrypto') {
         buffer = this.encryptCompressedData(buffer, entry, options.password);
-      } else if (enc === 'neo-aes256') {
-        buffer = this.encryptCompressedDataNeo(buffer, entry, options.password);
-      } else {
+      } else if (enc === 'aes256') {
         buffer = this.encryptCompressedDataAes(buffer, entry, options.password);
+      } else {
+        // Default / 'neo-aes256': NeoEncrypt (0x024E)
+        buffer = this.encryptCompressedDataNeo(buffer, entry, options.password);
       }
     }
 
