@@ -2,18 +2,36 @@
 
 Release notes for people who install and use **`neozipkit`** from npm. For blockchain timestamping and NFTs, see the sibling package [`neozip-blockchain`](https://www.npmjs.com/package/neozip-blockchain).
 
-## 1.0.3 (2026-08-02)
+## 1.0.3 (2026-08-04)
 
-### NeoZip Application Note foundations
+### NeoZip Application Note + APPNOTE §6 Merkle (v0 / v1)
 
-Ships **[NEOZIP_APPNOTE.md](./NEOZIP_APPNOTE.md)** in the npm package (also linked from the README). This release aligns the library with the profile’s **wire foundations** — not full L1 (`META-INF/manifest.json` is still forthcoming).
+Ships **[NEOZIP_APPNOTE.md](./NEOZIP_APPNOTE.md)** in the npm package (also linked from the README). Aligns the kit with the profile’s **wire foundations** and **§6 Merkle** algorithms (optional AI-aware `META-INF/manifest.json` is still forthcoming).
 
-**What you get:**
+**Foundations:**
 
 - Extra Field **`0x014E`** — per-entry SHA-256 of uncompressed payload (when `useSHA256: true`)
 - Zstd method **93** when you opt in with `useZstd: true` (Node ≥ 22.15; Deflate remains the library default)
 - **ASCII case-insensitive** discovery of reserved `META-INF/` paths (`TOKEN.NZIP`, `TIMESTAMP.NZIP`, `TS-SUBMIT.NZIP`, OTS twins, `manifest.json`)
-- Merkle leaves exclude all **`META-INF/**`** entries; current root algorithm is profile **`neozipkit-1.0`** (documented in the APPNOTE — kept for on-chain compatibility)
+- Merkle leaves exclude all **`META-INF/**`** entries
+
+**Merkle root (APPNOTE §6):**
+
+| Algorithm | Leaves | Odd node | Domain separation |
+| :---- | :---- | :---- | :---- |
+| **v1** (default, new archives) | `SHA-256(0x00 ‖ payload)` | Promote unhashed | `0x00` leaf / `0x01` parent |
+| **v0** (legacy verify) | bare `0x014E` digests | Duplicate last (Bitcoin-style) | None |
+
+**API:**
+
+- **`getMerkleRootAsync()`** — preferred: extract content entries, compute **v1** root
+- **`getMerkleRoot({ algorithm: 'v0' })`** — digests-only legacy root for old on-chain bindings
+- **`getMerkleRoot()`** — v1 needs payloads; returns `null` when only Extra Field digests are available (use async)
+- Pure helpers / **`Zipkit.merkleRootFromEntries(...)`**: path normalize (NFC, `/`), path-ordered leaves, `matchMerkleRoot` (§6.4-style v1→v0 fallback)
+
+Leaves no longer sort by hash value or reorder parent pairs.
+
+**Also:** NeoEncrypt (`0x024E` + real compression method) remains the default confidential write path; WinZip AES (method **99** + **`0x9901`**) is recognized for interop (APPNOTE §4.2). TypeScript 6: removed deprecated `baseUrl` from the package tsconfig.
 
 Helpers: `findReservedMetaEntry`, `isMetaInfPath`, `isReservedMetaPath`, `asciiPathEqualsIgnoreCase`.
 

@@ -4,12 +4,11 @@
     "rootDir": "./src",
     "outDir": "./dist",
     "typeRoots": ["./node_modules/@types", "./src/types"],
-    "baseUrl": "./src",
     "paths": {
-      "@/browser/*": ["browser/*"],
-      "@/server/*": ["server/*"],
-      "@/shared/*": ["shared/*"],
-      "@/types/*": ["types/*"]
+      "@/browser/*": ["./src/browser/*"],
+      "@/server/*": ["./src/server/*"],
+      "@/shared/*": ["./src/shared/*"],
+      "@/types/*": ["./src/types/*"]
     }
   },
   "include": [

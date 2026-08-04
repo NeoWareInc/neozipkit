@@ -2,14 +2,18 @@
 
 Release notes for people who install and use **`neozip-blockchain`** from npm (alongside [`neozipkit`](https://www.npmjs.com/package/neozipkit)).
 
-## 1.0.3 (2026-08-02)
+## 1.0.3 (2026-08-04)
 
-### APPNOTE-aligned META-INF discovery
+### APPNOTE-aligned META-INF discovery + Merkle §6.3
 
-Requires **`neozipkit@^1.0.3`**. Token, timestamp, and OTS sidecar lookup now follows [NEOZIP_APPNOTE.md](https://github.com/NeoWareInc/neozipkit/blob/main/packages/neozipkit/NEOZIP_APPNOTE.md) §2.3:
+Requires **`neozipkit@^1.0.3`**.
 
-- Writers still emit canonical uppercase paths (`META-INF/TOKEN.NZIP`, `TIMESTAMP.NZIP`, `TS-SUBMIT.NZIP`, OTS twins).
-- Readers accept **ASCII case-insensitive** spellings so round-tripped archives on Windows are not missed.
+- Token, timestamp, and OTS sidecar lookup follows [NEOZIP_APPNOTE.md](https://github.com/NeoWareInc/neozipkit/blob/main/packages/neozipkit/NEOZIP_APPNOTE.md) §2.3 (canonical uppercase writes; **ASCII case-insensitive** discovery).
+- Mint / stamp / verify helpers prefer **`getMerkleRootAsync()`** so digests match APPNOTE **§6.3** (domain-separated content leaves, path-normalized sort). Sync `getMerkleRoot()` alone is not enough for new v1 roots when only Extra Field digests are present.
+
+**Helpers:** `getMerkleRootSafeAsync(zip)` (preferred), `getMerkleRootSafe(zip)` (sync only).
+
+Legacy digests can still be checked with digests-based **`{ algorithm: 'v0' }`** roots / fallbacks.
 
 ```bash
 npm install neozipkit@^1.0.3 neozip-blockchain@^1.0.3
