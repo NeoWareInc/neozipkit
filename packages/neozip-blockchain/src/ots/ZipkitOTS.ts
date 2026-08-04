@@ -255,14 +255,33 @@ export async function getOtsBuffer(zip: ZipkitLike, otsEntry: ZipEntryLike): Pro
 }
 
 /**
- * Safely extracts merkle root from a ZIP file.
+ * Safely extracts merkle root from a ZIP file (sync).
+ * With only Extra Field digests, sync getMerkleRoot cannot form APPNOTE §6.3
+ * v1 leaves — returns null. Use {@link getMerkleRootSafeAsync} for new archives.
  * @param zip - Zipkit-like instance
  * @returns Merkle root hash string, or null if not available
  */
 export function getMerkleRootSafe(zip: ZipkitLike): string | null {
   try {
     const mr = zip.getMerkleRoot?.();
-    return (typeof mr === 'string' && mr.length > 0) ? mr : null;
+    return typeof mr === 'string' && mr.length > 0 ? mr : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Preferred: APPNOTE §6.3 v1 root (extract + domain-separated content leaves).
+ * Does not silently fall back to v0 digests (which would mint the wrong algorithm).
+ */
+export async function getMerkleRootSafeAsync(zip: ZipkitLike): Promise<string | null> {
+  try {
+    if (typeof zip.getMerkleRootAsync === 'function') {
+      const mr = await zip.getMerkleRootAsync();
+      if (typeof mr === 'string' && mr.length > 0) return mr;
+    }
+    // Optional explicit legacy only if caller also expose digests via getMerkleRoot({ algorithm: 'v0' })
+    return getMerkleRootSafe(zip);
   } catch {
     return null;
   }
@@ -287,7 +306,7 @@ function coerceDate(val: any): Date | undefined {
  * @returns Promise resolving to verification result with status: 'none', 'error', 'pending', or 'valid'
  */
 export async function verifyOtsZip(zip: ZipkitLike): Promise<OtsVerifyResult> {
-  const mr = getMerkleRootSafe(zip);
+  const mr = await getMerkleRootSafeAsync(zip);
   const entry = getOtsEntry(zip);
   if (!entry) return { status: 'none' };
   const otsBuf = await getOtsBuffer(zip, entry);

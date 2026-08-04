@@ -10,7 +10,12 @@ import { NEOZIPKIT_INFO } from '../types';
 import { ZipCompress, CompressOptions } from './ZipCompress';
 import ZipDecompress from './ZipDecompress';
 import { sha256, crc32 } from './encryption/ZipCrypto';
-import HashCalculator from './components/HashCalculator';
+import {
+  computeArchiveMerkleRoot,
+  computeMerkleRootV0FromDigests,
+  computeMerkleRootV1FromContents,
+  type MerkleAlgorithm,
+} from './merkle/MerkleRoot';
 import { 
   LOCAL_HDR,
   ENCRYPT_HDR_SIZE,
@@ -698,106 +703,126 @@ export default class Zipkit {
   }
 
   /**
-   * Calculate Merkle Root of the ZIP file
-   * 
-   * Excludes metadata files (META-INF) to ensure consistent calculation.
-   * Simply calls getDirectory() and returns null if empty.
-   * 
-   * @returns Merkle root string or null if calculation fails
+   * Calculate Merkle root of archive content (non-META-INF entries).
+   *
+   * Per NEOZIP_APPNOTE.md §6:
+   * - Default **v1**: domain-separated leaves SHA-256(0x00 ‖ uncompressed bytes) and
+   *   SHA-256(0x01 ‖ left ‖ right) parents; paths NFC-normalized before sort.
+   * - Legacy **v0**: bare 0x014E digests as leaves, duplicate-odd pairing, path as stored.
+   *
+   * When only Extra Field digests are available (typical after open), **v1 requires
+   * payload bytes**. This sync method therefore returns null for v1; use
+   * {@link getMerkleRootAsync} (extracts content) or `{ algorithm: 'v0' }`.
+   * When you already hold payloads, use {@link merkleRootFromEntries}.
+   *
+   * @param options.algorithm - `v1` (default) or legacy `v0`
+   * @returns Lowercase hex Merkle root, or null if calculation fails
    */
-  getMerkleRoot(): string | null {
-    // Simply get directory - no loading logic
+  getMerkleRoot(options?: { algorithm?: MerkleAlgorithm }): string | null {
+    const algorithm: MerkleAlgorithm = options?.algorithm ?? 'v1';
+
     let zipEntries: ZipEntry[];
     try {
       zipEntries = this.getDirectory();
     } catch (error) {
-      // Catch any errors from getDirectory() - this should never happen
-      // but if it does, log it and return null
       Logger.error(`getMerkleRoot(): Error calling getDirectory(): ${error instanceof Error ? error.message : String(error)}`);
       Logger.error(`getMerkleRoot(): Stack trace: ${error instanceof Error ? error.stack : 'No stack trace'}`);
       return null;
     }
-    
+
     if (!zipEntries || zipEntries.length === 0) {
       return null;
     }
-  
-    const hashAccumulator = new HashCalculator({ enableAccumulation: true });
-    
-    // Filter out META-INF/** (APPNOTE §6.2 content leaves)
-    const contentEntries = zipEntries.filter(entry => {
-      const filename = entry.filename || '';
-      return !isMetaInfPath(filename);
-    });
-    
-    for (const entry of contentEntries) {
-      if (entry.sha256) {
-        // Convert hex string to Buffer
-        const hashBuffer = Buffer.from(entry.sha256, 'hex');
-        hashAccumulator.addHash(hashBuffer);
-      }
-    }
-    
-    const merkleRoot = hashAccumulator.merkleRoot();
-    if (!merkleRoot) {
-      return null;
+
+    const contentEntries = zipEntries.filter((entry) => !isMetaInfPath(entry.filename || ''));
+
+    if (algorithm === 'v0') {
+      const digests = contentEntries
+        .filter((e) => e.sha256)
+        .map((e) => ({ path: e.filename || '', sha256: e.sha256 as string }));
+      return computeMerkleRootV0FromDigests(digests);
     }
 
-    return merkleRoot;
+    // v1: bare digests are not leaves — need getMerkleRootAsync()
+    return null;
   }
 
   /**
-   * Calculate Merkle Root of the ZIP file asynchronously
-   * 
-   * Excludes metadata files (META-INF) to ensure consistent calculation.
-   * Works with both buffer-based and file-based ZIPs.
-   * 
-   * @returns Promise resolving to Merkle root string or null if calculation fails
+   * Calculate Merkle root (preferred for v1 / new archives).
+   *
+   * **v1 (default):** extracts each content entry and builds APPNOTE §6.3 root.
+   * **v0:** uses Extra Field digests only (no extract), APPNOTE §6.2.
+   *
+   * META-INF/** is excluded. Buffer-based ZIP required.
+   *
+   * @param options.algorithm - `v1` (default) or legacy `v0`
+   * @returns Promise resolving to lowercase hex root, or null
    */
-  async getMerkleRootAsync(): Promise<string | null> {
+  async getMerkleRootAsync(options?: { algorithm?: MerkleAlgorithm }): Promise<string | null> {
+    const algorithm: MerkleAlgorithm = options?.algorithm ?? 'v1';
+
     let zipEntries: ZipEntry[] = [];
-    
+
     try {
-      // Get entries based on ZIP type
       if (this.inBuffer) {
         zipEntries = this.getDirectory();
       } else {
-        // File-based: cannot get entries synchronously - return null
-        // Caller should use ZipkitServer.getMerkleRootAsync() for file-based ZIPs
-        Logger.error('getMerkleRootAsync() called on file-based ZIP. Use ZipkitServer.getMerkleRootAsync() instead.');
+        Logger.error('getMerkleRootAsync() called on file-based ZIP. Load into a buffer first or use a node helper that can extract entries.');
         return null;
       }
     } catch (error) {
       Logger.error(`Failed to get directory for merkle root calculation: ${error instanceof Error ? error.message : String(error)}`);
       return null;
     }
-    
+
     if (!zipEntries || zipEntries.length === 0) {
       return null;
     }
-  
-    const hashAccumulator = new HashCalculator({ enableAccumulation: true });
-    
-    // Filter out META-INF/** (APPNOTE §6.2 content leaves)
-    const contentEntries = zipEntries.filter(entry => {
-      const filename = entry.filename || '';
-      return !isMetaInfPath(filename);
-    });
-    
+
+    const contentEntries = zipEntries.filter((entry) => !isMetaInfPath(entry.filename || ''));
+
+    if (algorithm === 'v0') {
+      const digests = contentEntries
+        .filter((e) => e.sha256)
+        .map((e) => ({ path: e.filename || '', sha256: e.sha256 as string }));
+      return computeMerkleRootV0FromDigests(digests);
+    }
+
+    const payloads: Array<{ path: string; content: Buffer }> = [];
     for (const entry of contentEntries) {
-      if (entry.sha256) {
-        // Convert hex string to Buffer
-        const hashBuffer = Buffer.from(entry.sha256, 'hex');
-        hashAccumulator.addHash(hashBuffer);
+      try {
+        const data = await this.extract(entry, true);
+        if (data === null) {
+          if (entry.uncompressedSize === 0) {
+            payloads.push({ path: entry.filename || '', content: Buffer.alloc(0) });
+          }
+          continue;
+        }
+        payloads.push({ path: entry.filename || '', content: data });
+      } catch (error) {
+        Logger.error(
+          `getMerkleRootAsync(): failed to extract ${entry.filename}: ${error instanceof Error ? error.message : String(error)}`
+        );
+        return null;
       }
     }
-    
-    const merkleRoot = hashAccumulator.merkleRoot();
-    if (!merkleRoot) {
+
+    if (payloads.length === 0) {
       return null;
     }
 
-    return merkleRoot;
+    return computeMerkleRootV1FromContents(payloads);
+  }
+
+  /**
+   * Compute Merkle root from known digests and/or payloads (APPNOTE §6).
+   * Prefer this during create when uncompressed bytes are still in hand.
+   */
+  static merkleRootFromEntries(
+    entries: Array<{ path: string; content?: Buffer; contentSha256?: string }>,
+    algorithm: MerkleAlgorithm = 'v1'
+  ): string | null {
+    return computeArchiveMerkleRoot(entries, algorithm);
   }
 
 }

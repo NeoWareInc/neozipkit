@@ -146,7 +146,10 @@ export interface ZipEntryLike {
  * Used for optional integration with neozipkit
  */
 export interface ZipkitLike {
-  getMerkleRoot?(): string | null;
+  /** APPNOTE §6 root; v1 may require getMerkleRootAsync (content leaves). */
+  getMerkleRoot?(options?: { algorithm?: 'v0' | 'v1' }): string | null;
+  /** Preferred: extracts payloads and computes v1 (or digests for v0). */
+  getMerkleRootAsync?(options?: { algorithm?: 'v0' | 'v1' }): Promise<string | null>;
   getDirectory?(includeMetadata?: boolean): ZipEntryLike[];
   extract?(entry: ZipEntryLike, raw?: boolean): Promise<Buffer | null>;
   getZipEntry?(filename: string): ZipEntryLike | null;

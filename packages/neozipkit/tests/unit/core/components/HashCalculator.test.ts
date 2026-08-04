@@ -221,7 +221,7 @@ describe('HashCalculator', () => {
       expect(root).not.toBeNull();
       expect(root).toMatch(/^[0-9a-f]{64}$/);
       
-      // Root should be hash of concatenated hashes
+      // Insertion order preserved (no sortLeaves / sortPairs); left ‖ right
       const expectedRoot = createHash('sha256')
         .update(Buffer.concat([hash1, hash2]))
         .digest('hex');
@@ -245,7 +245,7 @@ describe('HashCalculator', () => {
       expect(root).toMatch(/^[0-9a-f]{64}$/);
     });
 
-    it('should handle odd number of hashes', () => {
+    it('should handle odd number of hashes (duplicate last — generic accumulator)', () => {
       const calculator = new HashCalculator({ enableAccumulation: true });
       
       const hashes = [
@@ -259,6 +259,12 @@ describe('HashCalculator', () => {
       const root = calculator.merkleRoot();
       expect(root).not.toBeNull();
       expect(root).toMatch(/^[0-9a-f]{64}$/);
+
+      // Bitcoin-style: pair (a,b), pair (c,c), then parent
+      const pairAB = createHash('sha256').update(Buffer.concat([hashes[0], hashes[1]])).digest();
+      const pairCC = createHash('sha256').update(Buffer.concat([hashes[2], hashes[2]])).digest();
+      const expected = createHash('sha256').update(Buffer.concat([pairAB, pairCC])).digest('hex');
+      expect(root).toBe(expected);
     });
 
     it('should rebuild Merkle tree when hash is added', () => {

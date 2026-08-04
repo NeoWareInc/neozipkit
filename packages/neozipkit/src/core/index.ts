@@ -24,6 +24,7 @@ export { default as HashCalculator, HashCalculator as HashCalculatorClass } from
 export * from './components/Util';
 export * from './components/Support';
 export { ProgressTracker } from './components/ProgressTracker';
+export * from './merkle/MerkleRoot';
 
 // Encryption functionality
 export { EncryptionManager } from './encryption/Manager';
@@ -33,6 +34,19 @@ export type { EncryptionMethod, EncryptionOptions, EncryptionResult, DecryptionR
 // Types and constants
 export * from '../types';
 export * from './constants/Headers';
+export {
+  META_TOKEN_NZIP,
+  META_TOKEN_NZIP_LEGACY,
+  META_TS_SUBMIT_NZIP,
+  META_TIMESTAMP_NZIP,
+  META_TS_SUBMIT_OTS,
+  META_TIMESTAMP_OTS,
+  META_MANIFEST_JSON,
+  asciiPathEqualsIgnoreCase,
+  isMetaInfPath,
+  isReservedMetaPath,
+  findReservedMetaEntry,
+} from './constants/MetaPaths';
 export * from './constants/Errors';
 export * from './version';
 

@@ -85,11 +85,17 @@ export interface VerifyTimestampOptions {
 
 /**
  * Safely extracts merkle root from a ZIP file.
+ * Prefers getMerkleRootAsync (APPNOTE §6.3 content leaves). Does not fall back
+ * to legacy digests trees (avoids minting the wrong algorithm).
  */
-function getMerkleRootSafe(zip: ZipkitLike): string | null {
+async function getMerkleRootSafe(zip: ZipkitLike): Promise<string | null> {
   try {
+    if (typeof zip.getMerkleRootAsync === 'function') {
+      const asyncMr = await zip.getMerkleRootAsync();
+      if (typeof asyncMr === 'string' && asyncMr.length > 0) return asyncMr;
+    }
     const mr = zip.getMerkleRoot?.();
-    return (typeof mr === 'string' && mr.length > 0) ? mr : null;
+    return typeof mr === 'string' && mr.length > 0 ? mr : null;
   } catch {
     return null;
   }
@@ -445,7 +451,7 @@ export async function verifyTimestampedZip(
   zip: ZipkitLike,
   options: VerifyTimestampOptions = {}
 ): Promise<EthTimestampVerifyResult> {
-  const merkleRoot = getMerkleRootSafe(zip);
+  const merkleRoot = await getMerkleRootSafe(zip);
   if (!merkleRoot) {
     return { status: 'error', message: 'Merkle root not found in ZIP file' };
   }
@@ -569,7 +575,7 @@ export async function createTimestampedZip(
   zipkit: ZipkitLike,
   options: CreateTimestampOptions = {}
 ): Promise<TimestampMetadata | null> {
-  const merkleRoot = getMerkleRootSafe(zipkit);
+  const merkleRoot = await getMerkleRootSafe(zipkit);
   if (!merkleRoot) {
     throw new Error('Merkle root not found in ZIP file');
   }

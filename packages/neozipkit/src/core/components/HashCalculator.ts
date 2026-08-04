@@ -45,6 +45,8 @@ export class HashCalculator {
   // Incremental hash calculation state (from StreamHashCalculator)
   private crc32State: number = ~0;
   private sha256Hash: crypto.Hash | null = null;
+  /** Domain-separated leaf hasher (APPNOTE §6.3): SHA-256(0x00 ‖ payload). */
+  private merkleLeafHash: crypto.Hash | null = null;
   private useSHA256: boolean = false;
 
   // Hash accumulation state (from HashAccumulator)
@@ -52,13 +54,15 @@ export class HashCalculator {
   private xorResult: Buffer = Buffer.alloc(32, 0);
   private enableAccumulation: boolean = false;
 
-  // Merkle tree state (from MerkleTree)
+  // Merkle tree state (from MerkleTree) — generic digest folding; archive roots use merkle/MerkleRoot.ts
   private merkleLeaves: Buffer[] = [];
   private merkleLayers: Buffer[][] = [];
   private merkleOptions: MerkleTreeOptions = {
     hashLeaves: false,
-    sortLeaves: true,
-    sortPairs: true,
+    // Archive content roots sort by path in MerkleRoot; generic accumulator keeps insertion order.
+    sortLeaves: false,
+    sortPairs: false,
+    // match APPNOTE v0 odd-leaf rule when used as a generic Bitcoin-style tree
     duplicateOdd: true
   };
 
@@ -77,6 +81,8 @@ export class HashCalculator {
 
     if (this.useSHA256) {
       this.sha256Hash = crypto.createHash('sha256');
+      this.merkleLeafHash = crypto.createHash('sha256');
+      this.merkleLeafHash.update(Buffer.from([0x00]));
     }
   }
 
@@ -95,9 +101,12 @@ export class HashCalculator {
       this.crc32State = crc32update(this.crc32State, chunk[i]);
     }
     
-    // Update SHA-256 incrementally
+    // Update SHA-256 and v1 Merkle leaf hash incrementally
     if (this.sha256Hash) {
       this.sha256Hash.update(chunk);
+    }
+    if (this.merkleLeafHash) {
+      this.merkleLeafHash.update(chunk);
     }
   }
 
@@ -110,7 +119,7 @@ export class HashCalculator {
   }
 
   /**
-   * Get final SHA-256 hash as hex string
+   * Get final SHA-256 hash as hex string (Extra Field 0x014E — bare content digest)
    * @returns SHA-256 hash as hex string, or null if SHA-256 not enabled
    */
   finalizeSHA256(): string | null {
@@ -121,12 +130,25 @@ export class HashCalculator {
   }
 
   /**
+   * Get APPNOTE §6.3 v1 Merkle leaf: SHA-256(0x00 ‖ uncompressed payload) as hex.
+   * Consumes the leaf hasher; call after or instead of finalizeSHA256 for dual streams.
+   */
+  finalizeMerkleLeafV1(): string | null {
+    if (this.merkleLeafHash) {
+      return this.merkleLeafHash.digest('hex');
+    }
+    return null;
+  }
+
+  /**
    * Reset the incremental hash calculation state
    */
   reset(): void {
     this.crc32State = ~0;
-    if (this.sha256Hash) {
+    if (this.useSHA256) {
       this.sha256Hash = crypto.createHash('sha256');
+      this.merkleLeafHash = crypto.createHash('sha256');
+      this.merkleLeafHash.update(Buffer.from([0x00]));
     }
   }
 
@@ -264,6 +286,7 @@ export class HashCalculator {
     if (this.merkleOptions.sortPairs && Buffer.compare(left, right) > 0) {
       [left, right] = [right, left];
     }
+    // Generic accumulator tree (not APPNOTE archive root — see merkle/MerkleRoot.ts)
     return this.hash(Buffer.concat([left, right]));
   }
 

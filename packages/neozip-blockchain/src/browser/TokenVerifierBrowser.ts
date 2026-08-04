@@ -173,8 +173,12 @@ export class TokenVerifierBrowser {
         };
       }
 
-      // Calculate merkle root excluding token file
-      const calculatedMerkleRoot = this.zipkit.getMerkleRoot?.() || null;
+      // Calculate merkle root excluding token file (APPNOTE §6.3 prefers async content leaves)
+      const calculatedMerkleRoot =
+        (await this.zipkit.getMerkleRootAsync?.()) ||
+        this.zipkit.getMerkleRoot?.({ algorithm: 'v0' }) ||
+        this.zipkit.getMerkleRoot?.() ||
+        null;
       
       if (!calculatedMerkleRoot) {
         return {
