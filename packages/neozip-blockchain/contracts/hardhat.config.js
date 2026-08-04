@@ -1,5 +1,17 @@
 require("@nomicfoundation/hardhat-verify");
 
+/**
+ * Only inject PRIVATE_KEY when it is a valid 32-byte hex key.
+ * Rejects placeholders (e.g. "0x...") so hardhat can still compile.
+ */
+function deployerAccounts() {
+  const key = process.env.PRIVATE_KEY?.trim();
+  if (!key) return [];
+  const normalized = key.startsWith("0x") ? key.slice(2) : key;
+  if (!/^[0-9a-fA-F]{64}$/.test(normalized)) return [];
+  return [`0x${normalized}`];
+}
+
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: {
@@ -20,58 +32,49 @@ module.exports = {
     artifacts: "./artifacts"
   },
   networks: {
-    // Ethereum Mainnet
     ethereum: {
       url: process.env.ETH_RPC_URL || "https://eth.llamarpc.com",
       chainId: 1,
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : []
+      accounts: deployerAccounts()
     },
-    // Ethereum Sepolia
     sepolia: {
       url: process.env.SEPOLIA_RPC_URL || "https://rpc.sepolia.org",
       chainId: 11155111,
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : []
+      accounts: deployerAccounts()
     },
-    // Base Mainnet
     base: {
       url: process.env.BASE_RPC_URL || "https://mainnet.base.org",
       chainId: 8453,
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : []
+      accounts: deployerAccounts()
     },
-    // Base Sepolia
     baseSepolia: {
       url: process.env.BASE_SEPOLIA_RPC_URL || "https://sepolia.base.org",
       chainId: 84532,
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : []
+      accounts: deployerAccounts()
     },
-    // Arbitrum One
     arbitrum: {
       url: process.env.ARBITRUM_RPC_URL || "https://arb1.arbitrum.io/rpc",
       chainId: 42161,
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : []
+      accounts: deployerAccounts()
     },
-    // Arbitrum Sepolia
     arbitrumSepolia: {
       url: process.env.ARBITRUM_SEPOLIA_RPC_URL || "https://sepolia-rollup.arbitrum.io/rpc",
       chainId: 421614,
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : []
+      accounts: deployerAccounts()
     },
-    // Polygon Mainnet
     polygon: {
       url: process.env.POLYGON_RPC_URL || "https://polygon.llamarpc.com",
       chainId: 137,
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : []
+      accounts: deployerAccounts()
     },
-    // Polygon Sepolia (Amoy)
     polygonSepolia: {
       url: process.env.POLYGON_SEPOLIA_RPC_URL || "https://rpc-amoy.polygon.technology",
       chainId: 80002,
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : []
+      accounts: deployerAccounts()
     }
   },
   etherscan: {
     apiKey: {
-      // Etherscan API V2 - unified API key for all networks
       mainnet: process.env.ETHERSCAN_API_KEY || "",
       sepolia: process.env.ETHERSCAN_API_KEY || "",
       base: process.env.ETHERSCAN_API_KEY || "",
@@ -112,4 +115,3 @@ module.exports = {
     enabled: false
   }
 };
-

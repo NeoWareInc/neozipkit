@@ -417,7 +417,18 @@ Implementations **MUST NOT** accept an archive as high-security verified solely 
 
 ### 7.1 Networks
 
-NeoZip CLI defaults to `base-sepolia` for development; production networks are selected via `-n` / connection store. This note does not hard-code chain IDs — they live in connection config and `TOKEN.NZIP`.
+NeoZip CLI and `neozip-blockchain` default to **Base Sepolia** (`base-sepolia`, chain ID `84532`) for development.
+
+Token Service hosts (client library selection via `TOKEN_SERVICE_NETWORK` / `resolveNetworkProfile`):
+
+| Profile | Chain | Token Service host |
+| :------ | :---- | :----------------- |
+| `base-sepolia` (default) | Base Sepolia `84532` | `https://testnet.token-service.neozip.io` |
+| `base` | Base Mainnet `8453` | `https://token-service.neozip.io` |
+
+Production networks are also selected via CLI `-n` / connection store. On-chain contract addresses and chain IDs for tokens live in connection config and `TOKEN.NZIP` / library `CONTRACT_CONFIGS` (not in this note alone).
+
+Paid token purchase on mainnet is **not** specified for this profile generation (`purchaseAvailable` is false until a later revision).
 
 ### 7.2 Mint flow (informative)
 

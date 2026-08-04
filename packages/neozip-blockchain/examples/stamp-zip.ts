@@ -24,7 +24,13 @@
 import { ZipkitNode, CompressOptions } from 'neozipkit/node';
 
 // NeoZip Token Service API client
-import { submitDigest, getTokenServiceUrl, type TimestampMetadata, SUBMIT_METADATA } from '../src/token-service';
+import {
+  submitDigest,
+  getTokenServiceUrl,
+  resolveNetworkProfile,
+  type TimestampMetadata,
+  SUBMIT_METADATA,
+} from '../src/token-service';
 
 import * as fs from 'fs';
 import * as path from 'path';
@@ -127,12 +133,14 @@ function expandFilePatterns(patterns: string[]): string[] {
  * @param inputFiles Array of input file paths or patterns (supports wildcards)
  * @param email Optional email for digest submission
  * @param chainId Optional chain ID for digest submission
+ * @param network Optional network profile (base-sepolia | base)
  */
 export async function createTimestampedZip(
   outputZipPath: string,
   inputFiles: string[],
   email?: string,
-  chainId?: number
+  chainId?: number,
+  network?: string
 ): Promise<void> {
   // Expand file patterns to actual file paths
   const resolvedFiles = expandFilePatterns(inputFiles);
@@ -148,8 +156,28 @@ export async function createTimestampedZip(
   });
   console.log();
 
-  // Get configuration from environment
-  const tokenServiceUrl = getTokenServiceUrl();
+  // Resolve network profile (TOKEN_SERVICE_NETWORK / TOKEN_SERVICE_CHAIN_ID / defaults)
+  let profile;
+  try {
+    profile = resolveNetworkProfile({
+      network: network || process.env.TOKEN_SERVICE_NETWORK,
+      chainId:
+        chainId ??
+        (process.env.TOKEN_SERVICE_CHAIN_ID
+          ? parseInt(process.env.TOKEN_SERVICE_CHAIN_ID, 10)
+          : process.env.NEOZIP_CHAIN_ID
+            ? parseInt(process.env.NEOZIP_CHAIN_ID, 10)
+            : undefined),
+    });
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exit(1);
+  }
+
+  const tokenServiceUrl = getTokenServiceUrl({
+    network: profile.key,
+    chainId: profile.chainId,
+  });
   
   // Email is required for NeoZip Token Service (verified email)
   const submitEmail = email || process.env.TOKEN_SERVICE_EMAIL;
@@ -160,19 +188,14 @@ export async function createTimestampedZip(
     process.exit(1);
   }
   
-  const submitChainId =
-    chainId ||
-    (process.env.TOKEN_SERVICE_CHAIN_ID
-      ? parseInt(process.env.TOKEN_SERVICE_CHAIN_ID, 10)
-      : undefined);
+  const submitChainId = chainId ?? profile.chainId;
 
+  console.log(`Network: ${profile.label} (${profile.key})`);
   console.log(`NeoZip Token Service: ${tokenServiceUrl}`);
   if (submitEmail) {
     console.log(`Email: ${submitEmail}`);
   }
-  if (submitChainId) {
-    console.log(`Chain ID: ${submitChainId}`);
-  }
+  console.log(`Chain ID: ${submitChainId}`);
   console.log();
 
   // Create ZipkitNode instance
@@ -224,7 +247,11 @@ export async function createTimestampedZip(
     let submitResult;
     let submissionFailed = false;
     try {
-      submitResult = await submitDigest(merkleRoot, submitEmail, submitChainId);
+      submitResult = await submitDigest(merkleRoot, submitEmail, submitChainId, {
+        network: profile.key,
+        chainId: profile.chainId,
+        serverUrl: tokenServiceUrl,
+      });
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
       console.warn('⚠️  Warning: Failed to submit digest to NeoZip Token Service');
@@ -369,35 +396,59 @@ async function main() {
 
   const args = process.argv.slice(2);
 
-  if (args.length < 2) {
+  let network: string | undefined;
+  let chainId: number | undefined;
+  const positional: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--network' || args[i] === '-n') {
+      network = args[++i];
+    } else if (args[i] === '--chain-id' || args[i] === '-c') {
+      chainId = parseInt(args[++i] || '', 10);
+    } else if (args[i] === '--help' || args[i] === '-h') {
+      console.log('Usage:');
+      console.log(
+        '  tsx examples/stamp-zip.ts <output.zip> <input...> [--network base-sepolia|base] [--chain-id <id>]'
+      );
+      console.log('\nEnv:');
+      console.log('  TOKEN_SERVICE_NETWORK   base-sepolia (default) or base');
+      console.log('  TOKEN_SERVICE_CHAIN_ID  numeric override (e.g. 84532, 8453)');
+      console.log('  TOKEN_SERVICE_URL       explicit server URL override');
+      console.log('  TOKEN_SERVICE_EMAIL     verified email for stamp submissions');
+      process.exit(0);
+    } else if (!args[i].startsWith('-')) {
+      positional.push(args[i]);
+    }
+  }
+
+  if (positional.length < 2) {
     console.error('❌ Error: Missing required arguments');
     console.error('\nUsage:');
-    console.error('  tsx stamp-zip/stamp-zip.ts <output.zip> <input-file-pattern> [input-file-pattern2] ...');
-    console.error('\nExamples:');
-    console.error('  tsx stamp-zip/stamp-zip.ts output.zip document.txt');
-    console.error('  tsx stamp-zip/stamp-zip.ts output.zip *.txt');
-    console.error('  tsx stamp-zip/stamp-zip.ts output.zip test-files/*');
-    console.error('  tsx stamp-zip/stamp-zip.ts output.zip file1.txt file2.txt file3.txt');
-    console.error('  tsx stamp-zip/stamp-zip.ts output.zip *.txt *.json');
+    console.error(
+      '  tsx examples/stamp-zip.ts <output.zip> <input...> [--network base-sepolia|base]'
+    );
     process.exit(1);
   }
 
-  const outputZip = args[0];
-  const inputPatterns = args.slice(1);
+  const outputZip = positional[0];
+  const inputPatterns = positional.slice(1);
 
-  // Validate output zip filename
   if (!outputZip.endsWith('.zip') && !outputZip.endsWith('.nzip')) {
     console.error('❌ Error: Output file must have .zip or .nzip extension');
     process.exit(1);
   }
 
-  // Make output path absolute if relative
-  const outputZipPath = path.isAbsolute(outputZip) 
-    ? outputZip 
+  const outputZipPath = path.isAbsolute(outputZip)
+    ? outputZip
     : path.resolve(process.cwd(), outputZip);
 
   try {
-    await createTimestampedZip(outputZipPath, inputPatterns);
+    await createTimestampedZip(
+      outputZipPath,
+      inputPatterns,
+      undefined,
+      chainId,
+      network
+    );
     process.exit(0);
   } catch (error) {
     console.error('Fatal error:', error);

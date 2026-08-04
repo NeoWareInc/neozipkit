@@ -141,8 +141,12 @@ export type { PrepareMintResponse, NFTStatusResponse, NFTContractInfoResponse } 
 export interface TokenServiceHelperOptions {
   /** NeoZip Token Service URL (defaults to library constant / TOKEN_SERVICE_URL env) */
   serverUrl?: string;
-  /** Key into TOKEN_SERVICE_URLS (e.g. "default", "staging") */
+  /** Key into TOKEN_SERVICE_URLS (e.g. "default", "production") */
   serverKey?: string;
+  /** Network profile name (e.g. "base-sepolia", "base") */
+  network?: string;
+  /** Chain ID — pairs with network profiles when serverUrl omitted */
+  chainId?: number;
   /** Enable debug logging */
   debug?: boolean;
   /**
@@ -160,8 +164,11 @@ export interface TokenServiceHelperOptions {
 export { getTokenServiceUrl };
 
 function getClient(options?: TokenServiceHelperOptions): TokenServiceClient {
-  return new TokenServiceClient({ 
-    serverUrl: getTokenServiceUrl(options),
+  return new TokenServiceClient({
+    serverUrl: options?.serverUrl,
+    serverKey: options?.serverKey,
+    network: options?.network,
+    chainId: options?.chainId,
   });
 }
 
@@ -404,6 +411,9 @@ export async function pollForConfirmation(
       const perRequestTimeoutMs = Math.max(1000, Math.min(30000, remaining));
       const client = new TokenServiceClient({
         serverUrl,
+        serverKey: options?.serverKey,
+        network: options?.network,
+        chainId: options?.chainId,
         timeout: perRequestTimeoutMs,
         retries: 0,
         retryDelay: 0,

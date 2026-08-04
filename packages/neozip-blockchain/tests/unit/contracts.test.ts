@@ -16,6 +16,7 @@ import {
   CURRENT_DEPLOYMENT,
   getContractAdapter,
   getContractAdapterByVersion,
+  LEGACY_BASE_MAINNET_NFT_V210,
 } from '../../src/core/contracts';
 
 describe('Contract Configuration', () => {
@@ -33,6 +34,13 @@ describe('Contract Configuration', () => {
       expect(CONTRACT_CONFIGS[8453]).toBeDefined();
       expect(CONTRACT_CONFIGS[8453].network).toBe('Base Mainnet');
       expect(CONTRACT_CONFIGS[8453].version).toBe('2.10');
+      // Primary still v2.10 until mainnet v2.51 deploy; legacy address documented
+      expect(CONTRACT_CONFIGS[8453].address).toBe(
+        '0xd871Fba59F85108aF29299786DD8243B38dD9686'
+      );
+      expect(LEGACY_BASE_MAINNET_NFT_V210).toBe(
+        '0xd871Fba59F85108aF29299786DD8243B38dD9686'
+      );
     });
 
     it('should have Arbitrum One configuration', () => {

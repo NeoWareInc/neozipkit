@@ -222,13 +222,27 @@ function parseArgs(args: string[]): {
   inputPatterns: string[];
   privateKey: string;
   chainId: number;
+  network?: string;
 } {
+  let defaultChain = 84532;
+  try {
+    // Lazy import to avoid circular require issues in examples
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { resolveNetworkProfile } = require('../src/token-service');
+    defaultChain = resolveNetworkProfile().chainId;
+  } catch {
+    // keep default
+  }
+
   const result = {
     outputPath: '',
     inputPatterns: [] as string[],
     privateKey: '',
-    chainId: process.env.NEOZIP_CHAIN_ID ? parseInt(process.env.NEOZIP_CHAIN_ID, 10) : 84532,
+    chainId: defaultChain,
+    network: process.env.TOKEN_SERVICE_NETWORK || (undefined as string | undefined),
   };
+
+  const chainIdFromArgs = args.some((a) => a === '--chain-id' || a === '-c');
 
   let i = 0;
   while (i < args.length) {
@@ -238,8 +252,9 @@ function parseArgs(args: string[]): {
       result.privateKey = args[++i] || '';
     } else if (arg === '--chain-id' || arg === '-c') {
       result.chainId = parseInt(args[++i] || '84532', 10);
+    } else if (arg === '--network' || arg === '-n') {
+      result.network = args[++i] || undefined;
     } else if (arg.startsWith('--')) {
-      // Unknown flag, skip
       i++;
     } else if (!result.outputPath) {
       result.outputPath = arg;
@@ -249,9 +264,21 @@ function parseArgs(args: string[]): {
     i++;
   }
 
-  // Try to get private key from environment if not provided
   if (!result.privateKey) {
     result.privateKey = process.env.USER_PRIVATE_KEY || '';
+  }
+
+  if (result.network && !chainIdFromArgs) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { resolveNetworkProfile } = require('../src/token-service');
+      result.chainId = resolveNetworkProfile({
+        network: result.network,
+        useEnv: false,
+      }).chainId;
+    } catch {
+      // leave chainId
+    }
   }
 
   return result;
@@ -264,14 +291,16 @@ async function main() {
   
   if (args.length < 2 || args.includes('--help') || args.includes('-h')) {
     console.log('Usage:');
-    console.log('  tsx stamp-zip/token-create.ts <output.nzip> <input-files...> --private-key <key> [--chain-id <id>]');
+    console.log(
+      '  tsx examples/token-create.ts <output.nzip> <input-files...> --private-key <key> [--network base-sepolia|base] [--chain-id <id>]'
+    );
     console.log('\nOptions:');
     console.log('  --private-key, -k  Private key for minting (or set USER_PRIVATE_KEY env var)');
-    console.log('  --chain-id, -c     Chain ID (default: 84532 for Base Sepolia)');
+    console.log('  --network, -n      Network profile: base-sepolia (default) or base');
+    console.log('  --chain-id, -c     Chain ID (default from TOKEN_SERVICE_NETWORK / 84532)');
     console.log('\nExamples:');
-    console.log('  tsx stamp-zip/token-create.ts output.nzip document.txt --private-key $USER_PRIVATE_KEY');
-    console.log('  tsx stamp-zip/token-create.ts output.nzip *.txt --private-key $USER_PRIVATE_KEY');
-    console.log('  tsx stamp-zip/token-create.ts output.nzip test-files/* --private-key $USER_PRIVATE_KEY --chain-id 84532');
+    console.log('  tsx examples/token-create.ts output.nzip document.txt --private-key $USER_PRIVATE_KEY');
+    console.log('  tsx examples/token-create.ts output.nzip *.txt --network base --private-key $USER_PRIVATE_KEY');
     process.exit(1);
   }
 

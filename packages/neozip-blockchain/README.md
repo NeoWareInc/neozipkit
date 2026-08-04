@@ -41,7 +41,14 @@ The **NeoZip Token Service** is a **separate application** (not part of this rep
 - Fetch TIMESTAMP.NZIP and proof data
 - Support stamp → upgrade → mint workflows
 
-Configure your app with the NeoZip Token Service URL (`TOKEN_SERVICE_URL`) and run the NeoZip Token Service separately when using timestamping features. See `examples/` and `.env.sample` for usage.
+Configure your app with a **network profile** (`TOKEN_SERVICE_NETWORK=base-sepolia` default, or `base` for production) or an explicit `TOKEN_SERVICE_URL`. Library helpers resolve the correct host:
+
+| Profile | Chain | Host |
+|---------|-------|------|
+| `base-sepolia` (default) | 84532 | `https://testnet.token-service.neozip.io` |
+| `base` | 8453 | `https://token-service.neozip.io` |
+
+See `src/constants/servers.ts` (`resolveNetworkProfile`, `getTokenServiceUrlForNetwork`). Paid mainnet token purchase is stubbed (`isTokenPurchaseAvailable` → `false`). Run the NeoZip Token Service separately for timestamping. See `examples/` and `.env.sample`.
 
 ## Quick Start
 
@@ -95,10 +102,10 @@ Use the NeoZip Token Service to stamp a ZIP (submit digest), upgrade once the ba
 
 ## Supported Networks
 
-| Network | Chain ID | Status |
-|---------|----------|--------|
-| Base Mainnet | 8453 | Production |
-| Base Sepolia | 84532 | Testnet |
+| Network | Chain ID | Status | NFT (library default) |
+|---------|----------|--------|------------------------|
+| Base Mainnet | 8453 | Production | v2.10 (`LEGACY_BASE_MAINNET_NFT_V210`); upgrade to v2.51 after mainnet deploy |
+| Base Sepolia | 84532 | Testnet (default) | v2.51 + TimestampReg v0.90 |
 
 ## API Reference
 

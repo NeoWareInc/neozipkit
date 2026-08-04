@@ -52,6 +52,7 @@ import {
   prepareMint, 
   checkNFTStatus, 
   getTokenServiceUrl,
+  resolveNetworkProfile,
   type PrepareMintResponse,
   type TimestampMetadata,
   TIMESTAMP_METADATA,
@@ -171,11 +172,13 @@ function parseArgs(args: string[]): {
   outputPath?: string;
   privateKey?: string;
   chainId?: number;
+  network?: string;
 } {
   let inputPath: string | undefined;
   let outputPath: string | undefined;
   let privateKey = process.env.USER_PRIVATE_KEY;
   let chainId: number | undefined;
+  let network: string | undefined = process.env.TOKEN_SERVICE_NETWORK || undefined;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -183,8 +186,11 @@ function parseArgs(args: string[]): {
     if (arg === '--private-key' && args[i + 1]) {
       privateKey = args[i + 1];
       i++;
-    } else if (arg === '--chain-id' && args[i + 1]) {
+    } else if ((arg === '--chain-id' || arg === '-c') && args[i + 1]) {
       chainId = parseInt(args[i + 1], 10);
+      i++;
+    } else if ((arg === '--network' || arg === '-n') && args[i + 1]) {
+      network = args[i + 1];
       i++;
     } else if (!arg.startsWith('--')) {
       if (!inputPath) {
@@ -199,7 +205,7 @@ function parseArgs(args: string[]): {
     throw new Error('Input file path is required');
   }
 
-  return { inputPath, outputPath, privateKey, chainId };
+  return { inputPath, outputPath, privateKey, chainId, network };
 }
 
 async function main() {
@@ -209,16 +215,14 @@ async function main() {
   const args = process.argv.slice(2);
   
   if (args.length === 0 || args.includes('--help')) {
-    console.log('Usage: tsx stamp-zip/mint-nft.ts <input.nzip> [output.nzip] --private-key 0x...');
+    console.log('Usage: tsx examples/mint-nft.ts <input.nzip> [output.nzip] --private-key 0x...');
     console.log();
     console.log('Options:');
     console.log('  --private-key   User wallet private key (or set USER_PRIVATE_KEY env var)');
-    console.log('  --chain-id      Chain ID to mint on (defaults to chain from timestamp)');
+    console.log('  --chain-id, -c  Chain ID to mint on (defaults to chain from timestamp)');
+    console.log('  --network, -n   Network profile: base-sepolia | base (selects Token Service host)');
     console.log();
-    console.log('Examples:');
-    console.log('  tsx stamp-zip/mint-nft.ts stamped.nzip --private-key 0x...');
-    console.log('  tsx stamp-zip/mint-nft.ts stamped.nzip minted.nzip --private-key 0x...');
-    console.log('  USER_PRIVATE_KEY=0x... tsx stamp-zip/mint-nft.ts stamped.nzip');
+    console.log('Env: TOKEN_SERVICE_NETWORK, TOKEN_SERVICE_URL, TOKEN_SERVICE_CHAIN_ID, USER_PRIVATE_KEY');
     process.exit(0);
   }
 
@@ -226,6 +230,7 @@ async function main() {
   let outputPath: string | undefined;
   let privateKey: string | undefined;
   let chainIdArg: number | undefined;
+  let networkArg: string | undefined;
 
   try {
     const parsed = parseArgs(args);
@@ -233,6 +238,7 @@ async function main() {
     outputPath = parsed.outputPath;
     privateKey = parsed.privateKey;
     chainIdArg = parsed.chainId;
+    networkArg = parsed.network;
   } catch (error) {
     console.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);
@@ -332,21 +338,38 @@ async function main() {
     const chainId = chainIdArg || timestampMetadata.chainId;
     if (!chainId) {
       console.error('❌ Error: Chain ID not specified and not found in metadata');
-      console.error('   Use --chain-id to specify the chain');
+      console.error('   Use --chain-id or --network to specify the chain');
       process.exit(1);
     }
 
+    let profile: ReturnType<typeof resolveNetworkProfile> | null = null;
+    try {
+      profile = resolveNetworkProfile({
+        network: networkArg,
+        chainId,
+      });
+    } catch {
+      // chain from timestamp may not be a Token Service profile
+      profile = null;
+    }
+
     console.log(`   Chain ID: ${chainId}`);
+    if (profile) {
+      console.log(`   Network: ${profile.label} (${profile.key})`);
+    }
     console.log();
 
     // Step 2: Check if already minted
     console.log('Step 2: Checking if already minted...');
-    const tokenServiceUrl = getTokenServiceUrl();
+    const helperOpts = profile
+      ? { network: profile.key, chainId: profile.chainId }
+      : { chainId };
+    const tokenServiceUrl = getTokenServiceUrl(helperOpts);
     console.log(`   Server: ${tokenServiceUrl}`);
 
     let nftStatus;
     try {
-      nftStatus = await checkNFTStatus(timestampMetadata.digest, chainId);
+      nftStatus = await checkNFTStatus(timestampMetadata.digest, chainId, helperOpts);
     } catch (error) {
       console.error(`❌ Error: ${error instanceof Error ? error.message : String(error)}`);
       console.error(`\n💡 Make sure the NeoZip Token Service is running at ${tokenServiceUrl}`);
@@ -381,7 +404,12 @@ async function main() {
     
     let mintData: PrepareMintResponse['mintData'];
     try {
-      const prepareResult = await prepareMint(timestampMetadata.digest, chainId, batchId);
+      const prepareResult = await prepareMint(
+        timestampMetadata.digest,
+        chainId,
+        batchId,
+        helperOpts
+      );
       if (!prepareResult.success || !prepareResult.mintData) {
         console.error(`❌ Error: ${prepareResult.error || 'Failed to prepare mint data'}`);
         process.exit(1);
@@ -546,7 +574,7 @@ async function main() {
         batchTimestamp: mintData.batchTimestamp,
         registryAddress: mintData.registryAddress,
         nftContractAddress: mintData.nftContractAddress,
-        serverUrl: getTokenServiceUrl(),
+        serverUrl: getTokenServiceUrl(helperOpts),
       },
     };
 

@@ -19,7 +19,14 @@
 import { getTokenServiceUrl } from '../constants/servers';
 
 export interface TokenServiceClientOptions {
+  /** Explicit NeoZip Token Service URL (highest precedence) */
   serverUrl?: string;
+  /** Key into TOKEN_SERVICE_URLS (e.g. "default", "production") */
+  serverKey?: string;
+  /** Network profile name (e.g. "base-sepolia", "base") */
+  network?: string;
+  /** Chain ID — selects host from network profile when serverUrl/serverKey omitted */
+  chainId?: number;
   timeout?: number;
   retries?: number;
   retryDelay?: number;
@@ -373,7 +380,12 @@ export class TokenServiceClient {
   private retryDelay: number;
 
   constructor(options: TokenServiceClientOptions = {}) {
-    this.serverUrl = getTokenServiceUrl({ serverUrl: options.serverUrl });
+    this.serverUrl = getTokenServiceUrl({
+      serverUrl: options.serverUrl,
+      serverKey: options.serverKey,
+      network: options.network,
+      chainId: options.chainId,
+    });
     this.timeout = options.timeout || 30000; // 30 seconds
     this.retries = options.retries || 3;
     this.retryDelay = options.retryDelay || 1000; // 1 second

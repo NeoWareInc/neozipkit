@@ -1,120 +1,98 @@
 # Deploy NZIP-NFT v2.51
 
-Deploy the v2.51 contract (digest-only identity, no composite key) to Base Sepolia using the existing deploy script.
+Deploy the v2.51 contract (digest-only identity, no composite key) and TimestampReg v0.90.
 
 ## Prerequisites
 
 - Node.js (LTS 20 or 22)
-- Deployer wallet with Base Sepolia ETH (e.g. [Base Sepolia Faucet](https://www.coinbase.com/faucets/base-ethereum-sepolia-faucet))
-- Existing NZIP Timestamp Registry on Base Sepolia: `0x3CFc4E3886839dC859f611887660783a3EE241b4`
+- Deployer wallet with gas on the target chain
+- `PRIVATE_KEY` for that wallet (full 32-byte hex; not a placeholder)
+- Optional: `ETHERSCAN_API_KEY` (Basescan), `BASE_RPC_URL` / `BASE_SEPOLIA_RPC_URL`
 
-## Steps
+Hardhat config ignores invalid/placeholder `PRIVATE_KEY` values so compile still works without a real key.
 
-### 1. Install and compile (in repo root or contracts)
+---
 
-From the **repository root** (so the lockfile is used):
+## Base Sepolia (testnet, already live)
 
-```bash
-cd contracts
-pnpm install   # or: npm install (if lockfile allows)
-pnpm compile   # compiles NZIP-NFT-v2.51.sol and others
-```
+Existing registry: `0x3CFc4E3886839dC859f611887660783a3EE241b4`  
+Existing NFT v2.51: `0xe4ee4f36CBAF2Bf2959740F6A0B326Acd175Ce77`
 
-If you use a different package manager or need to update the lockfile, run the equivalent of `npm install` / `pnpm install` in `contracts`, then:
+### Compile
 
-```bash
-npx hardhat compile
-```
-
-### 2. Set deployer key
-
-Export the private key of the wallet that will pay gas and own the contract:
+From `packages/neozip-blockchain/contracts` (with hardhat available via that package’s deps—do **not** create a local `.pnpm-store` under the monorepo root):
 
 ```bash
-export PRIVATE_KEY=0x...   # your deployer private key
+pnpm compile
 ```
 
-Or create a `.env` in `contracts` (do not commit):
-
-```
-PRIVATE_KEY=0x...
-```
-
-Load it before deploying: `source .env` or use `dotenv` if you have it.
-
-### 3. Deploy v2.51 to Base Sepolia
-
-Using the **same registry** as v2.50:
+### Deploy v2.51 (if re-deploying)
 
 ```bash
-cd contracts
-node scripts/deploy.js nft --version 2.51 --network base-sepolia --registry 0x3CFc4E3886839dC859f611887660783a3EE241b4
-```
-
-Interactive: the script will print a summary and ask “Proceed with deployment? (y/n)”.
-
-Non-interactive (e.g. CI):
-
-```bash
+export PRIVATE_KEY=0x...   # deployer key
 node scripts/deploy.js nft --version 2.51 --network base-sepolia --registry 0x3CFc4E3886839dC859f611887660783a3EE241b4 --non-interactive
 ```
 
-`PRIVATE_KEY` must be set in the environment.
+Artifacts: `deployments/base-sepolia/NZIP-NFT-v2.51.json`
 
-### 4. Note the contract address
-
-The script prints the deployed address and writes:
-
-- `contracts/deployments/base-sepolia/NZIP-NFT-v2.51.json`
-- `contracts/abi/NZIP-NFT-v2.51.json`
-
-Example output:
-
-```
-✓ NZIPNFT deployed at: 0x...
-  Transaction: 0x...
-```
-
-### 5. Point the app at v2.51
-
-In **src/core/contracts.ts**, update Base Sepolia (chainId 84532):
-
-1. Set `address` to the new v2.51 contract address.
-2. Set `version` to `'2.51'`.
-
-Example:
-
-```ts
-84532: {
-  address: '0xYourNewV251Address',  // v2.51
-  // ...
-  version: '2.51',
-  // ...
-}
-```
-
-Optionally set `DEFAULT_CONTRACT_VERSION` to `'2.51'` so the library defaults to v2.51.
-
-### 6. (Optional) Verify on Basescan
-
-Constructor has one argument (registry address). From `contracts`:
+### Verify
 
 ```bash
 npx hardhat verify --network baseSepolia <DEPLOYED_ADDRESS> 0x3CFc4E3886839dC859f611887660783a3EE241b4
 ```
 
-Set `ETHERSCAN_API_KEY` (Basescan uses the same API key) if required.
+---
+
+## Base Mainnet (production)
+
+Deploy registry **first**, then NFT with that registry address. Then update `src/core/contracts.ts` `CONTRACT_CONFIGS[8453]`.
+
+### 1. Deploy TimestampReg v0.90
+
+```bash
+cd packages/neozip-blockchain/contracts
+export PRIVATE_KEY=0x...          # funded Base Mainnet wallet
+# optional: export BASE_RPC_URL=...
+# optional: authorize Token Service submitter:
+#   --authorize <TOKEN_SERVICE_SUBMITTER_ADDRESS>
+node scripts/deploy.js registry --version 0.90 --network base --non-interactive
+```
+
+Saves: `deployments/base/NZIP-TimestampReg-v0.90.json`
+
+### 2. Deploy NFT v2.51
+
+```bash
+node scripts/deploy.js nft --version 2.51 --network base --registry <MAINNET_REGISTRY_ADDRESS> --non-interactive
+```
+
+Saves: `deployments/base/NZIP-NFT-v2.51.json`
+
+### 3. Verify on Basescan
+
+```bash
+npx hardhat verify --network base <REGISTRY_ADDRESS>
+npx hardhat verify --network base <NFT_ADDRESS> <REGISTRY_ADDRESS>
+```
+
+### 4. Wire the client (`neozip-blockchain`)
+
+In `packages/neozip-blockchain/src/core/contracts.ts`:
+
+1. Keep **legacy** mainnet v2.10 as `LEGACY_BASE_MAINNET_NFT_V210` (historic tokens).
+2. Set `CONTRACT_CONFIGS[8453]`:
+   - `address` → new v2.51 NFT
+   - `version: '2.51'`
+   - `registryAddress` / `registryVersion: '0.90'`
+3. Update `tests/unit/contracts.test.ts` Mainnet expectations.
+
+Point production Token Service (`token-service.neozip.io`) at the new NFT and authorize batch submitters on the registry.
+
+---
 
 ## Other networks
 
-Use the same script and pass the desired `--network` and, for NFT, the `--registry` address for that chain:
-
-- `base-sepolia` (default)
-- `base`
-- `arbitrum-sepolia`
-- `arbitrum`
-
-Example for Base Mainnet (use the mainnet registry address):
+Same script: `--network` is `base-sepolia` | `base` | `arbitrum-sepolia` | `arbitrum`.
 
 ```bash
 node scripts/deploy.js nft --version 2.51 --network base --registry <MAINNET_REGISTRY_ADDRESS>

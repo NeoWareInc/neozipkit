@@ -42,8 +42,11 @@ export const CONTRACT_CONFIGS: Record<number, ContractConfig> = {
   },
   
   // Base Mainnet (Production)
+  // Primary config stays v2.10 until v2.51 + TimestampReg v0.90 are deployed on Base
+  // Mainnet and wired here (see contracts/DEPLOY-V2.51.md → Base Mainnet).
+  // Legacy address for historic tokens: LEGACY_BASE_MAINNET_NFT_V210 (same as current).
   8453: {
-    address: '0xd871Fba59F85108aF29299786DD8243B38dD9686',  // Production contract v2.10
+    address: '0xd871Fba59F85108aF29299786DD8243B38dD9686', // Production NFT (v2.10); legacy preserved at LEGACY_BASE_MAINNET_NFT_V210
     network: 'Base Mainnet',
     chainId: 8453,
     explorerUrl: 'https://basescan.org',
@@ -375,6 +378,13 @@ export const DEFAULT_NETWORK = 84532
 export const CURRENT_DEPLOYMENT = CONTRACT_CONFIGS[DEFAULT_NETWORK]
 /** Default contract version used when version is unspecified (e.g. legacy metadata). Prefer v2.50. */
 export const DEFAULT_CONTRACT_VERSION = '2.50'
+
+/**
+ * Legacy Base Mainnet NFT (v2.10). Tokens minted before the v2.51 deploy still
+ * live at this address. Primary config for 8453 points at v2.51 + registry when deployed.
+ */
+export const LEGACY_BASE_MAINNET_NFT_V210 =
+  '0xd871Fba59F85108aF29299786DD8243B38dD9686' as const
 
 // Helper functions
 export const getContractConfig = (chainId: number): ContractConfig => {
