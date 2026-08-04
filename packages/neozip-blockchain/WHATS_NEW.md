@@ -9,7 +9,7 @@ Release notes for people who install and use **`neozip-blockchain`** from npm (a
 - Dual Token Service hostnames: testnet → `https://testnet.token-service.neozip.io` (Base Sepolia, **default**); production → `https://token-service.neozip.io` (Base Mainnet).
 - Library APIs: `resolveNetworkProfile`, `getTokenServiceUrlForNetwork`, `NETWORK_PROFILES`, `isTokenPurchaseAvailable` (stub; always `false` — purchase coming soon).
 - Prefer env `TOKEN_SERVICE_NETWORK=base-sepolia|base`; `TOKEN_SERVICE_CHAIN_ID` still works; `NEOZIP_CHAIN_ID` is a deprecated alias.
-- Base Mainnet NFT in `CONTRACT_CONFIGS[8453]` remains **v2.10** until the v2.51 + registry mainnet deploy is wired (see `contracts/DEPLOY-V2.51.md`). Legacy address: `LEGACY_BASE_MAINNET_NFT_V210`.
+- Base Mainnet NFT in `CONTRACT_CONFIGS[8453]` is **v2.51** at `0x13C7c45FA99856153AeD9e97d6Db8bDEc5320E42` with TimestampReg v0.90 at `0x07A6a71444A974a7DcfC185966e56fF4809B39f4`. Historic v2.10: `LEGACY_BASE_MAINNET_NFT_V210`.
 
 ### APPNOTE-aligned META-INF discovery + Merkle §6.3
 

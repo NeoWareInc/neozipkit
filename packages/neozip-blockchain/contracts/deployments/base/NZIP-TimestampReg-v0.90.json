@@ -1,0 +1,16 @@
+{
+  "network": "Base Mainnet",
+  "networkKey": "base",
+  "chainId": 8453,
+  "timestamp": "2026-08-04T23:04:55.081Z",
+  "deployer": "0x1240f2D301Ae1e2858206C20080FBcE5Db2065C1",
+  "contract": {
+    "name": "NZIPTimestampReg",
+    "file": "NZIP-TimestampReg-v0.90.sol",
+    "version": "0.90.0",
+    "address": "0x07A6a71444A974a7DcfC185966e56fF4809B39f4",
+    "transactionHash": "0x3babbd7c3e8206a2af1f3dec02a0a5eeac8464b6c5b416a25acbb7bc5f8edfc6",
+    "constructorArgs": []
+  },
+  "explorerUrl": "https://basescan.org/address/0x07A6a71444A974a7DcfC185966e56fF4809B39f4"
+}

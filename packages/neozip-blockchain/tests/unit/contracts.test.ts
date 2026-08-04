@@ -33,11 +33,14 @@ describe('Contract Configuration', () => {
     it('should have Base Mainnet configuration', () => {
       expect(CONTRACT_CONFIGS[8453]).toBeDefined();
       expect(CONTRACT_CONFIGS[8453].network).toBe('Base Mainnet');
-      expect(CONTRACT_CONFIGS[8453].version).toBe('2.10');
-      // Primary still v2.10 until mainnet v2.51 deploy; legacy address documented
+      expect(CONTRACT_CONFIGS[8453].version).toBe('2.51');
       expect(CONTRACT_CONFIGS[8453].address).toBe(
-        '0xd871Fba59F85108aF29299786DD8243B38dD9686'
+        '0x13C7c45FA99856153AeD9e97d6Db8bDEc5320E42'
       );
+      expect(CONTRACT_CONFIGS[8453].registryAddress).toBe(
+        '0x07A6a71444A974a7DcfC185966e56fF4809B39f4'
+      );
+      expect(CONTRACT_CONFIGS[8453].registryVersion).toBe('0.90');
       expect(LEGACY_BASE_MAINNET_NFT_V210).toBe(
         '0xd871Fba59F85108aF29299786DD8243B38dD9686'
       );
@@ -165,10 +168,11 @@ describe('Contract Configuration', () => {
       expect(adapter.version).toBe('2.50');
     });
 
-    it('should return adapter for Base Mainnet (v2.10)', () => {
+    it('should return adapter for Base Mainnet (v2.51 config uses V2_50Adapter)', () => {
       const adapter = getContractAdapter(8453);
       expect(adapter).toBeDefined();
-      expect(adapter.version).toBe('2.10');
+      // v2.51 uses V2_50Adapter (same ABI family); adapter.version is '2.50'
+      expect(adapter.version).toBe('2.50');
     });
 
     it('should return default adapter for unknown chain ID (fallback to CURRENT_DEPLOYMENT)', () => {

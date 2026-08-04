@@ -104,7 +104,7 @@ Use the NeoZip Token Service to stamp a ZIP (submit digest), upgrade once the ba
 
 | Network | Chain ID | Status | NFT (library default) |
 |---------|----------|--------|------------------------|
-| Base Mainnet | 8453 | Production | v2.10 (`LEGACY_BASE_MAINNET_NFT_V210`); upgrade to v2.51 after mainnet deploy |
+| Base Mainnet | 8453 | Production | v2.51 + TimestampReg v0.90 (legacy v2.10: `LEGACY_BASE_MAINNET_NFT_V210`) |
 | Base Sepolia | 84532 | Testnet (default) | v2.51 + TimestampReg v0.90 |
 
 ## API Reference

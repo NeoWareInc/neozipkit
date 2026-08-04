@@ -20,10 +20,13 @@ Existing NFT v2.51: `0xe4ee4f36CBAF2Bf2959740F6A0B326Acd175Ce77`
 
 ### Compile
 
-From `packages/neozip-blockchain/contracts` (with hardhat available via that package’s deps—do **not** create a local `.pnpm-store` under the monorepo root):
+From the monorepo root (contracts is a workspace package):
 
 ```bash
-pnpm compile
+pnpm install   # installs hardhat for neozip-contracts
+pnpm --filter neozip-contracts compile
+# or:
+cd packages/neozip-blockchain/contracts && pnpm compile
 ```
 
 ### Deploy v2.51 (if re-deploying)

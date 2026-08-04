@@ -41,12 +41,10 @@ export const CONTRACT_CONFIGS: Record<number, ContractConfig> = {
     nameAliases: ['base-sepolia', 'base sepolia', 'basesepolia', 'base-sepolia-testnet']
   },
   
-  // Base Mainnet (Production)
-  // Primary config stays v2.10 until v2.51 + TimestampReg v0.90 are deployed on Base
-  // Mainnet and wired here (see contracts/DEPLOY-V2.51.md → Base Mainnet).
-  // Legacy address for historic tokens: LEGACY_BASE_MAINNET_NFT_V210 (same as current).
+  // Base Mainnet (Production) — NZIP-NFT v2.51 + TimestampReg v0.90
+  // Legacy v2.10 tokens: LEGACY_BASE_MAINNET_NFT_V210
   8453: {
-    address: '0xd871Fba59F85108aF29299786DD8243B38dD9686', // Production NFT (v2.10); legacy preserved at LEGACY_BASE_MAINNET_NFT_V210
+    address: '0x13C7c45FA99856153AeD9e97d6Db8bDEc5320E42', // NZIP-NFT v2.51
     network: 'Base Mainnet',
     chainId: 8453,
     explorerUrl: 'https://basescan.org',
@@ -55,7 +53,9 @@ export const CONTRACT_CONFIGS: Record<number, ContractConfig> = {
       'https://base.drpc.org',
       'https://base.gateway.tenderly.co'
     ],
-    version: '2.10',
+    version: '2.51',
+    registryAddress: '0x07A6a71444A974a7DcfC185966e56fF4809B39f4', // NZIPTimestampReg v0.90
+    registryVersion: '0.90',
     nameAliases: ['base-mainnet', 'base mainnet', 'basemainnet', 'base']
   },
   

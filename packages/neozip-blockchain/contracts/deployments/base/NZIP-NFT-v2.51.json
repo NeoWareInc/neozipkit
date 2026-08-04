@@ -1,0 +1,18 @@
+{
+  "network": "Base Mainnet",
+  "networkKey": "base",
+  "chainId": 8453,
+  "timestamp": "2026-08-04T23:08:48.517Z",
+  "deployer": "0x1240f2D301Ae1e2858206C20080FBcE5Db2065C1",
+  "contract": {
+    "name": "NZIPNFT",
+    "file": "NZIP-NFT-v2.51.sol",
+    "version": "2.51.0",
+    "address": "0x13C7c45FA99856153AeD9e97d6Db8bDEc5320E42",
+    "transactionHash": "0x55a125a91cad94217cd0987b3e81f8594c9420f049845ed5c032a221c0b86e77",
+    "constructorArgs": [
+      "0x07A6a71444A974a7DcfC185966e56fF4809B39f4"
+    ]
+  },
+  "explorerUrl": "https://basescan.org/address/0x13C7c45FA99856153AeD9e97d6Db8bDEc5320E42"
+}

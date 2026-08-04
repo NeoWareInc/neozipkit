@@ -1,2 +1,4 @@
 packages:
   - 'packages/*'
+  # Nested Hardhat package (NFT/registry Solidity) — not matched by packages/*
+  - 'packages/neozip-blockchain/contracts'
