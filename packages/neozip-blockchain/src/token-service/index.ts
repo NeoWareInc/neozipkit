@@ -53,6 +53,7 @@ export {
 // TokenServiceClient and core types
 export {
   TokenServiceClient,
+  MembershipRequiredError,
   type TokenServiceClientOptions,
   type StampRequest,
   type StampResponse,
@@ -79,6 +80,9 @@ export {
   type CalendarChainInfo,
   type HealthCheckResponse,
   type ComponentHealth,
+  type MembershipStatusResponse,
+  type MembershipCheckoutResponse,
+  type MembershipPortalResponse,
 } from './TokenServiceClient';
 
 // High-level convenience functions for NeoZip Token Service operations

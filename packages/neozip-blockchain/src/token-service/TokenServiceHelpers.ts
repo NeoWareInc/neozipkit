@@ -154,6 +154,10 @@ export interface TokenServiceHelperOptions {
    * `browser` (default when omitted): web confirm link + code. `app`: deep link + code only.
    */
   verificationDelivery?: VerificationDelivery;
+  /**
+   * Bearer access token for membership-gated routes (production prepare-mint, membership APIs).
+   */
+  accessToken?: string;
 }
 
 // ============================================================================
@@ -169,6 +173,7 @@ function getClient(options?: TokenServiceHelperOptions): TokenServiceClient {
     serverKey: options?.serverKey,
     network: options?.network,
     chainId: options?.chainId,
+    accessToken: options?.accessToken,
   });
 }
 
@@ -504,7 +509,9 @@ export async function prepareMint(
   options?: TokenServiceHelperOptions
 ): Promise<PrepareMintResponse> {
   const client = getClient(options);
-  return client.prepareMint(digest, chainId, batchId);
+  return client.prepareMint(digest, chainId, batchId, {
+    accessToken: options?.accessToken,
+  });
 }
 
 /**

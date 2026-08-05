@@ -30,6 +30,61 @@ export interface TokenServiceClientOptions {
   timeout?: number;
   retries?: number;
   retryDelay?: number;
+  /**
+   * Bearer access token for gated production routes (prepare-mint on member-required
+   * chains, membership status/checkout). Optional for public endpoints.
+   */
+  accessToken?: string;
+}
+
+/** Thrown when the service requires an active $10/year production membership. */
+export class MembershipRequiredError extends Error {
+  readonly status = 402;
+  readonly errorCode = 'MEMBERSHIP_REQUIRED';
+  readonly amountUsd: number;
+  readonly expiresAt: string | null;
+  readonly hint: string | null;
+
+  constructor(
+    message: string,
+    options?: { amountUsd?: number; expiresAt?: string | null; hint?: string | null },
+  ) {
+    super(message);
+    this.name = 'MembershipRequiredError';
+    this.amountUsd = options?.amountUsd ?? 10;
+    this.expiresAt = options?.expiresAt ?? null;
+    this.hint = options?.hint ?? null;
+  }
+}
+
+export interface MembershipStatusResponse {
+  success: boolean;
+  membership: {
+    required: boolean;
+    active: boolean;
+    status: string;
+    expiresAt: string | null;
+    amountUsd: number;
+    planCode: string;
+    checkoutAvailable: boolean;
+    stripeCustomerId: string | null;
+  };
+  membershipRequired?: boolean;
+  amountUsd?: number;
+}
+
+export interface MembershipCheckoutResponse {
+  success: boolean;
+  url?: string;
+  sessionId?: string;
+  amountUsd?: number;
+  error?: string;
+}
+
+export interface MembershipPortalResponse {
+  success: boolean;
+  url?: string;
+  error?: string;
 }
 
 // ============================================================================
@@ -378,6 +433,7 @@ export class TokenServiceClient {
   private timeout: number;
   private retries: number;
   private retryDelay: number;
+  private accessToken?: string;
 
   constructor(options: TokenServiceClientOptions = {}) {
     this.serverUrl = getTokenServiceUrl({
@@ -389,6 +445,7 @@ export class TokenServiceClient {
     this.timeout = options.timeout || 30000; // 30 seconds
     this.retries = options.retries || 3;
     this.retryDelay = options.retryDelay || 1000; // 1 second
+    this.accessToken = options.accessToken?.trim() || undefined;
   }
 
   /**
@@ -398,16 +455,23 @@ export class TokenServiceClient {
     return this.serverUrl;
   }
 
+  /** Set or clear Bearer access token used for membership-gated routes. */
+  setAccessToken(token: string | undefined): void {
+    this.accessToken = token?.trim() || undefined;
+  }
+
   /**
    * Make HTTP request with retry logic
    */
   private async request<T>(
     method: string,
     path: string,
-    body?: any
+    body?: any,
+    requestOptions?: { accessToken?: string; skipRetryStatuses?: number[] },
   ): Promise<T> {
     const url = `${this.serverUrl}${path}`;
     let lastError: Error | null = null;
+    const skipRetry = new Set(requestOptions?.skipRetryStatuses ?? [400, 401, 402, 403, 404]);
 
     for (let attempt = 0; attempt <= this.retries; attempt++) {
       try {
@@ -417,6 +481,10 @@ export class TokenServiceClient {
         const headers: Record<string, string> = {
           'Content-Type': 'application/json',
         };
+        const token = requestOptions?.accessToken?.trim() || this.accessToken;
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
 
         const options: RequestInit = {
           method,
@@ -432,25 +500,62 @@ export class TokenServiceClient {
         clearTimeout(timeoutId);
 
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(
-            errorData.error || `HTTP ${response.status}: ${response.statusText}`
-          );
+          const errorData = (await response.json().catch(() => ({}))) as Record<
+            string,
+            unknown
+          >;
+          const message =
+            (typeof errorData.error === 'string' && errorData.error) ||
+            `HTTP ${response.status}: ${response.statusText}`;
+          if (
+            response.status === 402 ||
+            errorData.errorCode === 'MEMBERSHIP_REQUIRED'
+          ) {
+            throw new MembershipRequiredError(message, {
+              amountUsd:
+                typeof errorData.amountUsd === 'number' ? errorData.amountUsd : 10,
+              expiresAt:
+                typeof errorData.expiresAt === 'string' ? errorData.expiresAt : null,
+              hint: typeof errorData.hint === 'string' ? errorData.hint : null,
+            });
+          }
+          const err = new Error(message) as Error & {
+            status?: number;
+            errorCode?: string;
+          };
+          err.status = response.status;
+          if (typeof errorData.errorCode === 'string') {
+            err.errorCode = errorData.errorCode;
+          }
+          // Do not retry client errors
+          if (skipRetry.has(response.status)) {
+            throw err;
+          }
+          throw err;
         }
 
         return await response.json();
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
-        
+
+        if (error instanceof MembershipRequiredError) {
+          throw error;
+        }
+
         // Don't retry on abort (timeout) or if it's the last attempt
         if (error instanceof Error && error.name === 'AbortError') {
           throw new Error(`Request timeout after ${this.timeout}ms`);
         }
 
+        const status = (error as { status?: number }).status;
+        if (status != null && skipRetry.has(status)) {
+          throw lastError;
+        }
+
         if (attempt < this.retries) {
           // Exponential backoff
           const delay = this.retryDelay * Math.pow(2, attempt);
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
     }
@@ -711,11 +816,47 @@ export class TokenServiceClient {
    * @param batchId - Optional batch ID from TIMESTAMP.NZIP metadata to ensure correct batch
    * @returns Promise resolving to mint data response containing all parameters for contract call
    */
-  async prepareMint(digest: string, chainId?: number, batchId?: string): Promise<PrepareMintResponse> {
+  async prepareMint(
+    digest: string,
+    chainId?: number,
+    batchId?: string,
+    options?: { accessToken?: string },
+  ): Promise<PrepareMintResponse> {
     const qs = new URLSearchParams({ digest });
     if (chainId) qs.set('chainId', String(chainId));
     if (batchId) qs.set('batchId', batchId);
-    return this.request<PrepareMintResponse>('GET', `/nft/prepare-mint?${qs.toString()}`);
+    return this.request<PrepareMintResponse>(
+      'GET',
+      `/nft/prepare-mint?${qs.toString()}`,
+      undefined,
+      { accessToken: options?.accessToken },
+    );
+  }
+
+  /** GET /membership/status — Bearer. */
+  async getMembershipStatus(accessToken?: string): Promise<MembershipStatusResponse> {
+    return this.request<MembershipStatusResponse>('GET', '/membership/status', undefined, {
+      accessToken,
+    });
+  }
+
+  /** POST /membership/checkout — Bearer; returns Stripe Checkout URL. */
+  async createMembershipCheckout(
+    accessToken?: string,
+  ): Promise<MembershipCheckoutResponse> {
+    return this.request<MembershipCheckoutResponse>(
+      'POST',
+      '/membership/checkout',
+      {},
+      { accessToken },
+    );
+  }
+
+  /** POST /membership/portal — Bearer; Stripe Customer Portal. */
+  async createMembershipPortal(accessToken?: string): Promise<MembershipPortalResponse> {
+    return this.request<MembershipPortalResponse>('POST', '/membership/portal', {}, {
+      accessToken,
+    });
   }
 
   // ==========================================================================
