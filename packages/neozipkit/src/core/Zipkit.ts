@@ -14,6 +14,8 @@ import {
   computeArchiveMerkleRoot,
   computeMerkleRootV0FromDigests,
   computeMerkleRootV1FromContents,
+  computeMerkleRootV1FromLeaves,
+  leafHashV1,
   type MerkleAlgorithm,
 } from './merkle/MerkleRoot';
 import { 
@@ -743,17 +745,33 @@ export default class Zipkit {
       return computeMerkleRootV0FromDigests(digests);
     }
 
-    // v1: bare digests are not leaves — need getMerkleRootAsync()
+    // v1: prefer leaves captured in the same create/extract hash stream (no re-hash)
+    if (
+      contentEntries.length > 0 &&
+      contentEntries.every((e) => !!e.merkleLeafV1)
+    ) {
+      return computeMerkleRootV1FromLeaves(
+        contentEntries.map((e) => ({
+          path: e.filename || '',
+          merkleLeafV1: e.merkleLeafV1 as string,
+        }))
+      );
+    }
+
+    // v1: bare digests are not leaves — need getMerkleRootAsync() or stream leaves
     return null;
   }
 
   /**
    * Calculate Merkle root (preferred for v1 / new archives).
    *
-   * **v1 (default):** extracts each content entry and builds APPNOTE §6.3 root.
+   * **v1 (default):** uses precomputed stream leaves when available; otherwise extracts
+   * each content entry once and folds APPNOTE §6.3 root (no second content hash pass
+   * when extract captures merkleLeafV1).
    * **v0:** uses Extra Field digests only (no extract), APPNOTE §6.2.
    *
-   * META-INF/** is excluded. Buffer-based ZIP required.
+   * META-INF/** is excluded. File-streaming mode: use ZipkitNode override (testEntry
+   * pipeline) rather than buffering the whole archive.
    *
    * @param options.algorithm - `v1` (default) or legacy `v0`
    * @returns Promise resolving to lowercase hex root, or null
@@ -764,12 +782,7 @@ export default class Zipkit {
     let zipEntries: ZipEntry[] = [];
 
     try {
-      if (this.inBuffer) {
-        zipEntries = this.getDirectory();
-      } else {
-        Logger.error('getMerkleRootAsync() called on file-based ZIP. Load into a buffer first or use a node helper that can extract entries.');
-        return null;
-      }
+      zipEntries = this.getDirectory();
     } catch (error) {
       Logger.error(`Failed to get directory for merkle root calculation: ${error instanceof Error ? error.message : String(error)}`);
       return null;
@@ -788,17 +801,40 @@ export default class Zipkit {
       return computeMerkleRootV0FromDigests(digests);
     }
 
-    const payloads: Array<{ path: string; content: Buffer }> = [];
+    // Reuse leaves already produced during write/extract (one stream hash pass)
+    if (
+      contentEntries.length > 0 &&
+      contentEntries.every((e) => !!e.merkleLeafV1)
+    ) {
+      return computeMerkleRootV1FromLeaves(
+        contentEntries.map((e) => ({
+          path: e.filename || '',
+          merkleLeafV1: e.merkleLeafV1 as string,
+        }))
+      );
+    }
+
+    // Buffer path: one decompress + dual hash inside extract (ZipDecompress)
+    if (!this.inBuffer) {
+      Logger.error(
+        'getMerkleRootAsync() called on file-based ZIP without precomputed merkle leaves. ' +
+          'Use ZipkitNode (streaming testEntry) or ensure create captured merkleLeafV1.'
+      );
+      return null;
+    }
+
     for (const entry of contentEntries) {
       try {
-        const data = await this.extract(entry, true);
-        if (data === null) {
-          if (entry.uncompressedSize === 0) {
-            payloads.push({ path: entry.filename || '', content: Buffer.alloc(0) });
-          }
+        const data = await this.extract(entry, false);
+        if (entry.merkleLeafV1) {
           continue;
         }
-        payloads.push({ path: entry.filename || '', content: data });
+        // Legacy decompress without dual leaf: hash payload once, cache leaf
+        if (data === null || data.length === 0) {
+          entry.merkleLeafV1 = leafHashV1(Buffer.alloc(0)).toString('hex');
+        } else {
+          entry.merkleLeafV1 = leafHashV1(data).toString('hex');
+        }
       } catch (error) {
         Logger.error(
           `getMerkleRootAsync(): failed to extract ${entry.filename}: ${error instanceof Error ? error.message : String(error)}`
@@ -807,19 +843,25 @@ export default class Zipkit {
       }
     }
 
-    if (payloads.length === 0) {
+    if (!contentEntries.every((e) => !!e.merkleLeafV1)) {
       return null;
     }
 
-    return computeMerkleRootV1FromContents(payloads);
+    return computeMerkleRootV1FromLeaves(
+      contentEntries.map((e) => ({
+        path: e.filename || '',
+        merkleLeafV1: e.merkleLeafV1 as string,
+      }))
+    );
   }
 
   /**
    * Compute Merkle root from known digests and/or payloads (APPNOTE §6).
-   * Prefer this during create when uncompressed bytes are still in hand.
+   * Prefer this during create when uncompressed bytes are still in hand, or when
+   * stream leaves (`merkleLeafV1`) were already produced.
    */
   static merkleRootFromEntries(
-    entries: Array<{ path: string; content?: Buffer; contentSha256?: string }>,
+    entries: Array<{ path: string; content?: Buffer; contentSha256?: string; merkleLeafV1?: string }>,
     algorithm: MerkleAlgorithm = 'v1'
   ): string | null {
     return computeArchiveMerkleRoot(entries, algorithm);

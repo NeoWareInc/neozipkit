@@ -23,6 +23,7 @@ import Errors from './constants/Errors';
 import { CMP_METHOD } from './constants/Headers';
 import { ZipCrypto } from './encryption/ZipCrypto';
 import { AesCrypto } from './encryption/AesCrypto';
+import { HashCalculator } from './components/HashCalculator';
 
 export interface DecompressionResult {
   success: boolean;
@@ -189,18 +190,23 @@ class ZipDecompress {
       throw new Error(`Unsupported compression method: ${method}`);
     }
 
-    // Verify hash
+    // One pass: CRC + bare SHA-256 (0x014E) + v1 Merkle leaf — no second payload read
+    const hashCalc = new HashCalculator({ useSHA256: true });
+    hashCalc.update(outBuf);
+    const calculatedCRC = hashCalc.finalizeCRC32();
+    const calculatedHash = hashCalc.finalizeSHA256();
+    const leaf = hashCalc.finalizeMerkleLeafV1();
+    if (leaf) {
+      entry.merkleLeafV1 = leaf;
+    }
+
     if (!skipHashCheck) {
       if (entry.sha256) {
-        const isValid = this.zipkit.testSHA256(entry, outBuf);
-        if (!isValid) {
+        if (calculatedHash !== entry.sha256) {
           throw new Error(Errors.INVALID_SHA256);
         }
-      } else {
-        const isValid = this.zipkit.testCRC32(entry, outBuf);
-        if (!isValid) {
-          throw new Error(Errors.INVALID_CRC);
-        }
+      } else if (calculatedCRC !== entry.crc) {
+        throw new Error(Errors.INVALID_CRC);
       }
     }
 

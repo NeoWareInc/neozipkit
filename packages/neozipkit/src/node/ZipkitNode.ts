@@ -27,6 +27,12 @@ import {
 import * as fs from 'fs';
 import * as path from 'path';
 import { minimatch } from 'minimatch';
+import {
+  computeMerkleRootV0FromDigests,
+  computeMerkleRootV1FromLeaves,
+  type MerkleAlgorithm,
+} from '../core/merkle/MerkleRoot';
+import { isMetaInfPath } from '../core/constants/MetaPaths';
 
 // Re-export everything from core Zipkit
 export * from '../core';
@@ -109,6 +115,79 @@ export default class ZipkitNode extends Zipkit {
       zipkit._zipkitDeCmp = this._zipkitDeCmpNode;
     }
     return this._zipkitDeCmpNode;
+  }
+
+  /**
+   * Streaming Merkle root for file-based archives.
+   * V1 leaves come from the same decompress→hash pass as integrity (testEntry / extract),
+   * chunked — never re-reads uncompressed sources or materializes whole entries for the root alone.
+   */
+  async getMerkleRootAsync(options?: { algorithm?: MerkleAlgorithm }): Promise<string | null> {
+    const algorithm: MerkleAlgorithm = options?.algorithm ?? 'v1';
+    let zipEntries: ZipEntry[];
+    try {
+      zipEntries = this.getDirectory();
+    } catch {
+      return null;
+    }
+    if (!zipEntries?.length) {
+      return null;
+    }
+
+    const contentEntries = zipEntries.filter((e) => !isMetaInfPath(e.filename || ''));
+    if (contentEntries.length === 0) {
+      return null;
+    }
+
+    if (algorithm === 'v0') {
+      const digests = contentEntries
+        .filter((e) => e.sha256)
+        .map((e) => ({ path: e.filename || '', sha256: e.sha256 as string }));
+      return computeMerkleRootV0FromDigests(digests);
+    }
+
+    if (contentEntries.every((e) => !!e.merkleLeafV1)) {
+      return computeMerkleRootV1FromLeaves(
+        contentEntries.map((e) => ({
+          path: e.filename || '',
+          merkleLeafV1: e.merkleLeafV1 as string,
+        }))
+      );
+    }
+
+    // Buffer-loaded: base class extract path
+    if ((this as any).inBuffer) {
+      return super.getMerkleRootAsync(options);
+    }
+
+    // File-based: stream hash each content entry once via testEntry (no write, dual hash)
+    if (!this.fileHandle && !this.filePath) {
+      // Create-session only: may only have live ZipEntry[] with leaves from write
+      return super.getMerkleRootAsync(options);
+    }
+
+    try {
+      for (const entry of contentEntries) {
+        if (entry.merkleLeafV1) {
+          continue;
+        }
+        await this.getZipDecompressNode().testEntry(entry, { skipHashCheck: false });
+      }
+    } catch (err) {
+      console.error('[ZipkitNode.getMerkleRootAsync] stream hash failed:', err);
+      return null;
+    }
+
+    if (!contentEntries.every((e) => !!e.merkleLeafV1)) {
+      return null;
+    }
+
+    return computeMerkleRootV1FromLeaves(
+      contentEntries.map((e) => ({
+        path: e.filename || '',
+        merkleLeafV1: e.merkleLeafV1 as string,
+      }))
+    );
   }
 
   // ============================================================================
