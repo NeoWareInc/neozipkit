@@ -132,12 +132,10 @@ export class ZipCompress {
     // Calculate hashes if needed
     if (hashCalculator) {
       hashCalculator.update(data);
-      if (!entry.crc || entry.crc === 0) {
-        entry.crc = hashCalculator.finalizeCRC32();
-      }
-      if (options?.useSHA256 && !entry.sha256) {
-        entry.sha256 = hashCalculator.finalizeSHA256();
-      }
+      hashCalculator.applyToEntry(entry, {
+        setCrc: !entry.crc || entry.crc === 0,
+        setSha256: !!(options?.useSHA256 && !entry.sha256),
+      });
       this.log(`Final hashes: CRC32=0x${entry.crc.toString(16).padStart(8, '0')}, SHA256=${entry.sha256 || 'N/A'}`);
     }
     
@@ -426,9 +424,11 @@ export class ZipCompress {
     hashCalculator.update(fileData);
     
     // Set hashes
-    entry.crc = hashCalculator.finalizeCRC32();
-    if (cmpOptions?.useSHA256) {
-      entry.sha256 = hashCalculator.finalizeSHA256();
+    hashCalculator.applyToEntry(entry, {
+      setCrc: true,
+      setSha256: !!cmpOptions?.useSHA256,
+    });
+    if (entry.sha256) {
       this.log(`SHA-256 calculated: ${entry.sha256}`);
     }
     

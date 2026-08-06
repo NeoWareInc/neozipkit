@@ -451,6 +451,8 @@ export class ZipDecompressNode {
       if (!options?.skipHashCheck) {
         if (entry.sha256) {
           const calculatedHash = hashCalc.finalizeSHA256();
+          const leaf = hashCalc.finalizeMerkleLeafV1();
+          if (leaf) entry.merkleLeafV1 = leaf;
           this.log(`SHA-256 comparison: calculated=${calculatedHash}, stored=${entry.sha256}`);
           if (calculatedHash !== entry.sha256) {
             if (options?.outputPath && fs) {
@@ -540,6 +542,8 @@ export class ZipDecompressNode {
       if (!options?.skipHashCheck) {
         if (entry.sha256) {
           const calculatedHash = hashCalc.finalizeSHA256();
+          const leaf = hashCalc.finalizeMerkleLeafV1();
+          if (leaf) entry.merkleLeafV1 = leaf;
           this.log(`SHA-256 comparison: calculated=${calculatedHash}, stored=${entry.sha256}`);
           if (calculatedHash !== entry.sha256) {
             throw new Error(Errors.INVALID_SHA256);
@@ -607,6 +611,8 @@ export class ZipDecompressNode {
       if (!options?.skipHashCheck) {
         if (entry.sha256) {
           const calculatedHash = hashCalc.finalizeSHA256();
+          const leaf = hashCalc.finalizeMerkleLeafV1();
+          if (leaf) entry.merkleLeafV1 = leaf;
           this.log(`SHA-256 comparison: calculated=${calculatedHash}, stored=${entry.sha256}`);
           if (calculatedHash !== entry.sha256) {
             throw new Error(Errors.INVALID_SHA256);
@@ -625,7 +631,13 @@ export class ZipDecompressNode {
           return { verifiedHash: undefined };
         }
       } else {
-        // Hash check skipped - return undefined
+        // Hash check skipped — still finalize leaf/digest once from this stream when SHA was enabled
+        if (entry.sha256 && hashCalc) {
+          const calculatedHash = hashCalc.finalizeSHA256();
+          const leaf = hashCalc.finalizeMerkleLeafV1();
+          if (leaf) entry.merkleLeafV1 = leaf;
+          return { verifiedHash: calculatedHash || undefined };
+        }
         return { verifiedHash: undefined };
       }
     } catch (error) {

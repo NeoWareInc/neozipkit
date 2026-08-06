@@ -14,7 +14,7 @@ export interface MerkleContentEntry {
   path: string;
   /**
    * Uncompressed payload bytes (same bytes hashed into Extra Field 0x014E).
-   * Required for **v1** leaves. Optional for **v0** when `contentSha256` is set.
+   * Required for **v1** leaves when `merkleLeafV1` is absent. Optional for **v0** when `contentSha256` is set.
    */
   content?: Buffer | Uint8Array;
   /**
@@ -22,6 +22,12 @@ export interface MerkleContentEntry {
    * Used as v0 leaf; for v1 this alone is **not** a leaf (see APPNOTE §6.3).
    */
   contentSha256?: string | Buffer;
+  /**
+   * Precomputed APPNOTE §6.3 v1 leaf: SHA-256(0x00 ‖ uncompressed_bytes), hex or 32-byte Buffer.
+   * Produced in the same streaming pass as `contentSha256` (create/extract via HashCalculator).
+   * Preferred for v1 when present — no second content read.
+   */
+  merkleLeafV1?: string | Buffer;
 }
 
 const LEAF_DOMAIN = Buffer.from([0x00]);
@@ -155,7 +161,18 @@ function resolveLeaf(
     return null;
   }
 
-  // v1: domain-separated hash of uncompressed payload only
+  // v1: prefer precomputed domain-separated leaf from the same hashing pass as 0x014E
+  if (entry.merkleLeafV1) {
+    const d = asBuffer(
+      entry.merkleLeafV1,
+      typeof entry.merkleLeafV1 === 'string' ? 'hex' : undefined
+    );
+    if (d.length !== 32) {
+      return null;
+    }
+    return d;
+  }
+  // Domain-separated hash of uncompressed payload (re-hash only if leaf not available)
   if (entry.content) {
     return leafHashV1(entry.content);
   }
@@ -226,11 +243,25 @@ export function computeMerkleRootV1FromContents(
 }
 
 /**
- * Verify a declared root (APPNOTE §6.4): try v1 first (when content available),
+ * Build v1 root from path + precomputed domain-separated leaves (APPNOTE §6.3).
+ * Prefer this after create/extract when HashCalculator produced merkleLeafV1 in one stream pass.
+ */
+export function computeMerkleRootV1FromLeaves(
+  entries: Array<{ path: string; merkleLeafV1: string | Buffer }>
+): string | null {
+  return computeArchiveMerkleRoot(
+    entries.map((e) => ({ path: e.path, merkleLeafV1: e.merkleLeafV1 })),
+    'v1'
+  );
+}
+
+/**
+ * Verify a declared root (APPNOTE §6.4): try v1 first (when content or leaves available),
  * then v0 digests. Returns which algorithm matched, or null on failure.
  *
- * When only digests are available, only v0 can be tried for a correct APPNOTE match.
- * Pass contents for full v1 verification.
+ * When only bare 0x014E digests are available, only v0 can match APPNOTE correctly.
+ * Pass `merkleLeafV1` or content for full v1 verification without re-hashing from scratch
+ * when leaves were computed in the decompress stream.
  */
 export function matchMerkleRoot(
   entries: MerkleContentEntry[],
@@ -241,8 +272,12 @@ export function matchMerkleRoot(
     return null;
   }
 
-  const hasContent = entries.some((e) => e.content && !isMetaInfPath(e.path || ''));
-  if (hasContent) {
+  const hasV1Material = entries.some(
+    (e) =>
+      !isMetaInfPath(e.path || '') &&
+      (!!e.merkleLeafV1 || !!e.content)
+  );
+  if (hasV1Material) {
     const v1 = computeArchiveMerkleRoot(entries, 'v1');
     if (v1 && v1 === expected) {
       return { algorithm: 'v1', security: 'high' };
@@ -254,10 +289,8 @@ export function matchMerkleRoot(
     return { algorithm: 'v0', security: 'legacy' };
   }
 
-  // If v1 was not tried (no content), try building v0-only already done.
-  // When content available, v1 already tried; also try v1 root mismatch then v0.
-  if (hasContent) {
-    // already tried both
+  // If v1 was not tried (no leaves/content), v0 was the only attempt.
+  if (hasV1Material) {
     return null;
   }
 
@@ -274,5 +307,6 @@ export default {
   computeArchiveMerkleRoot,
   computeMerkleRootV0FromDigests,
   computeMerkleRootV1FromContents,
+  computeMerkleRootV1FromLeaves,
   matchMerkleRoot,
 };

@@ -82,7 +82,14 @@ export default class ZipEntry implements ZipFileEntry {
   universalTime: number | null = null; // Universal Time
   uid: number | null = null;        // User ID
   gid: number | null = null;        // Group ID
-  sha256: string | null = null;     // SHA-256 hash of the file
+  sha256: string | null = null;     // SHA-256 hash of the file (Extra Field 0x014E, bare content digest)
+
+  /**
+   * APPNOTE §6.3 v1 Merkle leaf: SHA-256(0x00 ‖ uncompressed payload).
+   * In-memory only (not written as a ZIP Extra today). Filled in the same streaming hash
+   * pass as `sha256` during create/extract — never reconstruct by re-reading payload when set.
+   */
+  merkleLeafV1: string | null = null;
   
   // Symbolic link data
   isSymlink: boolean = false;       // Entry is a symbolic link

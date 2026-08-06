@@ -119,12 +119,10 @@ export class ZipCompressNode {
     
     if (hashCalculator) {
       hashCalculator.update(data);
-      if (!entry.crc || entry.crc === 0) {
-        entry.crc = hashCalculator.finalizeCRC32();
-      }
-      if (options?.useSHA256 && !entry.sha256) {
-        entry.sha256 = hashCalculator.finalizeSHA256();
-      }
+      hashCalculator.applyToEntry(entry, {
+            setCrc: !entry.crc || entry.crc === 0,
+            setSha256: !!(options?.useSHA256 && !entry.sha256),
+          });
     }
     
     // Compress based on method
@@ -188,12 +186,10 @@ export class ZipCompressNode {
         // For buffer, calculate hashes if needed
         if (hashCalculator && entry) {
           hashCalculator.update(data);
-          if (!entry.crc || entry.crc === 0) {
-            entry.crc = hashCalculator.finalizeCRC32();
-          }
-          if (options?.useSHA256 && !entry.sha256) {
-            entry.sha256 = hashCalculator.finalizeSHA256();
-          }
+          hashCalculator.applyToEntry(entry, {
+            setCrc: !entry.crc || entry.crc === 0,
+            setSha256: !!(options?.useSHA256 && !entry.sha256),
+          });
         }
         return data;
       } else {
@@ -220,12 +216,10 @@ export class ZipCompressNode {
         
         // Finalize hashes
         if (hashCalculator && entry) {
-          if (!entry.crc || entry.crc === 0) {
-            entry.crc = hashCalculator.finalizeCRC32();
-          }
-          if (options?.useSHA256 && !entry.sha256) {
-            entry.sha256 = hashCalculator.finalizeSHA256();
-          }
+          hashCalculator.applyToEntry(entry, {
+            setCrc: !entry.crc || entry.crc === 0,
+            setSha256: !!(options?.useSHA256 && !entry.sha256),
+          });
         }
         
         return Buffer.alloc(0);
@@ -246,10 +240,10 @@ export class ZipCompressNode {
         if (hashCalculator && entry) {
           hashCalculator.update(data);
           // Always set CRC if hash calculator was used (it calculated the correct CRC)
-          entry.crc = hashCalculator.finalizeCRC32();
-          if (options?.useSHA256 && !entry.sha256) {
-            entry.sha256 = hashCalculator.finalizeSHA256();
-          }
+          hashCalculator.applyToEntry(entry, {
+          setCrc: true,
+          setSha256: !!(options?.useSHA256 && !entry.sha256),
+        });
         }
         
         const result = pako.deflateRaw(data, { level: level ?? 6 });
@@ -299,10 +293,10 @@ export class ZipCompressNode {
         // Finalize hashes after all chunks processed and compressed
         if (hashCalculator && entry) {
           // Always set CRC if hash calculator was used (it calculated the correct CRC)
-          entry.crc = hashCalculator.finalizeCRC32();
-          if (options?.useSHA256 && !entry.sha256) {
-            entry.sha256 = hashCalculator.finalizeSHA256();
-          }
+          hashCalculator.applyToEntry(entry, {
+          setCrc: true,
+          setSha256: !!(options?.useSHA256 && !entry.sha256),
+        });
         }
         
         // For chunked processing, return empty buffer (data already written via onOutputBuffer)
@@ -376,12 +370,10 @@ export class ZipCompressNode {
       if (isBuffer) {
         if (hashCalculator && entry) {
           hashCalculator.update(input);
-          if (!entry.crc || entry.crc === 0) {
-            entry.crc = hashCalculator.finalizeCRC32();
-          }
-          if (options?.useSHA256 && !entry.sha256) {
-            entry.sha256 = hashCalculator.finalizeSHA256();
-          }
+          hashCalculator.applyToEntry(entry, {
+            setCrc: !entry.crc || entry.crc === 0,
+            setSha256: !!(options?.useSHA256 && !entry.sha256),
+          });
         }
         return input;
       }
@@ -406,12 +398,10 @@ export class ZipCompressNode {
         position += chunk.length;
       }
       if (hashCalculator && entry) {
-        if (!entry.crc || entry.crc === 0) {
-          entry.crc = hashCalculator.finalizeCRC32();
-        }
-        if (options?.useSHA256 && !entry.sha256) {
-          entry.sha256 = hashCalculator.finalizeSHA256();
-        }
+        hashCalculator.applyToEntry(entry, {
+            setCrc: !entry.crc || entry.crc === 0,
+            setSha256: !!(options?.useSHA256 && !entry.sha256),
+          });
       }
       return onOutputBuffer ? Buffer.alloc(0) : Buffer.concat(chunks);
     }
@@ -431,10 +421,10 @@ export class ZipCompressNode {
 
       if (isBuffer && hashCalculator && entry) {
         hashCalculator.update(input);
-        entry.crc = hashCalculator.finalizeCRC32();
-        if (options?.useSHA256 && !entry.sha256) {
-          entry.sha256 = hashCalculator.finalizeSHA256();
-        }
+        hashCalculator.applyToEntry(entry, {
+          setCrc: true,
+          setSha256: !!(options?.useSHA256 && !entry.sha256),
+        });
       }
 
       const collected: Buffer[] = [];
@@ -458,10 +448,10 @@ export class ZipCompressNode {
       );
 
       if (!isBuffer && hashCalculator && entry) {
-        entry.crc = hashCalculator.finalizeCRC32();
-        if (options?.useSHA256 && !entry.sha256) {
-          entry.sha256 = hashCalculator.finalizeSHA256();
-        }
+        hashCalculator.applyToEntry(entry, {
+          setCrc: true,
+          setSha256: !!(options?.useSHA256 && !entry.sha256),
+        });
       }
       if (entry) {
         entry.compressedSize = compressedSize;

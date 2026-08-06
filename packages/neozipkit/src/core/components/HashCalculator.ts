@@ -141,6 +141,35 @@ export class HashCalculator {
   }
 
   /**
+   * Apply stream digests to a ZIP entry in one place.
+   *
+   * When SHA-256 was enabled, both Extra Field 0x014E (`sha256`) and the v1 Merkle leaf
+   * (`merkleLeafV1`) are finalized from the **same** chunk stream — no second payload pass.
+   */
+  applyToEntry(
+    entry: {
+      crc: number;
+      sha256: string | null;
+      merkleLeafV1?: string | null;
+    },
+    options: { setCrc?: boolean; setSha256?: boolean }
+  ): void {
+    if (options.setCrc) {
+      entry.crc = this.finalizeCRC32();
+    }
+    if (options.setSha256) {
+      const digest = this.finalizeSHA256();
+      const leaf = this.finalizeMerkleLeafV1();
+      if (digest) {
+        entry.sha256 = digest;
+      }
+      if (leaf) {
+        entry.merkleLeafV1 = leaf;
+      }
+    }
+  }
+
+  /**
    * Reset the incremental hash calculation state
    */
   reset(): void {
