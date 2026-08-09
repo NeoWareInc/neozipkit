@@ -5,7 +5,7 @@
 **Status:** Release — extends PKWARE APPNOTE 6.3.10  
 **Date:** 2026-08-03  
 **Base specification:** PKWARE [APPNOTE.TXT](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT) (`.ZIP` File Format Specification, Version 6.3.10)  
-**Scope:** Compression, encryption, integrity, and blockchain / Token Service extensions used by current NeoZip CLI releases. Optional **AI-aware** metadata (`META-INF/manifest.json`) is defined for future agent ingestion; it is **not** required for minting, timestamping, or integrity verification.
+**Scope:** Compression, encryption, integrity, and blockchain / Token Service extensions for the NeoZip wire profile. Optional **AI-aware** metadata (`META-INF/manifest.json`) is defined for future agent ingestion; it is **not** required for minting, timestamping, or integrity verification.
 
 ---
 
@@ -48,7 +48,7 @@ APPNOTE does **not** require `MANIFEST.MF`, does not require Java attribute synt
 ### 1.3 Recommendation (normative for this profile)
 
 1. **Use the directory `META-INF/`** for all NeoZip sidecars and optional AI-aware manifests. Do not invent a parallel `METADATA/` tree.
-2. **Optional AI-aware manifest:** `META-INF/manifest.json` is an **OPTIONAL** structured discovery payload for AI agents, LLMs, and automated tools. Existing NeoZip CLI blockchain features (minting, timestamping, and integrity verification) **DO NOT** require this file.
+2. **Optional AI-aware manifest:** `META-INF/manifest.json` is an **OPTIONAL** structured discovery payload for AI agents, LLMs, and automated tools. Minting, timestamping, and integrity verification **DO NOT** require this file.
 3. **When written**, `META-INF/manifest.json` **SHOULD** be the **first** ZIP entry (APPNOTE §4.1.11 / §4.7.2), **MAY** be STORED or Deflate/Zstd-compressed (STORED is **RECOMMENDED**), and **MUST** be UTF-8 JSON (§3).
 4. **Do not put JSON in `META-INF/MANIFEST.MF`.** Leave that name for optional Java-compatible stubs only.
 5. **Optional bridge file** `META-INF/MANIFEST.MF` (Java attribute syntax) **MAY** be written as a thin pointer for JAR-aware tools:
@@ -69,7 +69,7 @@ APPNOTE does **not** require `MANIFEST.MF`, does not require Java attribute synt
 
    Absence of all of the above means a plain ZIP (or JAR / other profile).
 
-> **Note for implementers:** Minting, timestamping, and Merkle verification in current NeoZip CLI releases **MUST NOT** depend on `manifest.json` being present. Core cryptographic operations rely on central-directory entries, Extra Field `0x014E`, and `META-INF/*.NZIP` sidecars.
+> **Note for implementers:** Minting, timestamping, and Merkle verification **MUST NOT** depend on `manifest.json` being present. Core cryptographic operations rely on central-directory entries, Extra Field `0x014E`, and `META-INF/*.NZIP` sidecars.
 
 ---
 
@@ -105,12 +105,12 @@ When present, these **MUST** live under `META-INF/`:
 
 | Entry | When written | Purpose |
 | :---- | :---- | :---- |
-| `META-INF/TOKEN.NZIP` | After successful mint (`neozip mint` / `-b`) | On-chain token binding (tokenId, contract, tx, merkleRoot, …) |
-| `META-INF/TIMESTAMP.NZIP` | After confirmed Token Service stamp (`-ts` / `upgrade`) | Timestamp proof metadata |
+| `META-INF/TOKEN.NZIP` | After successful on-chain mint | On-chain token binding (tokenId, contract, tx, merkleRoot, …) |
+| `META-INF/TIMESTAMP.NZIP` | After confirmed Token Service stamp | Timestamp proof metadata |
 | `META-INF/TS-SUBMIT.NZIP` | After stamp submit, before confirm | Pending timestamp submission |
 
 Alternate token entry recognized by NeoZip: `META-INF/NZIP.TOKEN` (legacy, also uppercase).  
-Writers **MUST** emit the canonical uppercase forms above. NeoZip-aware readers (including NeoZip CLI) **MUST** discover these reserved paths with **ASCII case-insensitive** comparison (see §2.4), so `META-INF/token.nzip` is accepted for discovery; writers must still not emit that spelling.
+Writers **MUST** emit the canonical uppercase forms above. NeoZip-aware readers **MUST** discover these reserved paths with **ASCII case-insensitive** comparison (see §2.4), so `META-INF/token.nzip` is accepted for discovery; writers must still not emit that spelling.
 
 These files are NeoZip application payloads (JSON or versioned binary envelopes as implemented by NeoZip). Generic unzip tools treat them as ordinary files under `META-INF/` and typically do not present them as “the” content of the archive.
 
@@ -152,7 +152,7 @@ ZIP stores entry names as opaque byte strings (case-preserving). This profile se
 
 `META-INF/manifest.json` is an **OPTIONAL** payload reserved for AI systems, automated agents, and future AI-aware tooling. It provides a pre-parsed, human- and machine-readable overview of the archive’s structure, semantic contents, and profile summaries so tools can understand the ZIP without parsing low-level binary headers.
 
-> **Note for implementers:** Existing NeoZip CLI tools performing minting, timestamping, or verification **MUST NOT** depend on `manifest.json` being present. All core cryptographic operations rely directly on standard central-directory entries, Extra Field `0x014E`, and `META-INF/*.NZIP` sidecars.
+> **Note for implementers:** Minting, timestamping, or verification **MUST NOT** depend on `manifest.json` being present. All core cryptographic operations rely directly on standard central-directory entries, Extra Field `0x014E`, and `META-INF/*.NZIP` sidecars.
 
 When the file is present, the body is a UTF-8 JSON object. Unknown keys **MUST** be preserved on round-trip by NeoZip-aware writers when possible; unknown keys **MUST NOT** cause readers to reject the archive.
 
@@ -237,24 +237,24 @@ Full on-chain and Token Service proofs remain in `META-INF/TOKEN.NZIP` / `TIMEST
 
 | Method | APPNOTE method ID | NeoZip default | Notes |
 | :---- | :---- | :---- | :---- |
-| Store | 0 | optional (`-0`) | Required for selective-read of small metadata when desired |
-| Deflate | 8 | via `--deflate` / `--legacy` | Info-ZIP compatible path |
-| Zstd | **93** | **default** | Official PKWARE APPNOTE 6.3.8+ assignment (method 20 deprecated). Readable by Zstd-aware ZIP tools (e.g. WinZip 25+). Stock Info-ZIP `unzip` generally cannot; use `--legacy` / Deflate for that path. |
+| Store | 0 | optional | Required for selective-read of small metadata when desired |
+| Deflate | 8 | Info-ZIP interop path | Stock Info-ZIP readable |
+| Zstd | **93** | **default** | Official PKWARE APPNOTE 6.3.8+ assignment (method 20 deprecated). Readable by Zstd-aware ZIP tools (e.g. WinZip 25+). Stock Info-ZIP `unzip` generally cannot inflate method 93. |
 
 Writers using Zstd **MUST** set general-purpose flags and version-needed fields consistently with NeoZip implementation practice. When optional `manifest.json` is written, writers **SHOULD** document the method in `compression.method`.
 
 Readers that do not understand method 93 **MUST** report a clear unsupported-method error (not silent data loss).
 
-**Legacy interoperability:** `neozip --legacy` forces Deflate (or Store at `-0`) and disables NeoZip extensions (Zstd, blockchain `-b`/`-bd`/`-bm`, `-ots`, `-ts`) so stock Info-ZIP `unzip` can read the archive.
+**Legacy interoperability profile:** writers **MAY** emit Deflate (or Store) instead of Zstd and omit NeoZip blockchain sidecars so stock Info-ZIP tooling can fully extract the content entries. That interop path is product policy; the on-wire methods remain 0 / 8 / 93 as above.
 
 ### 4.2 Encryption
 
-| Method | Flag / option | Wire identification | Notes |
+| Method | Role | Wire identification | Notes |
 | :---- | :---- | :---- | :---- |
-| None | default for many workflows | Bit 0 clear | Allowed |
-| NeoEncrypt (NEO AES-256) | `-e` / `--aes256` (NeoZip default AES) | **Normal compression method** (0 / 8 / 93 / …) + Extra Field **`0x024E`** | NeoZip product default for confidential archives. Ciphertext stream matches WinZip AES-256 (PBKDF2, CTR, HMAC); headers do **not** use method 99 or `0x9901`. Stock Info-ZIP often misreads this path. |
-| WinZip AES-256 | library `encryptionMethod: 'aes256'` | **Compression method 99** + Extra Field **`0x9901`** | Industry AE-1/AE-2 encoding. NeoZip **reads** (and may write for interop) this form; it is **not** the NeoZip default for `-e`. |
-| Traditional PKZIP (ZipCrypto) | `--pkzip` | Bit 0 set; no AES extra | Legacy interoperability only; weak by modern standards. Forced by `--legacy` when encrypting. |
+| None | Default for many workflows | Bit 0 clear | Allowed |
+| NeoEncrypt (NEO AES-256) | NeoZip **default** AES for confidential archives | **Real compression method** (0 / 8 / 93 / …) + Extra Field **`0x024E`** | Ciphertext stream matches WinZip AES-256 (PBKDF2, CTR, HMAC); headers do **not** use method 99 or `0x9901`. Stock Info-ZIP often misreads this path. |
+| WinZip AES-256 | Interop write/read | **Compression method 99** + Extra Field **`0x9901`** | Industry AE-1/AE-2 encoding. NeoZip-aware tools **recognize** this form; it is **not** the product default for AES writing. |
+| Traditional PKZIP (ZipCrypto) | Legacy only | Bit 0 set; no AES extra | Weak by modern standards. **MAY** be used for maximum legacy unzip interop when encrypting. |
 
 #### 4.2.1 NeoEncrypt (default NeoZip AES-256)
 
@@ -265,7 +265,7 @@ NeoZip’s default AES-256 path is **NeoEncrypt** (see NeoZipKit `docs/NEO_CRYPT
 3. Extra Field **`0x024E`** (`HDR_ID.NEO_CRYPTO`) carries NeoEncrypt metadata (magic `NEZ\0`, format version, algorithm id = AES-256 v1). Distinct from integrity Extra Field **`0x014E`**.
 4. File data payload is the same layout as WinZip AES-256: `salt ‖ password-verifier(2) ‖ AES-CTR ciphertext ‖ HMAC-SHA1(10)`.
 
-NeoZip CLI `-e` / `--encrypt` / `--aes256` **MUST** emit this form. Generic tools that assume ZipCrypto for “encrypted + deflate/zstd” will not extract correctly — use NeoZip / NeoZipKit.
+Product defaults that emit NeoZip AES-256 **MUST** use this form. Generic tools that assume ZipCrypto for “encrypted + deflate/zstd” will not extract correctly — use a NeoZip-aware reader.
 
 #### 4.2.2 WinZip AES (recognized; different encryption codes)
 
@@ -280,8 +280,8 @@ WinZip AE-x is a separate on-wire profile (PKWARE method **99** + Extra Field **
 | Compression method in LO/CEN | Real method (**0**, **8**, **93**, …) | **99** |
 | Extra Field ID | **`0x024E`** | **`0x9901`** |
 | Ciphertext layout | WinZip AES-256 stream | Same (for AES-256) |
-| NeoZip CLI default `-e` | **Yes** | No (kit API `encryptionMethod: 'aes256'` for explicit WinZip write) |
-| NeoZipKit / NeoZip CLI extract | **Yes** | **Yes** (recognized on read) |
+| Default product AES write | **Yes** | No (explicit interop write only) |
+| NeoZip-aware extract | **Yes** | **Yes** (recognized on read) |
 
 Writers **MUST NOT** place both `0x9901` and `0x024E` on the same entry. Readers that support both **MUST** discriminate on Extra Field ID / method 99, not on “encrypted + password” alone.
 
@@ -404,12 +404,11 @@ Verification rebuilds a candidate root from **central-directory content entries*
    - Match → verification **SUCCESS** (**Legacy Security**); the verifier **MUST** issue a warning that the archive uses the legacy merkle algorithm (odd-leaf duplication / no domain separation).
 3. Else verification **FAIL**.
 
-**CLI behavior (informative):**
+**Implementer requirements:**
 
-- `neounzip -T` / `--pre-verify`: apply §6.4; on legacy (v0) success, surface a warning on stderr (and in JSON mode, a structured warning field when available).
-- Hard mismatch after both algorithms → verification **MUST** fail; extract **MAY** still proceed only with an explicit override (`--skip-blockchain`).
-
-Implementations **MUST NOT** accept an archive as high-security verified solely because a v0 root matched when a v1 root also could have been tried first — the fallback order above is mandatory so v1 is preferred whenever it matches.
+- On legacy (v0) success, verifiers **MUST** surface a warning (structured field when machine-readable output is used).
+- Hard mismatch after both algorithms → verification **MUST** fail. Extraction **MAY** still proceed only when the operator or API **explicitly** opts out of integrity enforcement for that operation.
+- Implementations **MUST NOT** accept an archive as high-security verified solely because a v0 root matched when a v1 root also could have been tried first — the fallback order above is mandatory so v1 is preferred whenever it matches.
 
 ---
 
@@ -417,23 +416,23 @@ Implementations **MUST NOT** accept an archive as high-security verified solely 
 
 ### 7.1 Networks
 
-NeoZip CLI and `neozip-blockchain` default to **Base Sepolia** (`base-sepolia`, chain ID `84532`) for development.
+NeoZip tooling **defaults** to **Base Sepolia** (`base-sepolia`, chain ID `84532`) for development.
 
-Token Service hosts (client library selection via `TOKEN_SERVICE_NETWORK` / `resolveNetworkProfile`):
+Token Service hosts (selected via environment / connection profile, e.g. `TOKEN_SERVICE_NETWORK`):
 
 | Profile | Chain | Token Service host |
 | :------ | :---- | :----------------- |
 | `base-sepolia` (default) | Base Sepolia `84532` | `https://testnet.token-service.neozip.io` |
 | `base` | Base Mainnet `8453` | `https://token-service.neozip.io` |
 
-Production networks are also selected via CLI `-n` / connection store. On-chain contract addresses and chain IDs for tokens live in connection config and `TOKEN.NZIP` / library `CONTRACT_CONFIGS` (not in this note alone).
+Production networks are also selected via client configuration / connection store. On-chain contract addresses and chain IDs for tokens live in connection config and `TOKEN.NZIP` / library contract tables (not in this note alone).
 
 Paid token purchase on mainnet is **not** specified for this profile generation (`purchaseAvailable` is false until a later revision).
 
 ### 7.2 Mint flow (informative)
 
 1. Create archive with per-entry SHA-256 extras → compute v1 Merkle root from the central directory (§6.3).
-2. `neozip mint <archive>` (or `-b` / `-bm` during create) mints an NFT / token bound to that Merkle root.
+2. A mint operation issues an NFT / token bound to that Merkle root.
 3. Writer appends/updates `META-INF/TOKEN.NZIP`. If optional `manifest.json` is present, it **MAY** update `blockchain` summary and `profiles` to include `"tokenized"` for agents.
 
 ### 7.3 `TOKEN.NZIP` logical fields
@@ -454,15 +453,15 @@ Implementations store a versioned envelope. Logical fields observed / required f
 
 ### 7.4 Timestamp flow (informative)
 
-1. `-ts` / Token Service submit → `META-INF/TS-SUBMIT.NZIP` (pending).
-2. `neozip upgrade` waits for confirmation → `META-INF/TIMESTAMP.NZIP`.
+1. Token Service submit → `META-INF/TS-SUBMIT.NZIP` (pending).
+2. After confirmation → `META-INF/TIMESTAMP.NZIP` (pending submit entry removed or left inert per implementation).
 3. If optional `manifest.json` is present, `timestamp` summary **MAY** be updated and `profiles` may include `"timestamped"`.
 
-OpenTimestamps (`-ots`) is an optional NeoZip CLI feature and **MAY** be advertised with a future profile flag `"ots"`.
+OpenTimestamps is an optional product feature and **MAY** be advertised with a future profile flag `"ots"`.
 
 ### 7.5 Data Wallet / connection store (out of band)
 
-Credentials (`NEOZIP_WALLET_PASSKEY`, Token Service email/token, network prefs) live in the NeoZip connection store under the user profile — **not** inside the archive. Archives carry proofs, not private keys.
+Credentials (wallet passkeys, Token Service email/token, network prefs) live in a user connection store — **not** inside the archive. Archives carry proofs, not private keys.
 
 ---
 
@@ -495,8 +494,8 @@ A file may advertise multiple profiles; verifiers check each independently. **+A
 | Info-ZIP / Finder / Explorer | Lists/extracts content; shows `META-INF/` as a folder; ignores Extra Field `0x014E`; cannot inflate Zstd (method 93) without a Zstd-capable reader |
 | Java `jar` tools | Safe if `MANIFEST.MF` absent or is a valid attribute stub (§1.3); must not find JSON in `MANIFEST.MF` |
 | WinZip 25+ / other APPNOTE 6.3.8+ Zstd readers | Can inflate method 93; NeoZip Extra Fields and `META-INF/*.NZIP` treated as ordinary data unless NeoZip-aware |
-| NeoZip CLI (`neozip` / `neounzip` / `neolist`) | Full L1–L3 verify from Extra Fields + `*.NZIP` sidecars; Zstd; AES-256; mint/stamp without requiring `manifest.json` |
-| AI / automation agents | Prefer optional `META-INF/manifest.json` when present (**+AI**); otherwise fall back to CLI JSON / schema interfaces for operations |
+| NeoZip-aware tools | Full L1–L3 verify from Extra Fields + `*.NZIP` sidecars; Zstd; NeoEncrypt / AES; mint/stamp **without** requiring `manifest.json`; apply §6.4; extract after hard integrity mismatch only when explicitly opted out |
+| AI / automation agents | Prefer optional `META-INF/manifest.json` when present (**+AI**); otherwise fall back to product JSON / schema interfaces for operations |
 
 ---
 
@@ -523,5 +522,6 @@ When present, archives may declare `specVersion` in `META-INF/manifest.json` for
 
 | Date | Version | Change |
 | :---- | :---- | :---- |
+| 2026-08-09 | 0.1.0 | Editorial: removed product CLI command/flag names; state verification, mint/stamp, and interop as profile rules only. |
 | 2026-08-03 | 0.1.0 | §4.2: NeoEncrypt (`0x024E` + real compression method) is NeoZip default AES-256; WinZip AES (method **99** + **`0x9901`**) is recognized for interop, not default write. |
 | 2026-08-03 | 0.1.0 | Initial release. |
