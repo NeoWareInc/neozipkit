@@ -522,6 +522,6 @@ When present, archives may declare `specVersion` in `META-INF/manifest.json` for
 
 | Date | Version | Change |
 | :---- | :---- | :---- |
-| 2026-08-09 | 0.1.0 | Editorial: removed product CLI command/flag names; state verification, mint/stamp, and interop as profile rules only. |
+| 2026-08-09 | 0.1.0 | Editorial: on-wire profile only — verification, mint/stamp, and interop stated without product command/flag names. |
 | 2026-08-03 | 0.1.0 | §4.2: NeoEncrypt (`0x024E` + real compression method) is NeoZip default AES-256; WinZip AES (method **99** + **`0x9901`**) is recognized for interop, not default write. |
 | 2026-08-03 | 0.1.0 | Initial release. |
