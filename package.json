@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "neozipkit-monorepo",
-  "version": "1.0.3",
+  "version": "1.0.5",
   "packageManager": "pnpm@9.15.9",
   "scripts": {
     "build": "pnpm -r --sort run build",

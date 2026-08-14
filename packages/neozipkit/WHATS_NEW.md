@@ -2,7 +2,7 @@
 
 Release notes for people who install and use **`neozipkit`** from npm. For blockchain timestamping and NFTs, see the sibling package [`neozip-blockchain`](https://www.npmjs.com/package/neozip-blockchain).
 
-## 1.0.3 (2026-08-04)
+## 1.0.5 (2026-08-14)
 
 ### NeoZip Application Note + APPNOTE §6 Merkle (v0 / v1)
 
@@ -24,12 +24,12 @@ Ships **[NEOZIP_APPNOTE.md](./NEOZIP_APPNOTE.md)** in the npm package (also link
 
 **API:**
 
-- **`getMerkleRootAsync()`** — preferred: extract content entries, compute **v1** root
+- **`getMerkleRootAsync()`** — preferred for **v1**: uses stream-captured `merkleLeafV1` when available, otherwise extracts content (buffer mode) or Node streaming `testEntry` (`ZipkitNode`)
 - **`getMerkleRoot({ algorithm: 'v0' })`** — digests-only legacy root for old on-chain bindings
-- **`getMerkleRoot()`** — v1 needs payloads; returns `null` when only Extra Field digests are available (use async)
-- Pure helpers / **`Zipkit.merkleRootFromEntries(...)`**: path normalize (NFC, `/`), path-ordered leaves, `matchMerkleRoot` (§6.4-style v1→v0 fallback)
+- **`getMerkleRoot()`** — v1 when leaves were already captured during create/hash; otherwise `null` (use async)
+- Pure helpers / **`Zipkit.merkleRootFromEntries(...)`**: path normalize (NFC, `/`), path-ordered leaves, optional `merkleLeafV1`, `matchMerkleRoot` (§6.4-style v1→v0 fallback)
 
-Leaves no longer sort by hash value or reorder parent pairs.
+Leaves no longer sort by hash value or reorder parent pairs. During create/extract with `useSHA256`, **`HashCalculator`** computes bare digests and domain-separated **v1** leaves in the same streaming pass (`finalizeMerkleLeafV1` / entry `merkleLeafV1`).
 
 **Also:** NeoEncrypt (`0x024E` + real compression method) remains the default confidential write path; WinZip AES (method **99** + **`0x9901`**) is recognized for interop (APPNOTE §4.2). TypeScript 6: removed deprecated `baseUrl` from the package tsconfig.
 
@@ -38,6 +38,7 @@ Helpers: `findReservedMetaEntry`, `isMetaInfPath`, `isReservedMetaPath`, `asciiP
 ---
 
 ## 1.0.2 (2026-07-28)
+
 
 ### First stable release
 
