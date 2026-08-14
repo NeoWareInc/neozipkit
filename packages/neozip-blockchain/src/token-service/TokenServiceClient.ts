@@ -37,7 +37,7 @@ export interface TokenServiceClientOptions {
   accessToken?: string;
 }
 
-/** Thrown when the service requires an active $10/year production membership. */
+/** Thrown when the service requires an active Token Service membership for a specific network. */
 export class MembershipRequiredError extends Error {
   readonly status = 402;
   readonly errorCode = 'MEMBERSHIP_REQUIRED';

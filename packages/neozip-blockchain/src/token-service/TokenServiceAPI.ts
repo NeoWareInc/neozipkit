@@ -69,6 +69,8 @@ export interface CreateTimestampOptions {
     fileCount?: number;
   };
   serverUrl?: string;
+  /** Chain to stamp on. When omitted, the Token Service picks its default. */
+  chainId?: number;
   debug?: boolean;
 }
 
@@ -181,6 +183,7 @@ export async function extractTimestampData(
  * @param options - Configuration options for timestamp creation
  * @param options.recipientEmail - Optional email address for notifications
  * @param options.serverUrl - Optional NeoZip Token Service URL (defaults to `TOKEN_SERVICE_URL` env var or `https://testnet.token-service.neozip.io`)
+ * @param options.chainId - Optional chain ID (e.g. 8453 Base Mainnet, 84532 Base Sepolia)
  * @param options.debug - Enable debug logging (defaults to `false`)
  * @param options.mode - **Deprecated**: For backward compatibility only, not sent to API
  * @param options.recipientAddress - **Deprecated**: For backward compatibility only, not sent to API
@@ -228,7 +231,7 @@ export async function createTimestamp(
     const response = await submitDigest(
       merkleRoot,
       options.recipientEmail,
-      undefined, // chainId - let server determine
+      options.chainId,
       { serverUrl, debug: options.debug }
     );
 
