@@ -1,11 +1,11 @@
 # NeoZip Application Note
 
 **Format:** `.nzip` (ZIP profile)  
-**Version:** 0.1.0  
+**Version:** 0.1.1  
 **Status:** Release — extends PKWARE APPNOTE 6.3.10  
-**Date:** 2026-08-03  
+**Date:** 2026-08-14  
 **Base specification:** PKWARE [APPNOTE.TXT](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT) (`.ZIP` File Format Specification, Version 6.3.10)  
-**Scope:** Compression, encryption, integrity, and blockchain / Token Service extensions for the NeoZip wire profile. Optional **AI-aware** metadata (`META-INF/manifest.json`) is defined for future agent ingestion; it is **not** required for minting, timestamping, or integrity verification.
+**Scope:** Compression, encryption (including optional **recipient / hybrid** access control), integrity, and blockchain / Token Service extensions for the NeoZip wire profile. Optional **AI-aware** metadata (`META-INF/manifest.json`) is defined for future agent ingestion; it is **not** required for minting, timestamping, integrity verification, or recipient decryption.
 
 ---
 
@@ -65,11 +65,12 @@ APPNOTE does **not** require `MANIFEST.MF`, does not require Java attribute synt
    An archive is recognized as a NeoZip profile if **any** of the following are present:
    - Extra Field `0x014E` on one or more content entries.
    - Sidecar proof entries `META-INF/TOKEN.NZIP` or `META-INF/TIMESTAMP.NZIP` (or pending `META-INF/TS-SUBMIT.NZIP`).
+   - Recipient-access sidecar `META-INF/ACCESS.NZIP` (§2.3 / §4.3).
    - Optional AI-aware manifest `META-INF/manifest.json` with `"format": "neozip"`.
 
    Absence of all of the above means a plain ZIP (or JAR / other profile).
 
-> **Note for implementers:** Minting, timestamping, and Merkle verification **MUST NOT** depend on `manifest.json` being present. Core cryptographic operations rely on central-directory entries, Extra Field `0x014E`, and `META-INF/*.NZIP` sidecars.
+> **Note for implementers:** Minting, timestamping, and Merkle verification **MUST NOT** depend on `manifest.json` being present. Core cryptographic operations rely on central-directory entries, Extra Field `0x014E`, and `META-INF/*.NZIP` sidecars. Recipient decryption uses `ACCESS.NZIP` plus content-entry AES (§4.3); it likewise **MUST NOT** require `manifest.json`.
 
 ---
 
@@ -99,7 +100,7 @@ knowledge_bundle.nzip
 
 `META-INF/manifest.json` is reserved for structured discovery so AI tools can understand the archive without parsing low-level headers. It is not required for L1–L3 cryptographic proof.
 
-### 2.3 Blockchain / Token Service sidecars
+### 2.3 Blockchain / Token Service / access sidecars
 
 When present, these **MUST** live under `META-INF/`:
 
@@ -108,9 +109,17 @@ When present, these **MUST** live under `META-INF/`:
 | `META-INF/TOKEN.NZIP` | After successful on-chain mint | On-chain token binding (tokenId, contract, tx, merkleRoot, …) |
 | `META-INF/TIMESTAMP.NZIP` | After confirmed Token Service stamp | Timestamp proof metadata |
 | `META-INF/TS-SUBMIT.NZIP` | After stamp submit, before confirm | Pending timestamp submission |
+| `META-INF/ACCESS.NZIP` | After recipient / hybrid encryption (§4.3) | ECIES-wrapped inner password + recipient list (UTF-8 JSON) |
 
 Alternate token entry recognized by NeoZip: `META-INF/NZIP.TOKEN` (legacy, also uppercase).  
-Writers **MUST** emit the canonical uppercase forms above. NeoZip-aware readers **MUST** discover these reserved paths with **ASCII case-insensitive** comparison (see §2.4), so `META-INF/token.nzip` is accepted for discovery; writers must still not emit that spelling.
+Writers **MUST** emit the canonical uppercase forms above. NeoZip-aware readers **MUST** discover these reserved paths with **ASCII case-insensitive** comparison (see §2.4), so `META-INF/token.nzip` / `META-INF/access.nzip` are accepted for discovery; writers must still not emit those spellings.
+
+**`ACCESS.NZIP` write rules (normative when the entry is present):**
+
+1. Writers **MUST** emit the path exactly as `META-INF/ACCESS.NZIP`.
+2. The entry **SHOULD** use compression method **Store (0)** so tools can read the JSON without inflate support beyond local headers.
+3. The entry **MUST NOT** be encrypted with the same inner password / AES layer used for content entries. Recipient-aware tools and generic ZIP listers **MUST** be able to read `ACCESS.NZIP` without unwrapping any recipient key. (See §4.2 discouragement of encrypting public `META-INF/` discovery payloads.)
+4. Body **MUST** be UTF-8 JSON conforming to the logical schema in §4.3.
 
 These files are NeoZip application payloads (JSON or versioned binary envelopes as implemented by NeoZip). Generic unzip tools treat them as ordinary files under `META-INF/` and typically do not present them as “the” content of the archive.
 
@@ -125,12 +134,13 @@ ZIP stores entry names as opaque byte strings (case-preserving). This profile se
 | Directory | `META-INF/` (uppercase, JAR/APPNOTE convention) |
 | Optional AI-aware manifest | `META-INF/manifest.json` |
 | Token / timestamp | `META-INF/TOKEN.NZIP`, `TIMESTAMP.NZIP`, `TS-SUBMIT.NZIP` |
+| Recipient access | `META-INF/ACCESS.NZIP` |
 
 **Reader lookup for reserved meta paths (NeoZip-aware tools MUST):**
 
 1. Match the reserved prefixes and filenames with **ASCII case-insensitive** comparison  
    (`META-INF/manifest.json` ≡ `meta-inf/Manifest.JSON` ≡ `META-INF/MANIFEST.JSON` for *discovery*).  
-   The same rule applies to `TOKEN.NZIP`, `NZIP.TOKEN`, `TIMESTAMP.NZIP`, `TS-SUBMIT.NZIP`, and the OTS equivalents.
+   The same rule applies to `TOKEN.NZIP`, `NZIP.TOKEN`, `TIMESTAMP.NZIP`, `TS-SUBMIT.NZIP`, `ACCESS.NZIP`, and the OTS equivalents.
 2. If **more than one** central-directory entry matches the same reserved meta target under ASCII case-insensitive comparison, the archive is **malformed**. Readers **MUST** reject it and **MUST NOT** recover by preferring the canonical spelling, the first match, or any other silent selection. Silent recovery creates parser differentials across NeoZip reader implementations.
 3. Paths **inside** content payloads (the original document’s own name) stay as stored; case folding applies only to reserved `META-INF/**` profile entries, not to arbitrary archive members.
 4. Paths recorded *inside* `manifest.json` bodies **SHOULD** use canonical casing when written; readers resolving those pointers **MUST** also try ASCII case-insensitive match within the ZIP central directory. If that resolution yields multiple case-insensitive matches for one reserved target, apply rule 2 (reject as malformed).
@@ -141,10 +151,10 @@ ZIP stores entry names as opaque byte strings (case-preserving). This profile se
 
 ### 2.5 Root entry rules
 
-1. All token and timestamp data **MUST** be under `META-INF/`.
+1. All token, timestamp, and recipient-access data **MUST** be under `META-INF/`.
 2. Content payloads are every ZIP entry outside `META-INF/`.
 3. When optional `manifest.json` is present, content payloads **SHOULD** be listed in `manifest.json` `content[]` for AI discovery; cryptographic Merkle construction still uses the central directory (§6).
-4. A general NeoZip archive **MAY** contain many content entries without blockchain sidecars and without `manifest.json`.
+4. A general NeoZip archive **MAY** contain many content entries without blockchain sidecars, without `ACCESS.NZIP`, and without `manifest.json`.
 
 ---
 
@@ -170,11 +180,11 @@ When the file is present, the body is a UTF-8 JSON object. Unknown keys **MUST**
 | :---- | :---- | :---- |
 | `content` | array | Content index for agents (non-`META-INF/` files). Each: `{ "path", "sha256", "size", "mimeType?" }`. Informational only; Merkle leaves come from the central directory (§6). |
 | `merkleRoot` | string | Optional hex copy of the content Merkle root for agents (§6). Authoritative on-chain binding remains in `TOKEN.NZIP` / `TIMESTAMP.NZIP` when present. |
-| `profiles` | string[] | Declared profiles, e.g. `["integrity"]`, `["tokenized"]`, `["timestamped"]`, `["ai-aware"]` |
+| `profiles` | string[] | Declared profiles, e.g. `["integrity"]`, `["tokenized"]`, `["timestamped"]`, `["ai-aware"]`, `["access-controlled"]` |
 | `blockchain` | object | Token / network summary when tokenized (full proof remains in `TOKEN.NZIP`) |
 | `timestamp` | object | Stamp summary when stamped (full proof in `TIMESTAMP.NZIP`) |
 | `compression` | object | Defaults: `{ "method": "zstd" \| "deflate" \| "store", "level"?: number }` |
-| `encryption` | object | `{ "method": "none" \| "neo-aes-256" \| "aes-256" \| "pkzip" }` (`neo-aes-256` = NeoZip default AES / NeoEncrypt) |
+| `encryption` | object | `{ "method": "none" \| "neo-aes-256" \| "aes-256" \| "pkzip" \| "hybrid-recipient" }` (`neo-aes-256` = NeoZip default AES / NeoEncrypt; `hybrid-recipient` = inner AES + `ACCESS.NZIP` outer wrap, §4.3) |
 
 ### 3.3 Example (AI-aware integrity summary, not tokenized)
 
@@ -285,9 +295,93 @@ WinZip AE-x is a separate on-wire profile (PKWARE method **99** + Extra Field **
 
 Writers **MUST NOT** place both `0x9901` and `0x024E` on the same entry. Readers that support both **MUST** discriminate on Extra Field ID / method 99, not on “encrypted + password” alone.
 
-When optional `manifest.json` is written, writers **SHOULD** set `encryption.method` to `"neo-aes-256"` (default NeoZip AES), `"aes-256"` (WinZip AE), `"pkzip"`, or `"none"`.
+When optional `manifest.json` is written, writers **SHOULD** set `encryption.method` to `"neo-aes-256"` (default NeoZip AES), `"aes-256"` (WinZip AE), `"pkzip"`, `"hybrid-recipient"` (inner AES + `ACCESS.NZIP`, §4.3), or `"none"`.
 
-Encryption of `META-INF/*.NZIP` public proofs and of optional `META-INF/manifest.json` is **DISCOURAGED** when discovery matters (tools cannot find digests/proofs). Prefer encrypting content entries while leaving `META-INF/` public proofs readable, unless the entire archive is confidential.
+Encryption of `META-INF/*.NZIP` public proofs (including `ACCESS.NZIP`) and of optional `META-INF/manifest.json` is **DISCOURAGED** when discovery matters (tools cannot find digests/proofs/recipient wraps). Prefer encrypting content entries while leaving `META-INF/` public proofs readable, unless the entire archive is confidential.
+
+### 4.3 Recipient / hybrid encryption (`META-INF/ACCESS.NZIP`)
+
+Optional **recipient access control** binds content decryption to holders of specific **secp256k1** private keys. The on-wire profile is a **hybrid** design: an inner ZIP AES password encrypts content entries; that password is wrapped once per recipient with **ECIES** and stored in a public sidecar.
+
+This section is normative for NeoZip-aware tools that **read or write** `META-INF/ACCESS.NZIP`. Base NeoZipKit MAY omit write support; Pro / access-controlled products implement the full pipeline.
+
+#### 4.3.1 Hybrid model
+
+1. **Inner (symmetric):** Generate a high-entropy secret (NeoZip Pro practice: 32 random bytes encoded as a 64-character hex string). Pass it as the ZIP password for **NeoEncrypt** (`0x024E`, §4.2.1) by default, or optionally WinZip AES (`0x9901` / method 99, §4.2.2). Encrypt **content** entries with that password.
+2. **Outer (asymmetric):** For each recipient, wrap the **UTF-8 bytes of the inner password string** with **ECIES on secp256k1** (algorithm id `ecies-secp256k1-aes256gcm`).
+3. **Sidecar:** Serialize recipient wraps and metadata as UTF-8 JSON and write **`META-INF/ACCESS.NZIP`** per §2.3 (STORED, **unencrypted**).
+
+```
+Inner password ──► NeoEncrypt / WinZip AES ──► encrypted content entries
+       │
+       └──► ECIES wrap (per recipient) ──► META-INF/ACCESS.NZIP (public JSON)
+```
+
+#### 4.3.2 Outer wrap algorithm (`ecies-secp256k1-aes256gcm`)
+
+**Wrap (per recipient):**
+
+1. Recipient public key: uncompressed secp256k1, hex with `04` prefix (130 hex characters).
+2. Generate an ephemeral secp256k1 key pair.
+3. ECDH: ephemeral private × recipient public → shared secret.
+4. HKDF-SHA256 over the shared secret → 32-byte wrapping key.
+5. AES-256-GCM encrypt the UTF-8 password bytes (random 12-byte IV).
+6. Store ciphertext as base64 of **`IV (12) ‖ auth tag (16) ‖ ciphertext`**, plus the ephemeral public key (uncompressed hex).
+
+**Unwrap:** ECDH with recipient private × ephemeral public → same HKDF → AES-GCM decrypt. Match the recipient by deriving the public key from the supplied private key and comparing (case-insensitive) to `recipients[].publicKeyHex`.
+
+#### 4.3.3 `ACCESS.NZIP` logical schema
+
+Top-level fields (UTF-8 JSON):
+
+| Field | Type | Purpose |
+| :---- | :---- | :---- |
+| `version` | string | Metadata format version (e.g. `"1.0"`) |
+| `scheme` | string | How identities were resolved: `ens-hybrid` \| `address-hybrid` \| `did-hybrid` \| `lit-protocol` |
+| `recipients` | array | Per-recipient wrap records (§4.3.4) |
+| `encryption` | object | Inner method: `{ "method": "neo-aes256" \| "aes-256-winzip", "note"? }` |
+| `created` | string | ISO-8601 timestamp |
+| `proVersion` | string | Implementing product version (informative) |
+
+When optional `manifest.json` is present for an access-controlled archive, writers **SHOULD** include `"access-controlled"` (and/or `"recipient-encrypted"`) in `profiles` and set `encryption.method` to `"hybrid-recipient"`.
+
+#### 4.3.4 Each `recipients[]` entry
+
+| Field | Type | Purpose |
+| :---- | :---- | :---- |
+| `identity` | string | Original identity string (ENS name, `0x…` address, `pkp:0x…`, DID, …) |
+| `identityType` | string | `ens` \| `address` \| `did` \| `lit-pkp` |
+| `resolvedAddress` | string | Checksummed Ethereum address where applicable |
+| `publicKeyHex` | string | Uncompressed secp256k1 public key used for wrapping |
+| `wrappedKey` | string | Base64 ECIES payload (§4.3.2) |
+| `ephemeralPublicKey` | string | Hex ephemeral public key |
+| `keyAlgorithm` | string | e.g. `ecies-secp256k1-aes256gcm` |
+
+**Homogeneity:** All recipients in one archive **MUST** share the same `identityType` (no mixing ENS with Lit PKP in a single `ACCESS.NZIP`).
+
+**Multiple recipients:** Each entry wraps the **same** inner password. Any matching private key recovers the AES layer.
+
+#### 4.3.5 Identity resolution (informative)
+
+Resolution is product-side; the wire format only requires a trusted `publicKeyHex` per recipient.
+
+| Type | Identity string | Notes |
+| :---- | :---- | :---- |
+| `ens` | `*.eth` | Resolve name → ENS text `io.neozip.pubkey` (uncompressed hex) |
+| `address` | `0x` + 40 hex | Address alone does not yield a unique pubkey; caller **MUST** supply `publicKeyHex` |
+| `lit-pkp` | `pkp:0x…` | Same hybrid ECIES wrap to the PKP’s secp256k1 pubkey; scheme `lit-protocol`. Lit **Access Control Conditions** / threshold decryption without the unwrap key are **out of scope** for this profile |
+| `did` | DID URI | Reserved for DID-based resolution (`did-hybrid`) |
+
+#### 4.3.6 Decrypt flow (informative)
+
+1. Locate and parse `META-INF/ACCESS.NZIP` (case-insensitive discovery, §2.4).
+2. Find `recipients[]` entry matching the caller’s public key.
+3. Unwrap → inner password; decrypt content entries with NeoZip AES rules (§4.2).
+4. If no recipient matches, fail explicitly (wrong key).
+
+#### 4.3.7 Privacy note
+
+`ACCESS.NZIP` is **not** confidential: anyone with the archive can read recipient identities, addresses, algorithms, and ciphertext blobs. Wrapped keys remain ciphertext without the matching private key; the sidecar still leaks **who** was targeted.
 
 ---
 
@@ -351,7 +445,7 @@ Reference design notes: [Merkle Root calculation — RFC 6962](https://docs.goog
 
 **Status:** legacy. Writers **MUST NOT** emit new proof-bound roots with v0. Verifiers retain v0 only for §6.4 fallback against existing on-chain / Token Service records.
 
-1. Collect all non-`META-INF/` content entries **directly from the ZIP central directory** (exclude every entry whose name is under `META-INF/**`).
+1. Collect all non-`META-INF/` content entries **directly from the ZIP central directory** (exclude every entry whose name is under `META-INF/**`, including `ACCESS.NZIP`, token/timestamp sidecars, and optional `manifest.json`).
 2. For each entry, take `H_leaf = SHA-256(uncompressed bytes)` (= Extra Field `0x014E` value when present).
 3. Sort leaves by central-directory path (UTF-8 byte order). Path normalization was not required by v0; verifiers reconstructing v0 roots **SHOULD** use the path bytes exactly as stored in the central directory file name.
 4. Build a binary merkle tree with SHA-256. **Odd-leaf rule:** when a level has an odd count, **duplicate the last leaf** before pairing (Bitcoin-style):  
@@ -364,7 +458,7 @@ For a single content entry, a v0 root **MAY** equal that entry’s SHA-256 (sing
 
 **Status:** current. Writers **MUST** use v1 for new archives.
 
-1. Collect all non-`META-INF/` content entries **directly from the ZIP central directory** (exclude every entry whose name is under `META-INF/**`). Do **not** require `manifest.json` `content[]` for Merkle construction.
+1. Collect all non-`META-INF/` content entries **directly from the ZIP central directory** (exclude every entry whose name is under `META-INF/**`, including `ACCESS.NZIP`, token/timestamp sidecars, and optional `manifest.json`). Do **not** require `manifest.json` `content[]` for Merkle construction.
 2. **Normalize each entry path** before sorting:
    - Decode as UTF-8 (central-directory file name bytes per APPNOTE).
    - Use POSIX separators only (`/` — convert `\` to `/`).
@@ -482,8 +576,9 @@ Credentials (wallet passkeys, Token Service email/token, network prefs) live in 
 | **L2** | NeoZip timestamped | L1 + valid `META-INF/TIMESTAMP.NZIP` bound to Merkle root |
 | **L3** | NeoZip tokenized | L1 + valid `META-INF/TOKEN.NZIP` bound to Merkle root (L2 optional) |
 | **+AI** | AI-aware enhanced | Any L1–L3 level **plus** `META-INF/manifest.json` for agent / LLM ingestion |
+| **+Access** | Recipient-encrypted | Any L0–L3 level **plus** valid `META-INF/ACCESS.NZIP` and decryptable content for at least one listed recipient (§4.3). Combinable with **+AI**. |
 
-A file may advertise multiple profiles; verifiers check each independently. **+AI** is additive: it never substitutes for L1–L3 cryptographic requirements.
+A file may advertise multiple profiles; verifiers check each independently. **+AI** and **+Access** are additive: they never substitute for L1–L3 cryptographic requirements when those levels are claimed.
 
 ---
 
@@ -491,10 +586,11 @@ A file may advertise multiple profiles; verifiers check each independently. **+A
 
 | Consumer | Expected behavior |
 | :---- | :---- |
-| Info-ZIP / Finder / Explorer | Lists/extracts content; shows `META-INF/` as a folder; ignores Extra Field `0x014E`; cannot inflate Zstd (method 93) without a Zstd-capable reader |
+| Info-ZIP / Finder / Explorer | Lists/extracts content; shows `META-INF/` as a folder; ignores Extra Field `0x014E`; cannot inflate Zstd (method 93) without a Zstd-capable reader; can read plaintext `ACCESS.NZIP` JSON but cannot unwrap without a NeoZip-aware recipient tool |
 | Java `jar` tools | Safe if `MANIFEST.MF` absent or is a valid attribute stub (§1.3); must not find JSON in `MANIFEST.MF` |
 | WinZip 25+ / other APPNOTE 6.3.8+ Zstd readers | Can inflate method 93; NeoZip Extra Fields and `META-INF/*.NZIP` treated as ordinary data unless NeoZip-aware |
 | NeoZip-aware tools | Full L1–L3 verify from Extra Fields + `*.NZIP` sidecars; Zstd; NeoEncrypt / AES; mint/stamp **without** requiring `manifest.json`; apply §6.4; extract after hard integrity mismatch only when explicitly opted out |
+| NeoZip recipient / Pro tools | Discover `ACCESS.NZIP`, unwrap ECIES for a matching private key, decrypt content (§4.3 / **+Access**); Merkle still excludes `META-INF/**` |
 | AI / automation agents | Prefer optional `META-INF/manifest.json` when present (**+AI**); otherwise fall back to product JSON / schema interfaces for operations |
 
 ---
@@ -510,11 +606,12 @@ When present, archives may declare `specVersion` in `META-INF/manifest.json` for
 
 ## 12. Open items (draft)
 
-1. Publish formal JSON Schema for `META-INF/manifest.json`, `TOKEN.NZIP`, and `TIMESTAMP.NZIP`.
+1. Publish formal JSON Schema for `META-INF/manifest.json`, `TOKEN.NZIP`, `TIMESTAMP.NZIP`, and `ACCESS.NZIP`.
 2. Decide whether to always emit the optional Java `MANIFEST.MF` stub.
 3. Register additional Extra Field IDs with PKWARE only after the entry-name convention proves itself in the field.
 4. Optional later merkle algorithm: bind normalized path into leaf digests for single-file inclusion proofs (explicit new algorithm id; not a silent change to v1).
 5. Future AI-aware enhancements: deeper semantic content indexes, agent instruction fields, and related extensions in `manifest.json` without requiring changes to token/timestamp verification.
+6. Optional Lit ACC / threshold outer layer (distinct from ECIES-to-pubkey `lit-pkp` in §4.3) if product demand warrants a new `scheme`.
 
 ---
 
@@ -522,6 +619,7 @@ When present, archives may declare `specVersion` in `META-INF/manifest.json` for
 
 | Date | Version | Change |
 | :---- | :---- | :---- |
+| 2026-08-14 | 0.1.1 | §2.3 / §4.3: reserve `META-INF/ACCESS.NZIP` recipient / hybrid encryption profile (ECIES outer wrap + NeoEncrypt/WinZip AES inner); discovery, Merkle exclusion, **+Access** conformance, schema open item. |
 | 2026-08-09 | 0.1.0 | Editorial: on-wire profile only — verification, mint/stamp, and interop stated without product command/flag names. |
 | 2026-08-03 | 0.1.0 | §4.2: NeoEncrypt (`0x024E` + real compression method) is NeoZip default AES-256; WinZip AES (method **99** + **`0x9901`**) is recognized for interop, not default write. |
 | 2026-08-03 | 0.1.0 | Initial release. |
