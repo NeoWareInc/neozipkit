@@ -2,7 +2,7 @@
 
 Blockchain functionality for NeoZip: **NeoZip Token Service timestamping** (stamp, upgrade, mint, verify), NFT minting, verification, and wallet management. Part of the [neozipkit monorepo](../../README.md).
 
-> **Stable 1.0:** This package **1.0.5** (first non-beta was **1.0.2**). Format profile: [NEOZIP_APPNOTE.md](../neozipkit/NEOZIP_APPNOTE.md). See [WHATS_NEW.md](WHATS_NEW.md).
+> **Stable 1.1:** This package **1.1.0** (adds identity-based encryption). Format profile: [NEOZIP_APPNOTE.md](../neozipkit/NEOZIP_APPNOTE.md). See [WHATS_NEW.md](WHATS_NEW.md).
 
 See [WHATS_NEW.md](WHATS_NEW.md) for release notes.
 
@@ -16,6 +16,7 @@ This package provides the client-side API and utilities that work with the sibli
 - **Wallet Management**: Browser and Node.js wallet integrations
 - **Multi-Network Support**: Base Mainnet, Base Sepolia, and more
 - **Examples**: Runnable scripts for stamp, upgrade, mint, verify, and token-create flows (see [`examples/README.md`](examples/README.md), `examples/`, and `package.json` `example:*` scripts)
+- **Identity encryption**: Encrypt `.nzip` archives for ENS / address / Lit PKP recipients (`neozip-blockchain/encryption` + `neozip-blockchain/identity`). See [docs/ENCRYPTION.md](docs/ENCRYPTION.md).
 
 ## Installation
 

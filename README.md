@@ -4,6 +4,15 @@ Monorepo for NeoZip packages — advanced ZIP file creation, compression, encryp
 
 > **Stable 1.0:** [`neozipkit`](packages/neozipkit/) and [`neozip-blockchain`](packages/neozip-blockchain/) **1.0.5** (first non-beta was **1.0.2**). Format profile: [`NEOZIP_APPNOTE.md`](packages/neozipkit/NEOZIP_APPNOTE.md).
 
+## Native / compiled kits
+
+Rust ports of `neozipkit` and `neozip-blockchain` (plus recipient encryption) live in a separate Cargo monorepo:
+
+- **[`NeoWareInc/neozipkit-pro`](https://github.com/NeoWareInc/neozipkit-pro)** — compiled-language kit libraries
+- **[`NeoWareInc/neozip-rust`](https://github.com/NeoWareInc/neozip-rust)** — NeoZip CLI and MCP apps that consume those crates
+
+**On-chain contracts** (Solidity / Hardhat) remain in this repository under [`packages/neozip-blockchain`](packages/neozip-blockchain/) — that is the master for contract source. The native kits only vendor ABI JSON snapshots for client use.
+
 ## Packages
 
 | Package | Description | npm |

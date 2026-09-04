@@ -2,6 +2,30 @@
 
 Release notes for people who install and use **`neozip-blockchain`** from npm (alongside [`neozipkit`](https://www.npmjs.com/package/neozipkit)).
 
+## 1.1.0
+
+### Identity-based (recipient) encryption
+
+Moved from the former private `@neowareinc/neozipkit-pro` package into this library:
+
+- **`neozip-blockchain/encryption`** — ECIES key wrapping (secp256k1 / X25519 + AES-256-GCM), `META-INF/ACCESS.NZIP`, `encryptForRecipients` / `decryptAsRecipient`
+- **`neozip-blockchain/identity`** — ENS / address / Lit PKP resolvers for recipient public keys
+
+Inner ZIP entry encryption still uses **neozipkit** NeoEncrypt (`neo-aes256`) by default. See [docs/ENCRYPTION.md](docs/ENCRYPTION.md).
+
+HKDF domain-separation strings are unchanged (`neozipkit-pro/ecies/v1`, …) so existing recipient-encrypted archives remain decryptable.
+
+```bash
+npm install neozipkit@^1.0.5 neozip-blockchain@^1.1.0
+```
+
+```typescript
+import { encryptForRecipients } from 'neozip-blockchain/encryption';
+import { ENSResolver } from 'neozip-blockchain/identity';
+```
+
+---
+
 ## 1.0.5 (2026-08-14)
 
 ### Token Service network profiles (Base Sepolia + Base Mainnet)

@@ -1,7 +1,7 @@
 {
   "name": "neozip-blockchain",
-  "version": "1.0.5",
-  "description": "Blockchain functionality for NeoZip and companion to neozipkit — NFT minting, verification, wallet management, OpenTimestamps",
+  "version": "1.1.0",
+  "description": "Blockchain functionality for NeoZip and companion to neozipkit — NFT minting, verification, wallet management, OpenTimestamps, identity-based encryption",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
@@ -32,10 +32,19 @@
     "./constants/metadata": {
       "types": "./dist/constants/metadata.d.ts",
       "default": "./dist/constants/metadata.js"
+    },
+    "./encryption": {
+      "types": "./dist/encryption/index.d.ts",
+      "default": "./dist/encryption/index.js"
+    },
+    "./identity": {
+      "types": "./dist/identity/index.d.ts",
+      "default": "./dist/identity/index.js"
     }
   },
   "files": [
     "dist",
+    "docs",
     "README.md",
     "WHATS_NEW.md",
     "LICENSE"
@@ -78,7 +87,11 @@
     "minting",
     "zip",
     "neozip",
-    "neozipkit"
+    "neozipkit",
+    "encryption",
+    "ecies",
+    "ens",
+    "identity"
   ],
   "author": "NeoWare, Inc.",
   "repository": {
@@ -92,6 +105,8 @@
   "homepage": "https://github.com/NeoWareInc/neozipkit/tree/main/packages/neozip-blockchain#readme",
   "license": "MIT",
   "dependencies": {
+    "@noble/curves": "^1.2.0",
+    "@noble/hashes": "^1.3.2",
     "ethers": "^6.0.0",
     "moment-timezone": "^0.6.0",
     "opentimestamps": "^0.4.9"
@@ -110,9 +125,13 @@
     "typescript": "^5.0.0"
   },
   "peerDependencies": {
+    "@lit-protocol/lit-node-client": ">=6.0.0",
     "neozipkit": "^1.0.5"
   },
   "peerDependenciesMeta": {
+    "@lit-protocol/lit-node-client": {
+      "optional": true
+    },
     "neozipkit": {
       "optional": false
     }
