@@ -12,7 +12,7 @@ Advanced ZIP file creation, compression, and encryption library for Node.js and 
 
 ## Features
 
-- **Advanced ZIP compression** with support for multiple compression methods (Deflate, ZStandard, Stored)
+- **Advanced ZIP compression** with support for multiple compression methods (Deflate, ZStandard, Stored), including zstd on in-memory `Buffer` / `ArrayBuffer` and in the browser via `CompressionStream`
 - **Streaming compression** for memory-efficient processing of large files
 - **Encryption** with ZIP (Legacy), **NeoEncrypt** (default AES-256 via Extra Field `0x024E`), and **WinZip AES-256** (AE-1/AE-2, method 99 — write with `encryptionMethod: 'aes256'`, always readable on extract); create and extract in Node and browser
 - **Hash-based verification** with Merkle tree support (CRC-32, SHA-256)
@@ -104,7 +104,7 @@ All blockchain code lives in the sibling **[neozip-blockchain](../neozip-blockch
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | `ZipkitNode` create / extract / list    | File streaming (`loadZipFile`, `writeZipEntry`, `extractToFile`, …)                                           |
 | Core `Zipkit.loadZip(Buffer)` / browser | Buffer APIs kept for browser and small in-process buffers                                                     |
-| Zstd (method 93)                        | Node native `zlib` Transform streams only (no WASM). Requires Node ≥ 22.15                                    |
+| Zstd (method 93)                        | Node: native `zlib` streams and buffer compress/inflate (Node ≥ 22.15). Browser: `CompressionStream` zstd on `ArrayBuffer` (no WASM). Sync zstd is Node-only |
 | Legacy WASM zstd archives               | Detect with `detectLegacyWasmZstd` / `ZipkitNode.detectLegacyZstdEntries`; extract truncates +18 zero padding |
 
 
@@ -112,7 +112,7 @@ See also: [docs/ZSTD_USAGE.md](docs/ZSTD_USAGE.md) and the Rust crate notes in `
 
 ## Publishing (npm)
 
-The published tarball includes **`dist/`**, **`src/`** (for `neozipkit/src` conditional exports), **[`README.md`](README.md)**, and **[`WHATS_NEW.md`](WHATS_NEW.md)**. **`examples/`** and other repo-only folders are excluded—use **`pnpm publish:dry-run`** (`npm publish --dry-run`) to preview the file list.
+The published tarball includes **`dist/`**, **`src/`** (for `neozipkit/src` conditional exports), **`node-esm.mjs`** (the ESM entry for `neozipkit/node`), **[`README.md`](README.md)**, and **[`WHATS_NEW.md`](WHATS_NEW.md)**. **`examples/`** and other repo-only folders are excluded—use **`pnpm publish:dry-run`** (`npm publish --dry-run`) to preview the file list.
 
 ## Development
 
@@ -166,7 +166,7 @@ As of **v0.6.1**, `loadZipFile()` automatically **closes any prior read handle**
 
 - **STORED (0)** – No compression
 - **DEFLATED (8)** – Deflate (default)
-- **ZSTD (93)** – Zstandard
+- **ZSTD (93)** – Zstandard. Node uses native `zlib` (streams and `Buffer` / `ArrayBuffer`). The browser bundle uses `CompressionStream` zstd. `ZipkitNode.writeMembersSync` / `buildZipBufferSync` default to raw zstd level 7. Caller extra blocks such as ZipWiki `0x014F` go on `ZipEntry.additionalExtra` and are written beside `0x014E`.
 
 
 
@@ -181,7 +181,7 @@ As of **v0.6.1**, `loadZipFile()` automatically **closes any prior read handle**
 
 ## What’s new
 
-See [WHATS_NEW.md](WHATS_NEW.md) for release notes. 
+See [WHATS_NEW.md](WHATS_NEW.md) for release notes. The unreleased section covers Extra Field `0x014F`, buffer and browser zstd, and `writeMembersSync`. 
 
 ## Security
 

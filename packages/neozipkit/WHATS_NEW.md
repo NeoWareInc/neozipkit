@@ -2,6 +2,61 @@
 
 Release notes for people who install and use **`neozipkit`** from npm. For blockchain timestamping and NFTs, see the sibling package [`neozip-blockchain`](https://www.npmjs.com/package/neozip-blockchain).
 
+## Unreleased
+
+Local build after **1.0.5**. Not on npm yet. ZipWiki consumes it with `file:../neozipkit/packages/neozipkit` until this build is published.
+
+### Caller extra fields, including ZipWiki `0x014F`
+
+`ZipEntry.createLocalHdr()` and `centralDirEntry()` write caller-supplied extra-field records beside **`0x014E`**, WinZip AES, and NeoEncrypt. Pass a buffer of complete records (header id + size + payload) on `entry.additionalExtra`.
+
+- **`0x014F`** is ZipWiki’s origin locator (URI, size, mtime, CRC-32 or SHA-256). The id is `HDR_ID.ORIGIN`. The kit does not interpret the TLV; it stores and returns the bytes.
+- Unknown extra ids survive a read. They are collected into `additionalExtra` so a later header rebuild does not drop them.
+- `ZipCopyNode` copies local bytes as-is and copies `additionalExtra` onto the rebuilt central-directory header, so an origin tag survives a raw copy.
+- Set `entry.emitUnicodePath = false` when the caller extra blob must be the only extra (ZipWiki pack does this). The default remains the Info-ZIP Unicode Path extra when the name needs it.
+- Method **93** records version needed to extract **6.3** (63).
+
+### Zstd on in-memory buffers, including the browser
+
+Method 93 is no longer only a Node file stream.
+
+- **Node:** `ZstdNode.compress`, `decompress`, `compressSync`, and `decompressSync` accept a `Buffer`, `Uint8Array`, or `ArrayBuffer`. `compressSyncAtLevel(data, zstdLevel)` uses a raw zlib zstd level (1–19). ZipWiki pack uses level **7** on that scale. The 1–9 kit scale (`mapCompressionLevel`, about `level * 2.1`) is unchanged for `createZipFromFiles` / `writeZipEntry`.
+- **Browser:** the bundle no longer throws from the zstd stub. Compress and inflate use `CompressionStream` / `DecompressionStream` (`'zstd'`) on an `ArrayBuffer`. There is still no WASM codec. Sync `compressSync` / `decompressSync` are Node-only; the browser API is async. Browsers without `CompressionStream` zstd (and Node itself) throw a clear error. Deflate and store are unchanged.
+- `inflateZipPayload(method, bytes)` (browser and core) and `inflateZipPayloadSync(method, buffer)` (`neozipkit/node`) inflate store (0), raw deflate (8), and zstd (93).
+
+### In-memory and streaming writer
+
+`ZipkitNode.writeMembersSync(path, members)` streams local headers, payloads, the central directory, and the EOCD to a file. `buildZipBufferSync(members)` builds the same archive as one `Buffer` for tests and small rewrites. `writeZipFileSync` is the same stream without the class.
+
+- Default method is zstd **93** at raw level **7**. Pass `method: 0 | 8 | 93`. Empty payloads and payloads that do not shrink are stored.
+- `useSHA256: true` writes Extra Field **`0x014E`**. `additionalExtra` is the caller block (`0x014F`). NeoEncrypt is not turned on.
+- `precompressed` copies an existing method, compressed bytes, CRC-32, and extra blob without recompressing.
+
+```ts
+import { ZipkitNode } from 'neozipkit/node';
+
+const zip = new ZipkitNode();
+zip.writeMembersSync('notes.zipwiki', [
+  {
+    name: 'wiki/parsed/notes.txt.md',
+    data: Buffer.from('# Notes\n'),
+    method: 93,
+    level: 7,
+    additionalExtra: originExtra, // complete 0x014F record
+  },
+]);
+```
+
+### Merkle v1 on CRC-only archives
+
+`getMerkleRootAsync()` (v1) now captures `merkleLeafV1` while `testEntry` checks CRC-32, not only when Extra Field `0x014E` is present. v0 is unchanged: bare `0x014E` digests for older archives.
+
+### ESM import of `neozipkit/node`
+
+The compiled kit is CommonJS. The package `import` condition is `node-esm.mjs`, so named imports (`ZipkitNode`, `buildZipBufferSync`, `ZipCopyNode`, Merkle helpers) work from ESM. `require('neozipkit/node')` still loads `dist/node/index.js`. `minimatch` is a runtime dependency of `ZipkitNode`.
+
+---
+
 ## 1.0.5 (2026-08-14)
 
 ### NeoZip Application Note + APPNOTE §6 Merkle (v0 / v1)
