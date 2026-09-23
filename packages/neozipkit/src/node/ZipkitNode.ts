@@ -24,6 +24,8 @@ import {
   detectLegacyWasmZstd,
   type LegacyZstdDetectResult,
 } from './LegacyZstd';
+import { writeZipFileSync, type ZipBufferMember } from './buildZipBuffer';
+export type { ZipBufferMember };
 import * as fs from 'fs';
 import * as path from 'path';
 import { minimatch } from 'minimatch';
@@ -1208,6 +1210,16 @@ export default class ZipkitNode extends Zipkit {
     // Placeholder for future implementation
     // This would require significant ZIP file manipulation logic
     throw new Error('updateZipFile() - Full implementation pending. Use neozip CLI for now.');
+  }
+
+  /**
+   * Stream members to `filePath` (local headers, payloads, central directory, EOCD).
+   * Pass `useSHA256` for Extra Field 0x014E and `additionalExtra` for caller blocks
+   * such as ZipWiki 0x014F. `method` 93 uses zlib zstd at `level` (default 7).
+   * NeoEncrypt is not enabled. Precompressed members are copied without recompression.
+   */
+  writeMembersSync(filePath: string, members: ZipBufferMember[]): void {
+    writeZipFileSync(filePath, members);
   }
 
   // ============================================================================

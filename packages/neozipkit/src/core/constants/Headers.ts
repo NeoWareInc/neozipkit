@@ -187,6 +187,7 @@ export const HDR_ID = {
   IBM1:            0x0065,    // IBM S/390 (Z390) - Attribute
   IBM2:            0x0066,    // IBM S/390 (Z390) - Attribute
   SHA256:          0x014E,    // NeoZip Extra Field: 32-byte SHA-256 of uncompressed payload (APPNOTE §5)
+  ORIGIN:          0x014F,    // ZipWiki origin locator (URI, size, mtime, CRC-32 or SHA-256)
   NEO_CRYPTO:      0x024E,    // NeoEncrypt metadata (see docs/NEO_CRYPTO_FORMAT.md); LE on wire: 4E 02
   POSZIP:          0x4690,    // POSZIP 4690
   UNV_TIME:        0x5455,    // Universal Time (UT) (32-bit) 5 data bytes

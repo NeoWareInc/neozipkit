@@ -592,7 +592,8 @@ export class ZipDecompressNode {
     const decompressedStream = this.decompressStream(compressedStream, entry.cmpMethod, undefined, entry);
     
     // Process and validate chunks - one block at a time
-    const hashCalc = new HashCalculator({ useSHA256: !!entry.sha256 });
+    // Always hash the v1 Merkle leaf so getMerkleRootAsync works for CRC-only archives.
+    const hashCalc = new HashCalculator({ useSHA256: true });
     let totalBytes = 0;
     
     try {
@@ -622,20 +623,20 @@ export class ZipDecompressNode {
           return { verifiedHash: calculatedHash };
         } else {
           const calculatedCRC = hashCalc.finalizeCRC32();
+          const leaf = hashCalc.finalizeMerkleLeafV1();
+          if (leaf) entry.merkleLeafV1 = leaf;
           this.log(`CRC-32 comparison: calculated=${calculatedCRC}, stored=${entry.crc}`);
           if (calculatedCRC !== entry.crc) {
             throw new Error(Errors.INVALID_CRC);
           }
           this.log(`CRC-32 comparison: calculated=${calculatedCRC}, stored=${entry.crc}`);
-          // No hash to return for CRC-32 only entries
           return { verifiedHash: undefined };
         }
       } else {
-        // Hash check skipped — still finalize leaf/digest once from this stream when SHA was enabled
+        const leaf = hashCalc.finalizeMerkleLeafV1();
+        if (leaf) entry.merkleLeafV1 = leaf;
         if (entry.sha256 && hashCalc) {
           const calculatedHash = hashCalc.finalizeSHA256();
-          const leaf = hashCalc.finalizeMerkleLeafV1();
-          if (leaf) entry.merkleLeafV1 = leaf;
           return { verifiedHash: calculatedHash || undefined };
         }
         return { verifiedHash: undefined };

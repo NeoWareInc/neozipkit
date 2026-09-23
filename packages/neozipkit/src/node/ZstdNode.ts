@@ -54,26 +54,49 @@ export function createDecompressTransform(): zlib.ZstdDecompress {
   return zlib.createZstdDecompress();
 }
 
-export async function compress(data: Buffer, level: number = 6): Promise<Buffer> {
+/** Bytes accepted by the buffer zstd codec (Node Buffer or browser ArrayBuffer). */
+export type ZstdInput = Buffer | Uint8Array | ArrayBuffer;
+
+export function asZstdBuffer(data: ZstdInput): Buffer {
+  if (Buffer.isBuffer(data)) return data;
+  if (data instanceof ArrayBuffer) return Buffer.from(data);
+  return Buffer.from(data.buffer, data.byteOffset, data.byteLength);
+}
+
+export async function compress(data: ZstdInput, level: number = 6): Promise<Buffer> {
   assertNativeZstd();
-  const result = await zstdCompressAsync(data, compressOptions(level));
+  const result = await zstdCompressAsync(asZstdBuffer(data), compressOptions(level));
   return Buffer.from(result);
 }
 
-export async function decompress(data: Buffer): Promise<Buffer> {
+export async function decompress(data: ZstdInput): Promise<Buffer> {
   assertNativeZstd();
-  const result = await zstdDecompressAsync(data);
+  const result = await zstdDecompressAsync(asZstdBuffer(data));
   return Buffer.from(result);
 }
 
-export function compressSync(data: Buffer, level: number = 6): Buffer {
+export function compressSync(data: ZstdInput, level: number = 6): Buffer {
   assertNativeZstd();
-  return zlib.zstdCompressSync(data, compressOptions(level));
+  return zlib.zstdCompressSync(asZstdBuffer(data), compressOptions(level));
 }
 
-export function decompressSync(data: Buffer): Buffer {
+/**
+ * Compress with a raw zlib zstd level (1–19), without the 1–9 kit scale.
+ * ZipWiki pack uses level 7 on this scale.
+ */
+export function compressSyncAtLevel(data: ZstdInput, zstdLevel: number): Buffer {
   assertNativeZstd();
-  return zlib.zstdDecompressSync(data);
+  const level = Math.min(19, Math.max(1, Math.trunc(zstdLevel)));
+  return zlib.zstdCompressSync(asZstdBuffer(data), {
+    params: {
+      [zlib.constants.ZSTD_c_compressionLevel]: level,
+    },
+  });
+}
+
+export function decompressSync(data: ZstdInput): Buffer {
+  assertNativeZstd();
+  return zlib.zstdDecompressSync(asZstdBuffer(data));
 }
 
 /**
@@ -147,7 +170,9 @@ export const ZstdNode = {
   compress,
   decompress,
   compressSync,
+  compressSyncAtLevel,
   decompressSync,
+  asZstdBuffer,
   compressChunks,
   decompressStream,
 };

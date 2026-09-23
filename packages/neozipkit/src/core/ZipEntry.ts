@@ -49,6 +49,15 @@ export default class ZipEntry implements ZipFileEntry {
   localHdrOffset: number = 0;   // Relative offset to local header from File/Disk start
   filename: string = '';       // File name
   extraField: Buffer | null = null; // Extra field
+  /**
+   * Caller-supplied extra-field records (complete header id + size + payload).
+   * Written on the local header and the central-directory header beside 0x014E.
+   * Unknown ids parsed from an existing header (including ZipWiki 0x014F) are kept here
+   * so a later header rebuild does not drop them.
+   */
+  additionalExtra: Buffer | null = null;
+  /** When false, local/central headers omit the Info-ZIP Unicode Path extra. */
+  emitUnicodePath = true;
   comment: string | null = null;    // Entry comment
 
   // File Data
@@ -306,6 +315,11 @@ export default class ZipEntry implements ZipFileEntry {
               this.neoCryptoFlags = _data.readUInt16LE(7);
             }
           }
+        } else if (_id !== HDR_ID.UNICODE_PATH) {
+          const rec = Buffer.from(this.extraField.subarray(i, i + 4 + _len));
+          this.additionalExtra = this.additionalExtra
+            ? Buffer.concat([this.additionalExtra, rec])
+            : rec;
         }
         // Skip Unicode Path here as we already processed it
         i += 4 + _len;
@@ -330,8 +344,16 @@ export default class ZipEntry implements ZipFileEntry {
    * @returns true if the filename contains non-ASCII characters or special characters
    */
   needsUnicodeHandling(): boolean {
+    if (!this.emitUnicodePath) return false;
     // Check if filename contains non-ASCII characters or special characters like apostrophes
     return /[^\x00-\x7E]|['"]/.test(this.filename);
+  }
+
+  /** Version needed to extract. Method 93 (zstd) is 6.3. */
+  private versionNeededToExtract(): number {
+    if (this.cmpMethod === CMP_METHOD.AES_ENCRYPT) return VER_AES_EXTRACT;
+    if (this.cmpMethod === CMP_METHOD.ZSTD) return 63;
+    return VER_EXTRACT;
   }
 
   /**
@@ -389,13 +411,18 @@ export default class ZipEntry implements ZipFileEntry {
     if (isNeoEncrypt) {
       extraFieldLen += NEO_CRYPTO_EXTRA_FIELD_SIZE;
     }
+
+    const sha256Local = this.sha256 ? Buffer.from(this.sha256, 'hex') : null;
+    const sha256LocalLen = sha256Local && sha256Local.length > 0 ? 4 + sha256Local.length : 0;
+    const callerExtraLen = this.additionalExtra?.length ?? 0;
+    extraFieldLen += sha256LocalLen + callerExtraLen;
     
     const data = Buffer.alloc(LOCAL_HDR.SIZE + this.filename.length + extraFieldLen);
     
     // "PK\003\004"
     data.writeUInt32LE(LOCAL_HDR.SIGNATURE, 0);
     // version needed to extract (NeoEncrypt keeps standard ZIP method — use normal extract version)
-    const verExtract = this.cmpMethod === CMP_METHOD.AES_ENCRYPT ? VER_AES_EXTRACT : VER_EXTRACT;
+    const verExtract = this.versionNeededToExtract();
     data.writeUInt16LE(verExtract, LOCAL_HDR.VER_EXTRACT);
     // general purpose bit flag
     data.writeUInt16LE(this.bitFlags >>> 0, LOCAL_HDR.FLAGS);
@@ -452,6 +479,17 @@ export default class ZipEntry implements ZipFileEntry {
       extraOffset += NEO_CRYPTO_EXTRA_FIELD_SIZE;
     }
 
+    if (sha256Local && sha256LocalLen > 0) {
+      data.writeUInt16LE(HDR_ID.SHA256, extraOffset);
+      data.writeUInt16LE(sha256Local.length, extraOffset + 2);
+      sha256Local.copy(data, extraOffset + 4);
+      extraOffset += sha256LocalLen;
+    }
+
+    if (this.additionalExtra && callerExtraLen > 0) {
+      this.additionalExtra.copy(data, extraOffset);
+    }
+
     return data;
   }
 
@@ -492,7 +530,8 @@ export default class ZipEntry implements ZipFileEntry {
     const isNeoEncrypt = this.neoCryptoAlgorithm > 0;
     const neoLen = isNeoEncrypt ? NEO_CRYPTO_EXTRA_FIELD_SIZE : 0;
 
-    const extraLen = utfLen + sha256Len + uidgidLen + symlinkLen + hardlinkLen + (needsUnicode ? unicodePathLen : 0) + aesLen + neoLen;
+    const callerExtraLen = this.additionalExtra?.length ?? 0;
+    const extraLen = utfLen + sha256Len + uidgidLen + symlinkLen + hardlinkLen + (needsUnicode ? unicodePathLen : 0) + aesLen + neoLen + callerExtraLen;
 
     // Calculate actual filename length (ASCII conversion may change length)
     const asciiName = this.filename.replace(/[^\x00-\x7E]/g, '?');
@@ -506,7 +545,7 @@ export default class ZipEntry implements ZipFileEntry {
     // Version made by - Needs to be set for NeoZip 
     data.writeUInt16LE(this.isUpdated ? this.VER_MADE_BY : this.verMadeBy, CENTRAL_DIR.VER_MADE);
     // Version needed to extract
-    const centralVerExtract = this.cmpMethod === CMP_METHOD.AES_ENCRYPT ? VER_AES_EXTRACT : VER_EXTRACT;
+    const centralVerExtract = this.versionNeededToExtract();
     data.writeInt16LE(this.isUpdated ? centralVerExtract : this.verMadeBy, CENTRAL_DIR.VER_EXT);
     // Encrypt, Decrypt Flags
     data.writeInt16LE(this.bitFlags >>> 0, CENTRAL_DIR.FLAGS);
@@ -635,6 +674,10 @@ export default class ZipEntry implements ZipFileEntry {
       data.writeUInt16LE(this.neoCryptoFlags, p + 7);
       data.writeUInt16LE(0, p + 9);
       extraOffset += NEO_CRYPTO_EXTRA_FIELD_SIZE;
+    }
+
+    if (this.additionalExtra && callerExtraLen > 0) {
+      this.additionalExtra.copy(data, extraOffset);
     }
 
     return data;

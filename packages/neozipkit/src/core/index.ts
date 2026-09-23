@@ -10,6 +10,7 @@ export * from './ZipEntry';
 export { ZipCompress } from './ZipCompress';
 export type { CompressOptions, CreateZipOptions } from './ZipCompress';
 export type { DecompressionResult, DecompressionOptions } from './ZipDecompress';
+export { inflateZipPayload } from './inflateZipPayload';
 export { ZipCopy } from './ZipCopy';
 export type {
   CopyOptions,

@@ -248,6 +248,10 @@ export class ZipCopyNode {
     cloned.uid = entry.uid;
     cloned.gid = entry.gid;
     cloned.sha256 = entry.sha256;
+    cloned.emitUnicodePath = entry.emitUnicodePath;
+    if (entry.additionalExtra) {
+      cloned.additionalExtra = Buffer.from(entry.additionalExtra);
+    }
 
     // Copy symlink data
     cloned.isSymlink = entry.isSymlink;
