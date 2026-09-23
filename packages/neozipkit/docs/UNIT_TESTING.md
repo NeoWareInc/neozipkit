@@ -115,7 +115,7 @@ class ZipEntry {
 
 **Why test these:**
 - Complex binary format parsing
-- Many edge cases (ZIP64, encryption, compression methods)
+- Many edge cases (ZIP64 covered in `tests/unit/core/zip64/Zip64.test.ts`, encryption, compression methods)
 - Bugs cause corrupted ZIP files
 - Can test with known ZIP file structures
 

@@ -9,6 +9,10 @@ import { deflateRawSync } from 'zlib';
 import ZipEntry from '../core/ZipEntry';
 import { crc32, sha256 } from '../core/encryption/ZipCrypto';
 import { compressSyncAtLevel } from './ZstdNode';
+import {
+  assertBufferAllowsEntryZip64,
+  buildEndRecords,
+} from '../core/zip64/Zip64';
 
 export type ZipPrecompressedMember = {
   method: number;
@@ -116,6 +120,11 @@ function frameMembers(members: ZipBufferMember[]): FramedMember[] {
     entry.uncompressedSize = payload.uncompressedSize;
     entry.timeDateDOS = ((dos.date & 0xffff) << 16) | (dos.time & 0xffff);
     entry.localHdrOffset = offset;
+    assertBufferAllowsEntryZip64(
+      entry.uncompressedSize,
+      entry.compressedSize,
+      entry.localHdrOffset
+    );
     if (!copied && member.useSHA256 === true) {
       entry.sha256 = sha256(uncompressed);
     }
@@ -131,16 +140,13 @@ function frameMembers(members: ZipBufferMember[]): FramedMember[] {
 }
 
 function eocd(entryCount: number, centralSize: number, centralOffset: number): Buffer {
-  const buf = Buffer.alloc(22);
-  buf.writeUInt32LE(0x06054b50, 0);
-  buf.writeUInt16LE(0, 4);
-  buf.writeUInt16LE(0, 6);
-  buf.writeUInt16LE(entryCount, 8);
-  buf.writeUInt16LE(entryCount, 10);
-  buf.writeUInt32LE(centralSize, 12);
-  buf.writeUInt32LE(centralOffset, 16);
-  buf.writeUInt16LE(0, 20);
-  return buf;
+  return buildEndRecords({
+    totalEntries: entryCount,
+    centralDirSize: centralSize,
+    centralDirOffset: centralOffset,
+    zip64EocdOffset: centralOffset + centralSize,
+    allowSizeOffsetZip64: false,
+  });
 }
 
 /** Build a ZIP in one buffer. Kept for tests and atomic in-memory rewrites. */

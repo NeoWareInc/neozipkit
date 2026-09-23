@@ -10,7 +10,14 @@
 
 import ZipEntry from './ZipEntry';
 import Zipkit from './Zipkit';
-import { LOCAL_HDR, CENTRAL_END, GP_FLAG } from './constants/Headers';
+import { LOCAL_HDR, GP_FLAG } from './constants/Headers';
+import {
+  assertBufferAllowsEntryZip64,
+  buildEndRecords,
+  dataDescriptorByteLength,
+  needsZip64SizeOrOffset,
+  ZIP64_BUFFER_SIZE_OFFSET_ERROR,
+} from './zip64/Zip64';
 
 /**
  * Options for copying ZIP files
@@ -174,9 +181,19 @@ export class ZipCopy {
     const localHeaderSize = this.calculateLocalHeaderSize(sourceBuffer, entry);
     
     // Determine total entry size
-    // For data descriptor entries, add 16 bytes for the data descriptor
+    // For data descriptor entries, add Zip64 (24) or classic (16) descriptor bytes
     const hasDataDescriptor = (entry.bitFlags & GP_FLAG.DATA_DESC) !== 0;
-    const totalEntrySize = localHeaderSize + entry.compressedSize + (hasDataDescriptor ? 16 : 0);
+    const descLen = hasDataDescriptor
+      ? dataDescriptorByteLength(entry.usesZip64Extra)
+      : 0;
+    const totalEntrySize = localHeaderSize + entry.compressedSize + descLen;
+
+    // Buffer copy must remain memory-feasible
+    assertBufferAllowsEntryZip64(
+      entry.uncompressedSize,
+      entry.compressedSize,
+      entry.localHdrOffset
+    );
 
     // Verify we have enough data in the buffer
     if (entry.localHdrOffset + totalEntrySize > sourceBuffer.length) {
@@ -264,6 +281,17 @@ export class ZipCopy {
     cloned.originalEntry = entry.originalEntry;
     cloned.inode = entry.inode;
 
+    cloned.usesZip64Extra = entry.usesZip64Extra;
+    if (entry.additionalExtra) {
+      cloned.additionalExtra = Buffer.from(entry.additionalExtra);
+    }
+    cloned.aesVersion = entry.aesVersion;
+    cloned.aesStrength = entry.aesStrength;
+    cloned.realCmpMethod = entry.realCmpMethod;
+    cloned.neoCryptoPayloadVersion = entry.neoCryptoPayloadVersion;
+    cloned.neoCryptoAlgorithm = entry.neoCryptoAlgorithm;
+    cloned.neoCryptoFlags = entry.neoCryptoFlags;
+
     return cloned;
   }
 
@@ -276,6 +304,19 @@ export class ZipCopy {
     zipComment: string,
     centralDirOffset: number
   ): Buffer {
+    if (
+      needsZip64SizeOrOffset(0, 0, 0, 0, centralDirOffset) ||
+      entries.some((e) =>
+        needsZip64SizeOrOffset(
+          e.uncompressedSize,
+          e.compressedSize,
+          e.localHdrOffset
+        )
+      )
+    ) {
+      throw new Error(ZIP64_BUFFER_SIZE_OFFSET_ERROR);
+    }
+
     const centralDirChunks: Buffer[] = [];
     for (const entry of entries) {
       centralDirChunks.push(entry.centralDirEntry());
@@ -283,32 +324,20 @@ export class ZipCopy {
     const centralDirBuffer = Buffer.concat(centralDirChunks);
     const centralDirSize = centralDirBuffer.length;
 
-    const commentBytes = Buffer.from(zipComment, 'utf8');
-    const commentLength = Math.min(commentBytes.length, 0xffff);
-
-    const eocdBuffer = Buffer.alloc(22 + commentLength);
-    let pos = 0;
-    eocdBuffer.writeUInt32LE(CENTRAL_END.SIGNATURE, pos);
-    pos += 4;
-    eocdBuffer.writeUInt16LE(0, pos);
-    pos += 2;
-    eocdBuffer.writeUInt16LE(0, pos);
-    pos += 2;
-    eocdBuffer.writeUInt16LE(entries.length, pos);
-    pos += 2;
-    eocdBuffer.writeUInt16LE(entries.length, pos);
-    pos += 2;
-    eocdBuffer.writeUInt32LE(centralDirSize, pos);
-    pos += 4;
-    eocdBuffer.writeUInt32LE(centralDirOffset, pos);
-    pos += 4;
-    eocdBuffer.writeUInt16LE(commentLength, pos);
-    pos += 2;
-    if (commentLength > 0) {
-      commentBytes.copy(eocdBuffer, pos, 0, commentLength);
+    if (needsZip64SizeOrOffset(0, 0, 0, centralDirSize, centralDirOffset)) {
+      throw new Error(ZIP64_BUFFER_SIZE_OFFSET_ERROR);
     }
 
-    return Buffer.concat([centralDirBuffer, eocdBuffer]);
+    const endRecords = buildEndRecords({
+      totalEntries: entries.length,
+      centralDirSize,
+      centralDirOffset,
+      zip64EocdOffset: centralDirOffset + centralDirSize,
+      archiveComment: zipComment,
+      allowSizeOffsetZip64: false,
+    });
+
+    return Buffer.concat([centralDirBuffer, endRecords]);
   }
 
   /**

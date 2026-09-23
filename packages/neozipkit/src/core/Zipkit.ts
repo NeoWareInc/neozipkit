@@ -25,7 +25,7 @@ import {
   CENTRAL_END, 
   CENTRAL_DIR, 
   ZIP64_CENTRAL_END, 
-  ZIP64_CENTRAL_DIR ,
+  ZIP64_CENTRAL_DIR,
   GP_FLAG,
   TIMESTAMP_SUBMITTED,
   TIMESTAMP_METADATA,
@@ -35,6 +35,14 @@ import {
   CENTRAL_DIRECTORY_END,
   HDR_ID
 } from './constants/Headers';
+import {
+  buildEndRecords,
+  classicEocdNeedsZip64,
+  parseZip64Eocd,
+  parseZip64Locator,
+  ZIP64_EOCD_RECORD_SIZE,
+  ZIP64_LOCATOR_SIZE,
+} from './zip64/Zip64';
 import {
   findReservedMetaEntry,
   isMetaInfPath,
@@ -605,17 +613,30 @@ export default class Zipkit {
     if (eocdBuffer.readUInt32LE(0) === CENTRAL_END.SIGNATURE) {
       this.centralDirSize = eocdBuffer.readUInt32LE(CENTRAL_END.CENTRAL_DIR_SIZE);
       this.centralDirOffset = eocdBuffer.readUInt32LE(CENTRAL_END.CENTRAL_DIR_OFFSET);
+      const volEntries = eocdBuffer.readUInt16LE(CENTRAL_END.VOL_ENTRIES);
+      const totalEntries = eocdBuffer.readUInt16LE(CENTRAL_END.TOTAL_ENTRIES);
 
-      if (this.centralDirOffset === 0xFFFFFFFF) {
-        // ZIP64: locate locator (20 bytes before EOCD) and then ZIP64 EOCD (56 bytes)
-        const locatorOffset = eocdOffset - 20;
-        const locatorBuffer = buffer.subarray(locatorOffset, locatorOffset + 20);
-        if (locatorBuffer.readUInt32LE(0) === ZIP64_CENTRAL_END.SIGNATURE) {
-          const zip64Offset = Number(locatorBuffer.readBigUInt64LE(8));
-          const zip64Buffer = buffer.subarray(zip64Offset, zip64Offset + 56);
-          this.centralDirSize = Number(zip64Buffer.readBigUInt64LE(ZIP64_CENTRAL_DIR.CENTRAL_DIR_SIZE));
-          this.centralDirOffset = Number(zip64Buffer.readBigUInt64LE(ZIP64_CENTRAL_DIR.CENTRAL_DIR_OFFSET));
+      if (
+        classicEocdNeedsZip64({
+          volEntries,
+          totalEntries,
+          centralDirSize: this.centralDirSize,
+          centralDirOffset: this.centralDirOffset,
+        })
+      ) {
+        const locatorOffset = eocdOffset - ZIP64_LOCATOR_SIZE;
+        if (locatorOffset < 0) {
+          throw new Error(Errors.INVALID_FORMAT);
         }
+        const locatorBuffer = buffer.subarray(locatorOffset, locatorOffset + ZIP64_LOCATOR_SIZE);
+        const zip64Offset = parseZip64Locator(locatorBuffer);
+        const zip64Buffer = buffer.subarray(
+          zip64Offset,
+          zip64Offset + ZIP64_EOCD_RECORD_SIZE
+        );
+        const z64 = parseZip64Eocd(zip64Buffer);
+        this.centralDirSize = z64.centralDirSize;
+        this.centralDirOffset = z64.centralDirOffset;
       }
     } else {
       throw new Error(Errors.INVALID_FORMAT);
@@ -691,17 +712,14 @@ export default class Zipkit {
    * Note: totalEntries must be passed as parameter since zipEntries[] in Zipkit is the cache
    */
   private centralEndHdrMethod(centralDirSize: number, centralDirOffset: number, totalEntries: number): Buffer {
-    const ceBuf = Buffer.alloc(CENTRAL_END.SIZE);
-    ceBuf.writeUInt32LE(CENTRAL_END.SIGNATURE, 0);
-    ceBuf.writeUInt16LE(0, 4); // Number of this disk
-    ceBuf.writeUInt16LE(0, 6); // Number of the disk with the start of the central directory
-    ceBuf.writeUInt16LE(totalEntries, 8); // Total number of entries
-    ceBuf.writeUInt16LE(totalEntries, 10); // Total number of entries on this disk
-    ceBuf.writeUInt32LE(centralDirSize, 12); // Size of central directory
-    ceBuf.writeUInt32LE(centralDirOffset, 16); // Offset of start of central directory
-    ceBuf.writeUInt16LE(0, 20); // ZIP file comment length
-    
-    return ceBuf;
+    // Buffer path: allow entry-count Zip64; refuse size/offset Zip64 (multi-GiB in memory).
+    return buildEndRecords({
+      totalEntries,
+      centralDirSize,
+      centralDirOffset,
+      zip64EocdOffset: centralDirOffset + centralDirSize,
+      allowSizeOffsetZip64: false,
+    });
   }
 
   /**

@@ -10,7 +10,11 @@
 import * as fs from 'fs';
 import ZipEntry from '../core/ZipEntry';
 import ZipkitNode from './ZipkitNode';
-import { LOCAL_HDR, CENTRAL_END, GP_FLAG } from '../core/constants/Headers';
+import { LOCAL_HDR, GP_FLAG } from '../core/constants/Headers';
+import {
+  buildEndRecords,
+  dataDescriptorByteLength,
+} from '../core/zip64/Zip64';
 
 /**
  * Options for copying ZIP files
@@ -159,9 +163,12 @@ export class ZipCopyNode {
     const localHeaderSize = this.calculateLocalHeaderSize(sourceFd, entry);
     
     // Determine total entry size
-    // For data descriptor entries, add 16 bytes for the data descriptor
+    // For data descriptor entries, add Zip64 (24) or classic (16) descriptor bytes
     const hasDataDescriptor = (entry.bitFlags & GP_FLAG.DATA_DESC) !== 0;
-    const totalEntrySize = localHeaderSize + entry.compressedSize + (hasDataDescriptor ? 16 : 0);
+    const descLen = hasDataDescriptor
+      ? dataDescriptorByteLength(entry.usesZip64Extra)
+      : 0;
+    const totalEntrySize = localHeaderSize + entry.compressedSize + descLen;
 
     // Read the entire entry (local header + compressed data + data descriptor if present) from source
     const entryBuffer = Buffer.alloc(totalEntrySize);
@@ -262,6 +269,14 @@ export class ZipCopyNode {
     cloned.originalEntry = entry.originalEntry;
     cloned.inode = entry.inode;
 
+    cloned.usesZip64Extra = entry.usesZip64Extra;
+    cloned.aesVersion = entry.aesVersion;
+    cloned.aesStrength = entry.aesStrength;
+    cloned.realCmpMethod = entry.realCmpMethod;
+    cloned.neoCryptoPayloadVersion = entry.neoCryptoPayloadVersion;
+    cloned.neoCryptoAlgorithm = entry.neoCryptoAlgorithm;
+    cloned.neoCryptoFlags = entry.neoCryptoFlags;
+
     return cloned;
   }
 
@@ -284,33 +299,16 @@ export class ZipCopyNode {
     const centralDirEndOffset = fs.fstatSync(destFd).size;
     const centralDirSize = centralDirEndOffset - centralDirStartOffset;
 
-    const commentBytes = Buffer.from(zipComment, 'utf8');
-    const commentLength = Math.min(commentBytes.length, 0xFFFF);
+    const endRecords = buildEndRecords({
+      totalEntries: entries.length,
+      centralDirSize,
+      centralDirOffset: centralDirStartOffset,
+      zip64EocdOffset: centralDirStartOffset + centralDirSize,
+      archiveComment: zipComment,
+      allowSizeOffsetZip64: true,
+    });
 
-    const eocdBuffer = Buffer.alloc(22 + commentLength);
-    let pos = 0;
-
-    eocdBuffer.writeUInt32LE(CENTRAL_END.SIGNATURE, pos);
-    pos += 4;
-    eocdBuffer.writeUInt16LE(0, pos);
-    pos += 2;
-    eocdBuffer.writeUInt16LE(0, pos);
-    pos += 2;
-    eocdBuffer.writeUInt16LE(entries.length, pos);
-    pos += 2;
-    eocdBuffer.writeUInt16LE(entries.length, pos);
-    pos += 2;
-    eocdBuffer.writeUInt32LE(centralDirSize, pos);
-    pos += 4;
-    eocdBuffer.writeUInt32LE(centralDirStartOffset, pos);
-    pos += 4;
-    eocdBuffer.writeUInt16LE(commentLength, pos);
-    pos += 2;
-    if (commentLength > 0) {
-      commentBytes.copy(eocdBuffer, pos, 0, commentLength);
-    }
-
-    fs.writeSync(destFd, eocdBuffer, 0, eocdBuffer.length);
+    fs.writeSync(destFd, endRecords, 0, endRecords.length);
 
     return { centralDirOffset: centralDirStartOffset, centralDirSize };
   }

@@ -12,63 +12,23 @@ Ids (`E1` …) are stable. Do not renumber; insert with a letter (`E1a`) if need
 (~512 KiB chunks), UTF-8 language encoding flag (bit 11) plus Unicode Path extra,
 NeoEncrypt (`0x024E`) and WinZip AES (method 99 / `0x9901`), ZipCrypto, data
 descriptors on copy/crypto, Info-ZIP UT extra (`0x5455`), Extra Field `0x014E`
-SHA-256, Zstd method 93 on Node.
+SHA-256, Zstd method 93 on Node, **Zip64 Version 1** (read + Node write for
+size/offset; buffer entry-count Zip64 — see E1).
 
 ---
 
-## E1 — Complete Zip64 read and write (priority 1)
+## E1 — Complete Zip64 read and write ✅
 
-**Why first.** Archives past **65,535 members** or **4 GiB − 1** of size/offset
-are not valid classic ZIP. The APPNOTE already defers Zip64 layouts to PKWARE.
-Until this is complete, those archives cannot be produced here and cannot be
-extracted reliably.
+**Status:** Done (APPNOTE Zip64 Version 1).
 
-**What exists today**
+- Shared helpers: `src/core/zip64/Zip64.ts`
+- **Read:** any classic EOCD sentinel → locator → Zip64 EOCD; merge extra `0x0001` into `ZipEntry`; Zip64 data-descriptor length on copy
+- **Write (Node):** local/central `0x0001`, version-needed 45, Zip64 EOCD + locator, local size patch into Zip64 extra
+- **Write (buffer/browser):** Zip64 for entry count > 65 535 only; size/offset ≥ 4 GiB throws and directs callers to Node streaming
+- **Copy:** `ZipCopyNode` rewrites Zip64 EOCD/locator; buffer `ZipCopy` refuses multi-GiB materialization
+- **Tests:** `tests/unit/core/zip64/Zip64.test.ts`
 
-- Constants for Zip64 EOCD (`0x06064b50`), locator (`0x07064b50`), and extra
-  `0x0001` (`HDR_ID.ZIP64`) in `src/core/constants/Headers.ts`.
-- **Partial read:** `Zipkit` / `ZipkitNode.loadZIP64EOCD` only if the classic
-  EOCD **central-directory offset** is `0xFFFFFFFF`. They then take CD size and
-  CD offset from a 56-byte Zip64 EOCD. They do **not** consult Zip64 when
-  entry count is `0xFFFF` or CD size is `0xFFFFFFFF`.
-- Extra `0x0001` is **logged** in verbose listing (`ZipEntry`); it is **not**
-  applied to `uncompressedSize`, `compressedSize`, or `localHdrOffset`.
-  `readZipEntry` still uses the classic u32 fields (`0xFFFFFFFF` stays as the
-  size).
-- **No write path.** `centralEndHdrMethod`, `writeEndOfCentralDirectory`,
-  `ZipEntry` local/central headers, and `ZipCopy` / `ZipCopyNode` always emit
-  u16 counts and u32 sizes/offsets. `writeUInt16LE` / `writeUInt32LE` throw
-  once those limits are exceeded. Extra `0x0001` is never written.
-- **No Zip64 tests** under `tests/`.
-
-**Done when**
-
-1. **Write** (Node streaming + buffer/`ZipkitBrowser` + copy): if uncompressed
-   size, compressed size, local-header offset, CD size, CD offset, or total
-   entries overflows the classic field, emit:
-   - Extra Field **`0x0001`** on that member (only overflowing fields, APPNOTE
-     order: uncompressed size, compressed size, relative header offset, disk
-     start number).
-   - **Zip64 EOCD** (`0x06064b50`) with u64 counts/sizes/offsets.
-   - **Zip64 locator** (`0x07064b50`) immediately before the classic EOCD.
-   - Classic EOCD still present, with `0xFFFF` / `0xFFFFFFFF` in overflowed
-     fields. Version-needed **45** on Zip64 members.
-2. **Read:** after the classic EOCD, if **any** of offset, CD size, or entry
-   counts is a Zip64 sentinel, parse locator then Zip64 EOCD (including
-   `TOTAL_ENTRIES`). When a member’s size or local offset is `0xFFFFFFFF` /
-   `0xFFFF`, merge extra `0x0001` into `ZipEntry` before inflate/extract.
-   Keep values past 4 GiB (`number` is enough through 2⁵³ − 1; use `bigint`
-   if offsets can exceed that — today’s `Number(readBigUInt64LE)` is not).
-3. **Tests:** round-trip (a) uncompressed size ≥ 4 GiB (stored sparse/synthetic),
-   (b) ≥ 65,536 empty members, (c) CD offset ≥ 4 GiB. Info-ZIP / Python
-   `zipfile` Zip64 can list the file; this kit lists and extracts one member.
-   Classic archives (no Zip64 records) still parse unchanged. Cover Node
-   streaming, `Zipkit.loadZip` buffer, browser, and copy.
-4. **Copy** (`ZipCopy` / `ZipCopyNode`) preserves extra `0x0001` and rewrites
-   Zip64 EOCD/locator for the new offsets.
-
-**Out of scope for E1:** spanned/split disks, Zip64 extensible data sector
-beyond the required record.
+**Out of scope (unchanged):** spanned/split disks (E6), Zip64 EOCD extensible sector.
 
 **Spec:** APPNOTE.txt §4.3.14–4.3.16, §4.4.16–4.4.24, §4.5.3.
 
@@ -134,11 +94,9 @@ full spanning is optional and low priority.
 
 | Id | Enhancement | Depends on |
 | :---- | :---- | :---- |
-| **E1** | **Complete Zip64 read + write** | — |
+| E1 | Zip64 read + write | **Done** |
 | E2 | Browser Zstd | — |
 | E3 | META-INF JSON Schema | — |
 | E4 | Optional manifest writer | — |
 | E5 | Path-bound Merkle | — |
 | E6 | Split/spanned | — |
-
-Ship **E1** before promising archives that exceed classic ZIP limits.

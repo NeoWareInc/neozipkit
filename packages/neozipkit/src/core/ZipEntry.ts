@@ -24,6 +24,17 @@ import {
 import { ZipFileEntry, FileData } from '../types';
 import { Logger } from './components/Logger';
 import { crc32 } from './encryption/ZipCrypto';
+import {
+  ZIP64_U16,
+  ZIP64_U32,
+  ZIP64_VERSION_NEEDED,
+  buildZip64Extra,
+  exceedsU16,
+  exceedsU32,
+  needsZip64Entry,
+  parseZip64Extra,
+  stripZip64FromExtra,
+} from './zip64/Zip64';
 
 const VER_ENCODING = 30;
 const VER_EXTRACT = 10;                             // Version needed to extract (1.0)
@@ -108,6 +119,9 @@ export default class ZipEntry implements ZipFileEntry {
   isHardLink: boolean = false;      // Entry is a hard link
   originalEntry: string | null = null; // Original entry name for hard links
   inode: number | null = null;      // Inode number for hard links
+
+  /** True when Zip64 extra (0x0001) was applied or will be emitted (8-byte data descriptors). */
+  usesZip64Extra: boolean = false;
 
   fileData?: FileData;
 
@@ -315,6 +329,26 @@ export default class ZipEntry implements ZipFileEntry {
               this.neoCryptoFlags = _data.readUInt16LE(7);
             }
           }
+        } else if (_id === HDR_ID.ZIP64) {
+          const z64 = parseZip64Extra(_data, {
+            uncompressedSize: this.uncompressedSize,
+            compressedSize: this.compressedSize,
+            localHdrOffset: this.localHdrOffset,
+            diskStart: this.volNumber,
+          });
+          this.usesZip64Extra = true;
+          if (z64.uncompressedSize !== undefined) {
+            this.uncompressedSize = z64.uncompressedSize;
+          }
+          if (z64.compressedSize !== undefined) {
+            this.compressedSize = z64.compressedSize;
+          }
+          if (z64.localHdrOffset !== undefined) {
+            this.localHdrOffset = z64.localHdrOffset;
+          }
+          if (z64.diskStart !== undefined) {
+            this.volNumber = z64.diskStart;
+          }
         } else if (_id !== HDR_ID.UNICODE_PATH) {
           const rec = Buffer.from(this.extraField.subarray(i, i + 4 + _len));
           this.additionalExtra = this.additionalExtra
@@ -349,11 +383,22 @@ export default class ZipEntry implements ZipFileEntry {
     return /[^\x00-\x7E]|['"]/.test(this.filename);
   }
 
-  /** Version needed to extract. Method 93 (zstd) is 6.3. */
+  /** Version needed to extract. Method 93 (zstd) is 6.3; Zip64 is 4.5. */
   private versionNeededToExtract(): number {
-    if (this.cmpMethod === CMP_METHOD.AES_ENCRYPT) return VER_AES_EXTRACT;
-    if (this.cmpMethod === CMP_METHOD.ZSTD) return 63;
-    return VER_EXTRACT;
+    let ver = VER_EXTRACT;
+    if (this.cmpMethod === CMP_METHOD.AES_ENCRYPT) ver = VER_AES_EXTRACT;
+    else if (this.cmpMethod === CMP_METHOD.ZSTD) ver = 63;
+    if (
+      needsZip64Entry(
+        this.uncompressedSize,
+        this.compressedSize,
+        this.localHdrOffset,
+        this.volNumber
+      )
+    ) {
+      ver = Math.max(ver, ZIP64_VERSION_NEEDED);
+    }
+    return ver;
   }
 
   /**
@@ -414,8 +459,26 @@ export default class ZipEntry implements ZipFileEntry {
 
     const sha256Local = this.sha256 ? Buffer.from(this.sha256, 'hex') : null;
     const sha256LocalLen = sha256Local && sha256Local.length > 0 ? 4 + sha256Local.length : 0;
-    const callerExtraLen = this.additionalExtra?.length ?? 0;
-    extraFieldLen += sha256LocalLen + callerExtraLen;
+    const callerExtra = stripZip64FromExtra(this.additionalExtra);
+    const callerExtraLen = callerExtra?.length ?? 0;
+
+    const useZip64Sizes =
+      exceedsU32(this.uncompressedSize) || exceedsU32(this.compressedSize);
+    if (useZip64Sizes) {
+      this.usesZip64Extra = true;
+    }
+    const zip64LocalExtra = useZip64Sizes
+      ? buildZip64Extra(
+          {
+            uncompressedSize: this.uncompressedSize,
+            compressedSize: this.compressedSize,
+          },
+          { forLocal: true }
+        )
+      : null;
+    const zip64LocalLen = zip64LocalExtra?.length ?? 0;
+
+    extraFieldLen += sha256LocalLen + callerExtraLen + zip64LocalLen;
     
     const data = Buffer.alloc(LOCAL_HDR.SIZE + this.filename.length + extraFieldLen);
     
@@ -432,10 +495,15 @@ export default class ZipEntry implements ZipFileEntry {
     data.writeUInt32LE(this.timeDateDOS >>> 0, LOCAL_HDR.TIMEDATE_DOS);
     // uncompressed file crc-32 value (AE-2 stores 0)
     data.writeUInt32LE(this.aesVersion === 2 ? 0 : this.crc, LOCAL_HDR.CRC);
-    // compressed size
-    data.writeUInt32LE(this.compressedSize, LOCAL_HDR.CMP_SIZE);
-    // uncompressed size
-    data.writeUInt32LE(this.uncompressedSize, LOCAL_HDR.UNCMP_SIZE);
+    // compressed / uncompressed sizes (Zip64 sentinels when needed)
+    data.writeUInt32LE(
+      useZip64Sizes ? ZIP64_U32 : this.compressedSize,
+      LOCAL_HDR.CMP_SIZE
+    );
+    data.writeUInt32LE(
+      useZip64Sizes ? ZIP64_U32 : this.uncompressedSize,
+      LOCAL_HDR.UNCMP_SIZE
+    );
     // filename length
     data.writeUInt16LE(this.filename.length, LOCAL_HDR.FNAME_LEN);
     // extra field length
@@ -452,6 +520,12 @@ export default class ZipEntry implements ZipFileEntry {
     // Add Unicode Path Extra Field only if needed
     if (needsUnicode) {
       extraOffset = this.addUnicodePathField(data, extraOffset);
+    }
+
+    // Zip64 sizes first among optional extras so Node can patch them by scanning
+    if (zip64LocalExtra) {
+      zip64LocalExtra.copy(data, extraOffset);
+      extraOffset += zip64LocalLen;
     }
 
     // Add AES extra field
@@ -486,8 +560,8 @@ export default class ZipEntry implements ZipFileEntry {
       extraOffset += sha256LocalLen;
     }
 
-    if (this.additionalExtra && callerExtraLen > 0) {
-      this.additionalExtra.copy(data, extraOffset);
+    if (callerExtra && callerExtraLen > 0) {
+      callerExtra.copy(data, extraOffset);
     }
 
     return data;
@@ -530,8 +604,45 @@ export default class ZipEntry implements ZipFileEntry {
     const isNeoEncrypt = this.neoCryptoAlgorithm > 0;
     const neoLen = isNeoEncrypt ? NEO_CRYPTO_EXTRA_FIELD_SIZE : 0;
 
-    const callerExtraLen = this.additionalExtra?.length ?? 0;
-    const extraLen = utfLen + sha256Len + uidgidLen + symlinkLen + hardlinkLen + (needsUnicode ? unicodePathLen : 0) + aesLen + neoLen + callerExtraLen;
+    const callerExtra = stripZip64FromExtra(this.additionalExtra);
+    const callerExtraLen = callerExtra?.length ?? 0;
+
+    const zip64Fields: {
+      uncompressedSize?: number;
+      compressedSize?: number;
+      localHdrOffset?: number;
+      diskStart?: number;
+    } = {};
+    if (exceedsU32(this.uncompressedSize)) {
+      zip64Fields.uncompressedSize = this.uncompressedSize;
+    }
+    if (exceedsU32(this.compressedSize)) {
+      zip64Fields.compressedSize = this.compressedSize;
+    }
+    if (exceedsU32(this.localHdrOffset)) {
+      zip64Fields.localHdrOffset = this.localHdrOffset;
+    }
+    if (exceedsU16(this.volNumber)) {
+      zip64Fields.diskStart = this.volNumber;
+    }
+    const zip64CentralExtra =
+      Object.keys(zip64Fields).length > 0 ? buildZip64Extra(zip64Fields) : null;
+    if (zip64CentralExtra) {
+      this.usesZip64Extra = true;
+    }
+    const zip64CentralLen = zip64CentralExtra?.length ?? 0;
+
+    const extraLen =
+      utfLen +
+      sha256Len +
+      uidgidLen +
+      symlinkLen +
+      hardlinkLen +
+      (needsUnicode ? unicodePathLen : 0) +
+      aesLen +
+      neoLen +
+      callerExtraLen +
+      zip64CentralLen;
 
     // Calculate actual filename length (ASCII conversion may change length)
     const asciiName = this.filename.replace(/[^\x00-\x7E]/g, '?');
@@ -555,10 +666,15 @@ export default class ZipEntry implements ZipFileEntry {
     data.writeUInt32LE(this.timeDateDOS >>> 0, CENTRAL_DIR.TIMEDATE_DOS);
     // Uncompressed file CRC-32 value (AE-2 stores 0)
     data.writeUInt32LE(this.aesVersion === 2 ? 0 : this.crc, CENTRAL_DIR.CRC);
-    // Compressed Size
-    data.writeUInt32LE(this.compressedSize, CENTRAL_DIR.CMP_SIZE);
-    // Uncompressed Size
-    data.writeUInt32LE(this.uncompressedSize, CENTRAL_DIR.UNCMP_SIZE);
+    // Compressed / uncompressed sizes and local offset (Zip64 sentinels when needed)
+    data.writeUInt32LE(
+      zip64Fields.compressedSize !== undefined ? ZIP64_U32 : this.compressedSize,
+      CENTRAL_DIR.CMP_SIZE
+    );
+    data.writeUInt32LE(
+      zip64Fields.uncompressedSize !== undefined ? ZIP64_U32 : this.uncompressedSize,
+      CENTRAL_DIR.UNCMP_SIZE
+    );
     // Filename Length
     data.writeUInt16LE(this.filename.length, CENTRAL_DIR.FNAME_LEN);
     // Extra Field Length
@@ -566,13 +682,19 @@ export default class ZipEntry implements ZipFileEntry {
     // File Comment Length
     data.writeUInt16LE(commentLen, CENTRAL_DIR.COMMENT_LEN);
     // Volume Number Start
-    data.writeUInt16LE(0, CENTRAL_DIR.DISK_NUM);
+    data.writeUInt16LE(
+      zip64Fields.diskStart !== undefined ? ZIP64_U16 : this.volNumber,
+      CENTRAL_DIR.DISK_NUM
+    );
     // Internal File Attributes
     data.writeUInt16LE(this.intFileAttr >>> 0, CENTRAL_DIR.INT_FILE_ATTR);
     // External File Attributes
     data.writeUInt32LE(this.extFileAttr >>> 0, CENTRAL_DIR.EXT_FILE_ATTR);
     // Local Header Offset
-    data.writeUInt32LE(this.localHdrOffset, CENTRAL_DIR.LOCAL_HDR_OFFSET);
+    data.writeUInt32LE(
+      zip64Fields.localHdrOffset !== undefined ? ZIP64_U32 : this.localHdrOffset,
+      CENTRAL_DIR.LOCAL_HDR_OFFSET
+    );
 
     // Write filename - use ASCII filename (replacing non-ASCII with ?)
     // This ensures compatibility with older ZIP readers
@@ -589,6 +711,12 @@ export default class ZipEntry implements ZipFileEntry {
 
     // Add Extra Field data after file comment
     let extraOffset = currentOffset;
+
+    // Zip64 extended information (sizes / offset / disk)
+    if (zip64CentralExtra) {
+      zip64CentralExtra.copy(data, extraOffset);
+      extraOffset += zip64CentralLen;
+    }
 
     // Add Universal Time field
     if (this.universalTime) {
@@ -676,8 +804,8 @@ export default class ZipEntry implements ZipFileEntry {
       extraOffset += NEO_CRYPTO_EXTRA_FIELD_SIZE;
     }
 
-    if (this.additionalExtra && callerExtraLen > 0) {
-      this.additionalExtra.copy(data, extraOffset);
+    if (callerExtra && callerExtraLen > 0) {
+      callerExtra.copy(data, extraOffset);
     }
 
     return data;

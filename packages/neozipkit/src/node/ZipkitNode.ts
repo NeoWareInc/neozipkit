@@ -11,13 +11,23 @@ import { ZipDecompressNode } from './ZipDecompressNode';
 import { 
   CENTRAL_END, 
   CENTRAL_DIR, 
-  ZIP64_CENTRAL_END, 
-  ZIP64_CENTRAL_DIR,
   LOCAL_HDR,
   GP_FLAG,
   CMP_METHOD,
-  ENCRYPT_HDR_SIZE
+  ENCRYPT_HDR_SIZE,
+  HDR_ID,
 } from '../core/constants/Headers';
+import {
+  buildEndRecords,
+  classicEocdNeedsZip64,
+  exceedsU32,
+  parseZip64Eocd,
+  parseZip64Locator,
+  writeU64,
+  ZIP64_EOCD_RECORD_SIZE,
+  ZIP64_LOCATOR_SIZE,
+  ZIP64_U32,
+} from '../core/zip64/Zip64';
 import { NEO_CRYPTO_ALGORITHM_AES256_V1 } from '../core/encryption/NeoCrypto';
 import { AesCrypto } from '../core/encryption/AesCrypto';
 import {
@@ -861,9 +871,53 @@ export default class ZipkitNode extends Zipkit {
       throw new Error(`Compressed size not set for entry: ${entry.filename}`);
     }
 
-    const sizeBuffer = Buffer.alloc(4);
-    sizeBuffer.writeUInt32LE(entry.compressedSize, 0);
-    fs.writeSync(writer.outputFd, sizeBuffer, 0, 4, entry.localHdrOffset + 18);
+    const classicCmp = entry.localHdrOffset + LOCAL_HDR.CMP_SIZE;
+    const classicUncmp = entry.localHdrOffset + LOCAL_HDR.UNCMP_SIZE;
+    const useZip64Sizes =
+      exceedsU32(entry.uncompressedSize) || exceedsU32(entry.compressedSize);
+
+    if (useZip64Sizes) {
+      // Classic fields stay at 0xFFFFFFFF; update u64 sizes inside local extra 0x0001
+      const sentinel = Buffer.alloc(4);
+      sentinel.writeUInt32LE(ZIP64_U32, 0);
+      fs.writeSync(writer.outputFd, sentinel, 0, 4, classicCmp);
+      fs.writeSync(writer.outputFd, sentinel, 0, 4, classicUncmp);
+
+      const fnameLenBuf = Buffer.alloc(2);
+      fs.readSync(writer.outputFd, fnameLenBuf, 0, 2, entry.localHdrOffset + LOCAL_HDR.FNAME_LEN);
+      const fnameLen = fnameLenBuf.readUInt16LE(0);
+      const extraLenBuf = Buffer.alloc(2);
+      fs.readSync(writer.outputFd, extraLenBuf, 0, 2, entry.localHdrOffset + LOCAL_HDR.EXTRA_LEN);
+      const extraLen = extraLenBuf.readUInt16LE(0);
+      const extraStart = entry.localHdrOffset + LOCAL_HDR.SIZE + fnameLen;
+      const extraBuf = Buffer.alloc(extraLen);
+      if (extraLen > 0) {
+        fs.readSync(writer.outputFd, extraBuf, 0, extraLen, extraStart);
+      }
+      let patched = false;
+      for (let i = 0; i + 4 <= extraBuf.length; ) {
+        const id = extraBuf.readUInt16LE(i);
+        const len = extraBuf.readUInt16LE(i + 2);
+        if (id === HDR_ID.ZIP64 && len >= 16) {
+          // Local Zip64 always has uncompressed (8) then compressed (8)
+          writeU64(extraBuf, i + 4, entry.uncompressedSize);
+          writeU64(extraBuf, i + 12, entry.compressedSize);
+          fs.writeSync(writer.outputFd, extraBuf, i + 4, 16, extraStart + i + 4);
+          patched = true;
+          break;
+        }
+        i += 4 + len;
+      }
+      if (!patched) {
+        throw new Error(
+          `Zip64 local extra (0x0001) missing for large entry: ${entry.filename}`
+        );
+      }
+    } else {
+      const sizeBuffer = Buffer.alloc(4);
+      sizeBuffer.writeUInt32LE(entry.compressedSize, 0);
+      fs.writeSync(writer.outputFd, sizeBuffer, 0, 4, classicCmp);
+    }
 
     if (entry.crc !== undefined) {
       const crcBuffer = Buffer.alloc(4);
@@ -949,51 +1003,16 @@ export default class ZipkitNode extends Zipkit {
     centralDirOffset: number,
     archiveComment?: string
   ): Promise<void> {
-    const comment = archiveComment || '';
-    const commentBytes = Buffer.from(comment, 'utf8');
-    const commentLength = Math.min(commentBytes.length, 0xFFFF); // Max 65535 bytes
+    const buffer = buildEndRecords({
+      totalEntries,
+      centralDirSize,
+      centralDirOffset,
+      zip64EocdOffset: centralDirOffset + centralDirSize,
+      archiveComment,
+      allowSizeOffsetZip64: true,
+    });
 
-    const buffer = Buffer.alloc(22 + commentLength);
-    let offset = 0;
-
-    // End of central directory signature (4 bytes)
-    buffer.writeUInt32LE(0x06054b50, offset);
-    offset += 4;
-
-    // Number of this disk (2 bytes)
-    buffer.writeUInt16LE(0, offset);
-    offset += 2;
-
-    // Number of the disk with the start of the central directory (2 bytes)
-    buffer.writeUInt16LE(0, offset);
-    offset += 2;
-
-    // Total number of entries in the central directory on this disk (2 bytes)
-    buffer.writeUInt16LE(totalEntries, offset);
-    offset += 2;
-
-    // Total number of entries in the central directory (2 bytes)
-    buffer.writeUInt16LE(totalEntries, offset);
-    offset += 2;
-
-    // Size of the central directory (4 bytes)
-    buffer.writeUInt32LE(centralDirSize, offset);
-    offset += 4;
-
-    // Offset of start of central directory with respect to the starting disk number (4 bytes)
-    buffer.writeUInt32LE(centralDirOffset, offset);
-    offset += 4;
-
-    // ZIP file comment length (2 bytes)
-    buffer.writeUInt16LE(commentLength, offset);
-    offset += 2;
-
-    // ZIP file comment (variable length)
-    if (commentLength > 0) {
-      commentBytes.copy(buffer, offset, 0, commentLength);
-    }
-
-    // Write EOCD to file
+    // Write EOCD (and Zip64 EOCD + locator when needed) to file
     await new Promise<void>((resolve, reject) => {
       writer.outputStream.write(buffer, (error) => {
         if (error) {
@@ -1287,9 +1306,17 @@ export default class ZipkitNode extends Zipkit {
         const zipkit = this as any;
         zipkit.centralDirSize = eocdBuffer.readUInt32LE(CENTRAL_END.CENTRAL_DIR_SIZE);
         zipkit.centralDirOffset = eocdBuffer.readUInt32LE(CENTRAL_END.CENTRAL_DIR_OFFSET);
-        
-        // Handle ZIP64
-        if (zipkit.centralDirOffset === 0xFFFFFFFF) {
+        const volEntries = eocdBuffer.readUInt16LE(CENTRAL_END.VOL_ENTRIES);
+        const totalEntries = eocdBuffer.readUInt16LE(CENTRAL_END.TOTAL_ENTRIES);
+
+        if (
+          classicEocdNeedsZip64({
+            volEntries,
+            totalEntries,
+            centralDirSize: zipkit.centralDirSize,
+            centralDirOffset: zipkit.centralDirOffset,
+          })
+        ) {
           await this.loadZIP64EOCD(eocdOffset);
         }
       } else {
@@ -1319,20 +1346,18 @@ export default class ZipkitNode extends Zipkit {
     }
     
     // Look for ZIP64 locator
-    const locatorOffset = eocdOffset - 20;
-    const locatorBuffer = Buffer.alloc(20);
-    await this.fileHandle.read(locatorBuffer, 0, 20, locatorOffset);
+    const locatorOffset = eocdOffset - ZIP64_LOCATOR_SIZE;
+    const locatorBuffer = Buffer.alloc(ZIP64_LOCATOR_SIZE);
+    await this.fileHandle.read(locatorBuffer, 0, ZIP64_LOCATOR_SIZE, locatorOffset);
     
-    if (locatorBuffer.readUInt32LE(0) === ZIP64_CENTRAL_END.SIGNATURE) {
-      // Read ZIP64 EOCD
-      const zip64Offset = locatorBuffer.readBigUInt64LE(8);
-      const zip64Buffer = Buffer.alloc(56);
-      await this.fileHandle.read(zip64Buffer, 0, 56, Number(zip64Offset));
-      
-      const zipkit = this as any;
-      zipkit.centralDirSize = Number(zip64Buffer.readBigUInt64LE(ZIP64_CENTRAL_DIR.CENTRAL_DIR_SIZE));
-      zipkit.centralDirOffset = Number(zip64Buffer.readBigUInt64LE(ZIP64_CENTRAL_DIR.CENTRAL_DIR_OFFSET));
-    }
+    const zip64Offset = parseZip64Locator(locatorBuffer);
+    const zip64Buffer = Buffer.alloc(ZIP64_EOCD_RECORD_SIZE);
+    await this.fileHandle.read(zip64Buffer, 0, ZIP64_EOCD_RECORD_SIZE, zip64Offset);
+    
+    const z64 = parseZip64Eocd(zip64Buffer);
+    const zipkit = this as any;
+    zipkit.centralDirSize = z64.centralDirSize;
+    zipkit.centralDirOffset = z64.centralDirOffset;
   }
 
   /**

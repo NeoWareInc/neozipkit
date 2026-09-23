@@ -6,6 +6,31 @@ Release notes for people who install and use **`neozipkit`** from npm. For block
 
 Local build after **1.0.5**. Not on npm yet. ZipWiki consumes it with `file:../neozipkit/packages/neozipkit` until this build is published.
 
+### Zip64 (APPNOTE Version 1)
+
+NeoZipKit can create and open archives past classic ZIP limits: **more than 65 535 members**, or **sizes / offsets ≥ 4 GiB**. Zip64 Version 1 is emitted automatically when a classic field would overflow. Spanned (multi-disk) Zip64 is still out of scope.
+
+**What you should use**
+
+| Goal | API |
+| ---- | --- |
+| Write or copy members ≥ 4 GiB, or archives whose CD offset ≥ 4 GiB | **`ZipkitNode`** / **`ZipCopyNode`** (file streaming) |
+| Many small members (> 65 535) that still fit in RAM | Node **or** `buildZipBufferSync` / browser |
+| Open a Zip64 archive already in a `Buffer` | `Zipkit.loadZip` — lists and parses sizes correctly; avoid loading multi-GiB members into memory |
+
+**On the wire**
+
+- Per-member Extra Field **`0x0001`** (only overflowing fields, APPNOTE order); local Zip64 extras always carry both uncompressed and compressed sizes
+- **Zip64 EOCD** (`0x06064b50`) + **locator** (`0x07064b50`) before the classic EOCD
+- Classic EOCD / header fields use `0xFFFF` / `0xFFFFFFFF` sentinels where they overflow
+- Version needed to extract **45** on Zip64 members
+
+**Read path:** any classic EOCD sentinel triggers locator → Zip64 EOCD; `ZipEntry.readZipEntry` merges `0x0001` into `uncompressedSize`, `compressedSize`, and `localHdrOffset`. Copy paths use 8-byte data-descriptor sizes when `usesZip64Extra` is set.
+
+**Buffer / browser policy:** size or offset Zip64 that would build a multi-GiB `Buffer` / Blob throws a clear error directing you to the Node file API. Entry-count Zip64 is allowed when the archive remains memory-feasible.
+
+Helpers: `src/core/zip64/Zip64.ts` (also exported from the package). Tests: `tests/unit/core/zip64/Zip64.test.ts`.
+
 ### Caller extra fields, including ZipWiki `0x014F`
 
 `ZipEntry.createLocalHdr()` and `centralDirEntry()` write caller-supplied extra-field records beside **`0x014E`**, WinZip AES, and NeoEncrypt. Pass a buffer of complete records (header id + size + payload) on `entry.additionalExtra`.

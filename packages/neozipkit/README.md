@@ -4,7 +4,7 @@ Advanced ZIP file creation, compression, and encryption library for Node.js and 
 
 **Scope of this package:** NeoZipKit focuses solely on creating and manipulating ZIP files (compression, encryption, extraction). All blockchain-related functionality—timestamping, NFT tokenization, verification, wallet integration, and smart contracts—lives in the sibling **[neozip-blockchain](../neozip-blockchain/)** package within this monorepo. Use that package when you need to link ZIPs to the blockchain.
 
-**Format note:** See **[NEOZIP_APPNOTE.md](./NEOZIP_APPNOTE.md)** for the NeoZip ZIP profile (compression methods, Extra Field `0x014E`, `META-INF` integrity and blockchain sidecars). Kit backlog (Zip64 first): **[docs/FUTURE_ENHANCEMENTS.md](docs/FUTURE_ENHANCEMENTS.md)**.
+**Format note:** See **[NEOZIP_APPNOTE.md](./NEOZIP_APPNOTE.md)** for the NeoZip ZIP profile (compression methods, Extra Field `0x014E`, `META-INF` integrity and blockchain sidecars). Kit backlog: **[docs/FUTURE_ENHANCEMENTS.md](docs/FUTURE_ENHANCEMENTS.md)**.
 
 > **Stable 1.0:** NeoZipKit **1.0.5** (first non-beta was **1.0.2**). See [NEOZIP_APPNOTE.md](./NEOZIP_APPNOTE.md) and [WHATS_NEW.md](WHATS_NEW.md). Please report issues on [GitHub](https://github.com/NeoWareInc/neozipkit/issues).
 
@@ -14,6 +14,7 @@ Advanced ZIP file creation, compression, and encryption library for Node.js and 
 
 - **Advanced ZIP compression** with support for multiple compression methods (Deflate, ZStandard, Stored), including zstd on in-memory `Buffer` / `ArrayBuffer` and in the browser via `CompressionStream`
 - **Streaming compression** for memory-efficient processing of large files
+- **Zip64 (APPNOTE Version 1)** for archives past classic ZIP limits: Node streaming for member sizes / offsets ≥ 4 GiB; buffer APIs support Zip64 for entry counts > 65 535 and can **read** Zip64 metadata when the archive already fits in memory
 - **Encryption** with ZIP (Legacy), **NeoEncrypt** (default AES-256 via Extra Field `0x024E`), and **WinZip AES-256** (AE-1/AE-2, method 99 — write with `encryptionMethod: 'aes256'`, always readable on extract); create and extract in Node and browser
 - **Hash-based verification** with Merkle tree support (CRC-32, SHA-256)
 - **Real-time progress tracking** for long-running operations
@@ -104,13 +105,42 @@ All blockchain code lives in the sibling **[neozip-blockchain](../neozip-blockch
 | --------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | `ZipkitNode` create / extract / list    | File streaming (`loadZipFile`, `writeZipEntry`, `extractToFile`, …)                                           |
 | Core `Zipkit.loadZip(Buffer)` / browser | Buffer APIs kept for browser and small in-process buffers                                                     |
+| Zip64 sizes / offsets ≥ 4 GiB           | **Node streaming only** (`ZipkitNode` / `ZipCopyNode`). Buffer builders refuse with a clear error             |
+| Zip64 entry count > 65 535              | Node **or** buffer/browser when the whole archive still fits in memory                                        |
 | Zstd (method 93)                        | Node: native `zlib` streams and buffer compress/inflate (Node ≥ 22.15). Browser: `CompressionStream` zstd on `ArrayBuffer` (no WASM). Sync zstd is Node-only |
 | Legacy WASM zstd archives               | Detect with `detectLegacyWasmZstd` / `ZipkitNode.detectLegacyZstdEntries`; extract truncates +18 zero padding |
 
 
 See also: [docs/ZSTD_USAGE.md](docs/ZSTD_USAGE.md) and the Rust crate notes in `neozip-rust` (`crates/neozipkit/src/limits.rs`).
 
-## Publishing (npm)
+## Zip64 (large archives)
+
+Classic ZIP fields are **16-bit** entry counts and **32-bit** sizes/offsets. Past those limits the kit emits APPNOTE **Zip64 Version 1** automatically (no opt-in flag). Spanned/split multi-disk archives are not supported.
+
+| Limit exceeded | Threshold | Use |
+| -------------- | --------- | --- |
+| Member uncompressed or compressed size | ≥ 4 GiB (`> 0xFFFFFFFF`) | `ZipkitNode` file create / extract |
+| Local-header or central-directory offset | ≥ 4 GiB | `ZipkitNode` / `ZipCopyNode` |
+| Number of members | > 65 535 | Node **or** in-memory (`buildZipBufferSync` / browser) if RAM allows |
+| Listing / reading Zip64 metadata | — | Any surface that can open the archive; Extra Field `0x0001` and Zip64 EOCD are parsed |
+
+**Wire details (automatic):** Extra Field `0x0001` on overflowing members, Zip64 end-of-central-directory + locator before the classic EOCD, classic fields set to `0xFFFF` / `0xFFFFFFFF` sentinels, version needed to extract **45**.
+
+```typescript
+import { ZipkitNode } from 'neozipkit/node';
+
+// Large members: stream to/from disk — do not use buildZipBufferSync for ≥ 4 GiB payloads
+const zip = new ZipkitNode();
+await zip.createZipFromFiles(['huge-video.mkv'], 'archive.nzip');
+await zip.loadZipFile('archive.nzip');
+const entries = zip.getDirectory();
+// entries[0].uncompressedSize / compressedSize / localHdrOffset hold full 64-bit values
+await zip.closeFile();
+```
+
+Do **not** call `buildZipBufferSync` or browser Blob create when a member size or archive offset would need Zip64 for ≥ 4 GiB — that path throws and points you at `ZipkitNode`. Prefer streaming extract for huge members rather than `extractToBuffer`.
+
+Release notes: [WHATS_NEW.md](WHATS_NEW.md). Spec: PKWARE [docs/APPNOTE.txt](docs/APPNOTE.txt) §§4.3.14–4.3.16, 4.5.3.
 
 The published tarball includes **`dist/`**, **`src/`** (for `neozipkit/src` conditional exports), **`node-esm.mjs`** (the ESM entry for `neozipkit/node`), **[`README.md`](README.md)**, and **[`WHATS_NEW.md`](WHATS_NEW.md)**. **`examples/`** and other repo-only folders are excluded—use **`pnpm publish:dry-run`** (`npm publish --dry-run`) to preview the file list.
 
