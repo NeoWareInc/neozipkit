@@ -322,3 +322,66 @@ describe('Zip64 predicates', () => {
     ).toBe(true);
   });
 });
+
+describe('forceZip64', () => {
+  test('buildEndRecords emits Zip64 EOCD with CD-offset sentinel when forced', () => {
+    const buf = buildEndRecords({
+      totalEntries: 2,
+      centralDirSize: 100,
+      centralDirOffset: 50,
+      zip64EocdOffset: 150,
+      allowSizeOffsetZip64: false,
+      forceZip64: true,
+    });
+    expect(buf.readUInt32LE(0)).toBe(ZIP64_CENTRAL_DIR.SIGNATURE);
+    const classicOff = ZIP64_EOCD_RECORD_SIZE + ZIP64_LOCATOR_SIZE;
+    expect(buf.readUInt32LE(classicOff + CENTRAL_END.CENTRAL_DIR_OFFSET)).toBe(
+      ZIP64_U32
+    );
+    expect(buf.readUInt16LE(classicOff + CENTRAL_END.TOTAL_ENTRIES)).toBe(2);
+    const z64 = parseZip64Eocd(buf.subarray(0, ZIP64_EOCD_RECORD_SIZE));
+    expect(z64.totalEntries).toBe(2);
+    expect(z64.centralDirOffset).toBe(50);
+  });
+
+  test('ZipEntry forceZip64 emits Extra 0x0001 for small sizes', () => {
+    const entry = new ZipEntry('small.txt', null, false);
+    entry.cmpMethod = 0;
+    entry.crc = 0;
+    entry.uncompressedSize = 12;
+    entry.compressedSize = 12;
+    entry.localHdrOffset = 0;
+    entry.isUpdated = true;
+    entry.emitUnicodePath = false;
+    entry.forceZip64 = true;
+
+    const local = entry.createLocalHdr();
+    expect(local.readUInt16LE(LOCAL_HDR.VER_EXTRACT)).toBeGreaterThanOrEqual(
+      ZIP64_VERSION_NEEDED
+    );
+    expect(local.readUInt32LE(LOCAL_HDR.CMP_SIZE)).toBe(ZIP64_U32);
+    expect(local.readUInt32LE(LOCAL_HDR.UNCMP_SIZE)).toBe(ZIP64_U32);
+    expect(entry.usesZip64Extra).toBe(true);
+
+    const central = entry.centralDirEntry();
+    expect(central.readUInt32LE(CENTRAL_DIR.CMP_SIZE)).toBe(ZIP64_U32);
+    expect(central.readUInt32LE(CENTRAL_DIR.UNCMP_SIZE)).toBe(ZIP64_U32);
+    expect(central.readUInt32LE(CENTRAL_DIR.LOCAL_HDR_OFFSET)).toBe(ZIP64_U32);
+  });
+
+  test('buildZipBufferSync forceZip64 round-trips accurate sizes', () => {
+    const payload = Buffer.from('hello zip64 force');
+    const buf = buildZipBufferSync(
+      [{ name: 'a.txt', data: payload, method: 0 }],
+      { forceZip64: true }
+    );
+    expect(buf.includes(Buffer.from([0x50, 0x4b, 0x06, 0x06]))).toBe(true);
+    const zipkit = new Zipkit();
+    const entries = zipkit.loadZip(buf);
+    expect(entries.length).toBe(1);
+    expect(entries[0].filename).toBe('a.txt');
+    expect(entries[0].uncompressedSize).toBe(payload.length);
+    expect(entries[0].compressedSize).toBe(payload.length);
+    expect(entries[0].usesZip64Extra).toBe(true);
+  });
+});

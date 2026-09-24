@@ -34,7 +34,7 @@ import {
   detectLegacyWasmZstd,
   type LegacyZstdDetectResult,
 } from './LegacyZstd';
-import { writeZipFileSync, type ZipBufferMember } from './buildZipBuffer';
+import { writeZipFileSync, type ZipBufferMember, type BuildZipBufferOptions } from './buildZipBuffer';
 export type { ZipBufferMember };
 import * as fs from 'fs';
 import * as path from 'path';
@@ -729,6 +729,10 @@ export default class ZipkitNode extends Zipkit {
       onHashCalculated?: (entry: ZipEntry, hash: Buffer) => void;
     }
   ): Promise<void> {
+    if (options?.forceZip64) {
+      entry.forceZip64 = true;
+    }
+
     // Set compression method based on options
     const level = options?.level ?? 6;
     let realCmpMethod: number;
@@ -874,7 +878,9 @@ export default class ZipkitNode extends Zipkit {
     const classicCmp = entry.localHdrOffset + LOCAL_HDR.CMP_SIZE;
     const classicUncmp = entry.localHdrOffset + LOCAL_HDR.UNCMP_SIZE;
     const useZip64Sizes =
-      exceedsU32(entry.uncompressedSize) || exceedsU32(entry.compressedSize);
+      entry.forceZip64 ||
+      exceedsU32(entry.uncompressedSize) ||
+      exceedsU32(entry.compressedSize);
 
     if (useZip64Sizes) {
       // Classic fields stay at 0xFFFFFFFF; update u64 sizes inside local extra 0x0001
@@ -994,6 +1000,7 @@ export default class ZipkitNode extends Zipkit {
    * @param centralDirSize - Size of central directory in bytes
    * @param centralDirOffset - Offset to start of central directory
    * @param archiveComment - Optional archive comment (max 65535 bytes)
+   * @param options - Optional Zip64 force and related EOCD flags
    * @returns Promise that resolves when EOCD is written
    */
   async writeEndOfCentralDirectory(
@@ -1001,7 +1008,8 @@ export default class ZipkitNode extends Zipkit {
     totalEntries: number,
     centralDirSize: number,
     centralDirOffset: number,
-    archiveComment?: string
+    archiveComment?: string,
+    options?: { forceZip64?: boolean }
   ): Promise<void> {
     const buffer = buildEndRecords({
       totalEntries,
@@ -1010,6 +1018,7 @@ export default class ZipkitNode extends Zipkit {
       zip64EocdOffset: centralDirOffset + centralDirSize,
       archiveComment,
       allowSizeOffsetZip64: true,
+      forceZip64: options?.forceZip64 === true,
     });
 
     // Write EOCD (and Zip64 EOCD + locator when needed) to file
@@ -1088,7 +1097,9 @@ export default class ZipkitNode extends Zipkit {
         writer,
         entries.length,
         centralDirSize,
-        centralDirOffset
+        centralDirOffset,
+        undefined,
+        { forceZip64: options?.forceZip64 === true }
       );
     } finally {
       await this.finalizeZipFile(writer);
@@ -1236,9 +1247,14 @@ export default class ZipkitNode extends Zipkit {
    * Pass `useSHA256` for Extra Field 0x014E and `additionalExtra` for caller blocks
    * such as ZipWiki 0x014F. `method` 93 uses zlib zstd at `level` (default 7).
    * NeoEncrypt is not enabled. Precompressed members are copied without recompression.
+   * Pass `{ forceZip64: true }` to emit Zip64 even for small members (testing).
    */
-  writeMembersSync(filePath: string, members: ZipBufferMember[]): void {
-    writeZipFileSync(filePath, members);
+  writeMembersSync(
+    filePath: string,
+    members: ZipBufferMember[],
+    options?: BuildZipBufferOptions
+  ): void {
+    writeZipFileSync(filePath, members, options);
   }
 
   // ============================================================================

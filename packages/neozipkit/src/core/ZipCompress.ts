@@ -35,6 +35,12 @@ export interface CompressOptions {
   useSHA256?: boolean;        // Whether to calculate SHA256 hash default is false
   useZstd?: boolean;          // Use Zstandard (method 93); default false (Deflate). Node ≥ 22.15 required when true.
   bufferSize?: number;        // Override default buffer size
+  /**
+   * Force APPNOTE Zip64 Version 1 even when sizes/offsets/counts fit classic fields.
+   * Useful for testing Zip64 read/list/integrity without multi-GiB payloads.
+   * Node streaming writers emit Zip64 EOCD + locator and per-member Extra `0x0001`.
+   */
+  forceZip64?: boolean;
 }
 
 /**

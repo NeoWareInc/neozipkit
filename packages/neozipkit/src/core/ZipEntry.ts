@@ -122,6 +122,11 @@ export default class ZipEntry implements ZipFileEntry {
 
   /** True when Zip64 extra (0x0001) was applied or will be emitted (8-byte data descriptors). */
   usesZip64Extra: boolean = false;
+  /**
+   * When true, emit Zip64 Extra Field `0x0001` and version-needed 45 even if
+   * sizes/offsets fit classic u16/u32 fields (APPNOTE MAY; for testing).
+   */
+  forceZip64: boolean = false;
 
   fileData?: FileData;
 
@@ -389,6 +394,7 @@ export default class ZipEntry implements ZipFileEntry {
     if (this.cmpMethod === CMP_METHOD.AES_ENCRYPT) ver = VER_AES_EXTRACT;
     else if (this.cmpMethod === CMP_METHOD.ZSTD) ver = 63;
     if (
+      this.forceZip64 ||
       needsZip64Entry(
         this.uncompressedSize,
         this.compressedSize,
@@ -463,7 +469,9 @@ export default class ZipEntry implements ZipFileEntry {
     const callerExtraLen = callerExtra?.length ?? 0;
 
     const useZip64Sizes =
-      exceedsU32(this.uncompressedSize) || exceedsU32(this.compressedSize);
+      this.forceZip64 ||
+      exceedsU32(this.uncompressedSize) ||
+      exceedsU32(this.compressedSize);
     if (useZip64Sizes) {
       this.usesZip64Extra = true;
     }
@@ -613,13 +621,13 @@ export default class ZipEntry implements ZipFileEntry {
       localHdrOffset?: number;
       diskStart?: number;
     } = {};
-    if (exceedsU32(this.uncompressedSize)) {
+    if (this.forceZip64 || exceedsU32(this.uncompressedSize)) {
       zip64Fields.uncompressedSize = this.uncompressedSize;
     }
-    if (exceedsU32(this.compressedSize)) {
+    if (this.forceZip64 || exceedsU32(this.compressedSize)) {
       zip64Fields.compressedSize = this.compressedSize;
     }
-    if (exceedsU32(this.localHdrOffset)) {
+    if (this.forceZip64 || exceedsU32(this.localHdrOffset)) {
       zip64Fields.localHdrOffset = this.localHdrOffset;
     }
     if (exceedsU16(this.volNumber)) {

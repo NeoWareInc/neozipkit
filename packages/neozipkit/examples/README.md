@@ -48,12 +48,30 @@ Demonstrates creating a ZIP archive from multiple files using `ZipkitNode.create
 **Usage:**
 ```bash
 ts-node examples/create-zip.ts
+# or
+pnpm example:create-zip
 ```
 
 **What it does:**
 - Creates a ZIP file from multiple source files
 - Uses simple compression options
 - Shows basic error handling
+
+### 1b. Force Zip64 create / list / test (`create-zip64.ts`)
+
+Creates a Zip64 archive from the same small `test-files/` sources using `forceZip64: true`, lists entries (sizes + `usesZip64Extra`), then runs integrity test without extracting.
+
+**Usage:**
+```bash
+pnpm example:create-zip64
+# or
+pnpm test:zip64
+```
+
+**What it does:**
+- Writes `examples/output/example-zip64.zip` with Zip64 EOCD + Extra `0x0001`
+- Confirms listed uncompressed sizes match the source files
+- Calls `extractZipFile(..., { testOnly: true })` for CRC validation
 
 ### 2. Extract ZIP (`extract-zip.ts`)
 

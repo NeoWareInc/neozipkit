@@ -75,6 +75,12 @@ export interface BuildEndRecordsOptions {
    * Entry-count Zip64 is still allowed. Default true (Node streaming).
    */
   allowSizeOffsetZip64?: boolean;
+  /**
+   * Emit Zip64 EOCD + locator even when classic widths suffice (APPNOTE MAY).
+   * Classic EOCD then uses a CD-offset sentinel so readers consult Zip64 EOCD
+   * (Info-ZIP `-fz` style).
+   */
+  forceZip64?: boolean;
   versionMadeBy?: number;
 }
 
@@ -334,6 +340,11 @@ export function buildClassicEocd(opts: {
   archiveComment?: string;
   /** When true, write 0xFFFF / 0xFFFFFFFF for any field that overflows classic width. */
   useZip64Sentinels: boolean;
+  /**
+   * Force classic CD offset to 0xFFFFFFFF so readers consult Zip64 EOCD
+   * even when the real offset fits in u32 (Info-ZIP `-fz`).
+   */
+  forceCdOffsetSentinel?: boolean;
 }): Buffer {
   const comment = opts.archiveComment || '';
   const commentBytes = Buffer.from(comment, 'utf8');
@@ -352,7 +363,8 @@ export function buildClassicEocd(opts: {
       ? ZIP64_U32
       : opts.centralDirSize;
   const cdOffset =
-    opts.useZip64Sentinels && exceedsU32(opts.centralDirOffset)
+    opts.forceCdOffsetSentinel ||
+    (opts.useZip64Sentinels && exceedsU32(opts.centralDirOffset))
       ? ZIP64_U32
       : opts.centralDirOffset;
 
@@ -373,11 +385,14 @@ export function buildClassicEocd(opts: {
  */
 export function buildEndRecords(opts: BuildEndRecordsOptions): Buffer {
   const allowSizeOffset = opts.allowSizeOffsetZip64 !== false;
-  const needArchive = needsZip64Archive(
-    opts.totalEntries,
-    opts.centralDirSize,
-    opts.centralDirOffset
-  );
+  const forceZip64 = opts.forceZip64 === true;
+  const needArchive =
+    forceZip64 ||
+    needsZip64Archive(
+      opts.totalEntries,
+      opts.centralDirSize,
+      opts.centralDirOffset
+    );
 
   if (!needArchive) {
     return buildClassicEocd({
@@ -391,6 +406,7 @@ export function buildEndRecords(opts: BuildEndRecordsOptions): Buffer {
 
   const sizeOffsetZip64 =
     exceedsU32(opts.centralDirSize) || exceedsU32(opts.centralDirOffset);
+  // forceZip64 with fitting size/offset is allowed on buffer path (no multi-GiB materialization).
   if (sizeOffsetZip64 && !allowSizeOffset) {
     throw new Error(ZIP64_BUFFER_SIZE_OFFSET_ERROR);
   }
@@ -408,6 +424,7 @@ export function buildEndRecords(opts: BuildEndRecordsOptions): Buffer {
     centralDirOffset: opts.centralDirOffset,
     archiveComment: opts.archiveComment,
     useZip64Sentinels: true,
+    forceCdOffsetSentinel: forceZip64,
   });
   return Buffer.concat([zip64Eocd, locator, classic]);
 }

@@ -42,6 +42,12 @@ export type ZipBufferMember = {
   method?: 0 | 8 | 93;
   /** zlib zstd level or raw deflate level. Default 7. */
   level?: number;
+  /**
+   * Force Zip64 Extra `0x0001` on this member even when sizes fit classic fields.
+   * Pair with `forceZip64` on `buildZipBufferSync` / `writeZipFileSync` options
+   * (or set on every member) so the EOCD is Zip64 as well.
+   */
+  forceZip64?: boolean;
   precompressed?: ZipPrecompressedMember;
 };
 
@@ -83,10 +89,14 @@ function compressPayload(
   return { method, data: compressed };
 }
 
-function frameMembers(members: ZipBufferMember[]): FramedMember[] {
+function frameMembers(
+  members: ZipBufferMember[],
+  opts?: { forceZip64?: boolean }
+): FramedMember[] {
   const packTime = new Date();
   const framed: FramedMember[] = [];
   let offset = 0;
+  const forceAll = opts?.forceZip64 === true;
   for (const member of members) {
     const copied = member.precompressed;
     const uncompressed = member.data ?? Buffer.alloc(0);
@@ -120,6 +130,7 @@ function frameMembers(members: ZipBufferMember[]): FramedMember[] {
     entry.uncompressedSize = payload.uncompressedSize;
     entry.timeDateDOS = ((dos.date & 0xffff) << 16) | (dos.time & 0xffff);
     entry.localHdrOffset = offset;
+    entry.forceZip64 = forceAll || member.forceZip64 === true;
     assertBufferAllowsEntryZip64(
       entry.uncompressedSize,
       entry.compressedSize,
@@ -139,19 +150,34 @@ function frameMembers(members: ZipBufferMember[]): FramedMember[] {
   return framed;
 }
 
-function eocd(entryCount: number, centralSize: number, centralOffset: number): Buffer {
+function eocd(
+  entryCount: number,
+  centralSize: number,
+  centralOffset: number,
+  forceZip64?: boolean
+): Buffer {
   return buildEndRecords({
     totalEntries: entryCount,
     centralDirSize: centralSize,
     centralDirOffset: centralOffset,
     zip64EocdOffset: centralOffset + centralSize,
     allowSizeOffsetZip64: false,
+    forceZip64: forceZip64 === true,
   });
 }
 
+export type BuildZipBufferOptions = {
+  /** Force Zip64 EOCD + per-member Extra when sizes fit classic fields. */
+  forceZip64?: boolean;
+};
+
 /** Build a ZIP in one buffer. Kept for tests and atomic in-memory rewrites. */
-export function buildZipBufferSync(members: ZipBufferMember[]): Buffer {
-  const framed = frameMembers(members);
+export function buildZipBufferSync(
+  members: ZipBufferMember[],
+  options?: BuildZipBufferOptions
+): Buffer {
+  const forceZip64 = options?.forceZip64 === true;
+  const framed = frameMembers(members, { forceZip64 });
   const parts: Buffer[] = [];
   let centralSize = 0;
   let payloadBytes = 0;
@@ -163,13 +189,18 @@ export function buildZipBufferSync(members: ZipBufferMember[]): Buffer {
     parts.push(part.central);
     centralSize += part.central.length;
   }
-  parts.push(eocd(framed.length, centralSize, payloadBytes));
+  parts.push(eocd(framed.length, centralSize, payloadBytes, forceZip64));
   return Buffer.concat(parts);
 }
 
 /** Stream local headers, payloads, the central directory, and the EOCD to `filePath`. */
-export function writeZipFileSync(filePath: string, members: ZipBufferMember[]): void {
-  const framed = frameMembers(members);
+export function writeZipFileSync(
+  filePath: string,
+  members: ZipBufferMember[],
+  options?: BuildZipBufferOptions
+): void {
+  const forceZip64 = options?.forceZip64 === true;
+  const framed = frameMembers(members, { forceZip64 });
   const fd = openSync(filePath, 'w');
   try {
     let payloadBytes = 0;
@@ -183,7 +214,7 @@ export function writeZipFileSync(filePath: string, members: ZipBufferMember[]): 
       writeSync(fd, part.central);
       centralSize += part.central.length;
     }
-    writeSync(fd, eocd(framed.length, centralSize, payloadBytes));
+    writeSync(fd, eocd(framed.length, centralSize, payloadBytes, forceZip64));
   } finally {
     closeSync(fd);
   }

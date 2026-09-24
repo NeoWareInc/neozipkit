@@ -35,7 +35,11 @@ export type { LegacyZstdDetectResult, LegacyZstdConfidence, DetectLegacyZstdOpti
 // Efficient ZIP copying using ZipEntry directly
 export { ZipCopyNode } from './ZipCopyNode';
 export { buildZipBufferSync, writeZipFileSync } from './buildZipBuffer';
-export type { ZipBufferMember, ZipPrecompressedMember } from './buildZipBuffer';
+export type {
+  ZipBufferMember,
+  ZipPrecompressedMember,
+  BuildZipBufferOptions,
+} from './buildZipBuffer';
 export { inflateZipPayloadSync } from './inflateZipPayload';
 export type {
   CopyOptions,

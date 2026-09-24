@@ -6,7 +6,7 @@ Advanced ZIP file creation, compression, and encryption library for Node.js and 
 
 **Format note:** See **[NEOZIP_APPNOTE.md](./NEOZIP_APPNOTE.md)** for the NeoZip ZIP profile (compression methods, Extra Field `0x014E`, `META-INF` integrity and blockchain sidecars). Kit backlog: **[docs/FUTURE_ENHANCEMENTS.md](docs/FUTURE_ENHANCEMENTS.md)**.
 
-> **Stable 1.0:** NeoZipKit **1.0.5** (first non-beta was **1.0.2**). See [NEOZIP_APPNOTE.md](./NEOZIP_APPNOTE.md) and [WHATS_NEW.md](WHATS_NEW.md). Please report issues on [GitHub](https://github.com/NeoWareInc/neozipkit/issues).
+> **Preparing 1.2.0:** NeoZipKit **1.2.0** (workspace / next npm). Prior stable on npm: **1.0.5**. See [NEOZIP_APPNOTE.md](./NEOZIP_APPNOTE.md) and [WHATS_NEW.md](WHATS_NEW.md). Please report issues on [GitHub](https://github.com/NeoWareInc/neozipkit/issues).
 
 
 
@@ -14,7 +14,7 @@ Advanced ZIP file creation, compression, and encryption library for Node.js and 
 
 - **Advanced ZIP compression** with support for multiple compression methods (Deflate, ZStandard, Stored), including zstd on in-memory `Buffer` / `ArrayBuffer` and in the browser via `CompressionStream`
 - **Streaming compression** for memory-efficient processing of large files
-- **Zip64 (APPNOTE Version 1)** for archives past classic ZIP limits: Node streaming for member sizes / offsets ≥ 4 GiB; buffer APIs support Zip64 for entry counts > 65 535 and can **read** Zip64 metadata when the archive already fits in memory
+- **Zip64 (APPNOTE Version 1)** for archives past classic ZIP limits: Node streaming for member sizes / offsets ≥ 4 GiB; buffer APIs support Zip64 for entry counts > 65 535 and can **read** Zip64 metadata when the archive already fits in memory. Use `forceZip64: true` to emit Zip64 for small test archives (`pnpm test:zip64`).
 - **Encryption** with ZIP (Legacy), **NeoEncrypt** (default AES-256 via Extra Field `0x024E`), and **WinZip AES-256** (AE-1/AE-2, method 99 — write with `encryptionMethod: 'aes256'`, always readable on extract); create and extract in Node and browser
 - **Hash-based verification** with Merkle tree support (CRC-32, SHA-256)
 - **Real-time progress tracking** for long-running operations

@@ -26,7 +26,8 @@ size/offset; buffer entry-count Zip64 — see E1).
 - **Write (Node):** local/central `0x0001`, version-needed 45, Zip64 EOCD + locator, local size patch into Zip64 extra
 - **Write (buffer/browser):** Zip64 for entry count > 65 535 only; size/offset ≥ 4 GiB throws and directs callers to Node streaming
 - **Copy:** `ZipCopyNode` rewrites Zip64 EOCD/locator; buffer `ZipCopy` refuses multi-GiB materialization
-- **Tests:** `tests/unit/core/zip64/Zip64.test.ts`
+- **Tests:** `tests/unit/core/zip64/Zip64.test.ts` (includes `forceZip64`)
+- **Force for testing:** `CompressOptions.forceZip64` / `buildZipBufferSync(..., { forceZip64: true })`; smoke: `pnpm test:zip64`
 
 **Out of scope (unchanged):** spanned/split disks (E6), Zip64 EOCD extensible sector.
 

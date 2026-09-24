@@ -2,9 +2,22 @@
 
 Release notes for people who install and use **`neozipkit`** from npm. For blockchain timestamping and NFTs, see the sibling package [`neozip-blockchain`](https://www.npmjs.com/package/neozip-blockchain).
 
-## Unreleased
+## 1.2.0 (preparing)
 
-Local build after **1.0.5**. Not on npm yet. ZipWiki consumes it with `file:../neozipkit/packages/neozipkit` until this build is published.
+Next npm release. Local / workspace consumers can use this version before publish.
+
+### forceZip64 (testing Zip64 without huge files)
+
+`CompressOptions.forceZip64` (and `buildZipBufferSync` / `writeZipFileSync` `{ forceZip64: true }`) emit APPNOTE Zip64 Version 1 even when sizes and offsets fit classic fields — Extra Field `0x0001`, version needed **45**, Zip64 EOCD + locator, classic CD-offset sentinel (Info-ZIP `-fz` style). Use it to exercise list/integrity paths with the small files under `examples/test-files/`.
+
+```ts
+await zip.createZipFromFiles(files, 'out-zip64.zip', {
+  forceZip64: true,
+  useZstd: false,
+});
+```
+
+Smoke script (create → list → `testOnly`): `pnpm example:create-zip64` or `pnpm test:zip64`.
 
 ### Zip64 (APPNOTE Version 1)
 
@@ -17,6 +30,7 @@ NeoZipKit can create and open archives past classic ZIP limits: **more than 65�
 | Write or copy members ≥ 4 GiB, or archives whose CD offset ≥ 4 GiB | **`ZipkitNode`** / **`ZipCopyNode`** (file streaming) |
 | Many small members (> 65 535) that still fit in RAM | Node **or** `buildZipBufferSync` / browser |
 | Open a Zip64 archive already in a `Buffer` | `Zipkit.loadZip` — lists and parses sizes correctly; avoid loading multi-GiB members into memory |
+| Force Zip64 for small test archives | `createZipFromFiles(..., { forceZip64: true })` |
 
 **On the wire**
 
