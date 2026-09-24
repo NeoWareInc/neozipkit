@@ -49,11 +49,28 @@ Helpers: `src/core/zip64/Zip64.ts` (also exported from the package). Tests: `tes
 
 `ZipEntry.createLocalHdr()` and `centralDirEntry()` write caller-supplied extra-field records beside **`0x014E`**, WinZip AES, and NeoEncrypt. Pass a buffer of complete records (header id + size + payload) on `entry.additionalExtra`.
 
-- **`0x014F`** is ZipWiki’s origin locator (URI, size, mtime, CRC-32 or SHA-256). The id is `HDR_ID.ORIGIN`. The kit does not interpret the TLV; it stores and returns the bytes.
+- **`0x014F`** is ZipWiki’s origin locator (URI, size, mtime, CRC-32 or SHA-256). The id is `HDR_ID.ORIGIN`. Helpers: `makeOriginExtra` / `parseOriginFromExtra` / `parseOriginFromEntry` (`src/core/origin/OriginExtra.ts`).
 - Unknown extra ids survive a read. They are collected into `additionalExtra` so a later header rebuild does not drop them.
 - `ZipCopyNode` copies local bytes as-is and copies `additionalExtra` onto the rebuilt central-directory header, so an origin tag survives a raw copy.
 - Set `entry.emitUnicodePath = false` when the caller extra blob must be the only extra (ZipWiki pack does this). The default remains the Info-ZIP Unicode Path extra when the name needs it.
 - Method **93** records version needed to extract **6.3** (63).
+
+```ts
+import { makeOriginExtra, parseOriginFromEntry, buildZipBufferSync } from 'neozipkit/node';
+
+const originExtra = makeOriginExtra({
+  uri: 'https://example.org/docs/sample.pdf',
+  size: 1234,
+});
+const buf = buildZipBufferSync([
+  { name: 'wiki/parsed/sample.pdf.md', data: notes, method: 0, additionalExtra: originExtra },
+]);
+// After loadZip / loadZipFile:
+const loc = parseOriginFromEntry(entries[0]);
+console.log(loc?.uri);
+```
+
+Tests: `tests/unit/core/origin/OriginExtra.test.ts`.
 
 ### Zstd on in-memory buffers, including the browser
 

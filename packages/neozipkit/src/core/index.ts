@@ -27,6 +27,7 @@ export * from './components/Support';
 export { ProgressTracker } from './components/ProgressTracker';
 export * from './merkle/MerkleRoot';
 export * from './zip64/Zip64';
+export * from './origin/OriginExtra';
 
 // Encryption functionality
 export { EncryptionManager } from './encryption/Manager';
