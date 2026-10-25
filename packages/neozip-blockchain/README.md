@@ -2,7 +2,7 @@
 
 Blockchain functionality for NeoZip: **NeoZip Token Service timestamping** (stamp, upgrade, mint, verify), NFT minting, verification, and wallet management. Part of the [neozipkit monorepo](../../README.md).
 
-> **Stable 1.1:** This package **1.1.0** (adds identity-based encryption). Format profile: [NEOZIP_APPNOTE.md](../neozipkit/NEOZIP_APPNOTE.md). See [WHATS_NEW.md](WHATS_NEW.md).
+> **Stable 1.5:** This package **1.5.0** (identity-based encryption; pairs with `neozipkit@1.5.0`). Format profile: [NEOZIP_APPNOTE.md](../neozipkit/NEOZIP_APPNOTE.md). See [WHATS_NEW.md](WHATS_NEW.md).
 
 See [WHATS_NEW.md](WHATS_NEW.md) for release notes.
 

@@ -2,7 +2,9 @@
 
 Release notes for people who install and use **`neozip-blockchain`** from npm (alongside [`neozipkit`](https://www.npmjs.com/package/neozipkit)).
 
-## 1.1.0
+## 1.5.0 (2026-10-25)
+
+Released with sibling **`neozipkit@1.5.0`** (Zip64, Extra Field `0x014F`, browser/buffer zstd, `forceZip64`).
 
 ### Identity-based (recipient) encryption
 
@@ -16,7 +18,7 @@ Inner ZIP entry encryption still uses **neozipkit** NeoEncrypt (`neo-aes256`) by
 HKDF domain-separation strings are unchanged (`neozipkit-pro/ecies/v1`, …) so existing recipient-encrypted archives remain decryptable.
 
 ```bash
-npm install neozipkit@^1.0.5 neozip-blockchain@^1.1.0
+npm install neozipkit@^1.5.0 neozip-blockchain@^1.5.0
 ```
 
 ```typescript

@@ -2,9 +2,9 @@
 
 Release notes for people who install and use **`neozipkit`** from npm. For blockchain timestamping and NFTs, see the sibling package [`neozip-blockchain`](https://www.npmjs.com/package/neozip-blockchain).
 
-## 1.2.0 (preparing)
+## 1.5.0 (2026-10-25)
 
-Next npm release. Local / workspace consumers can use this version before publish.
+Released with sibling **`neozip-blockchain@1.5.0`**.
 
 ### forceZip64 (testing Zip64 without huge files)
 
