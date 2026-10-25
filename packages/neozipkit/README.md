@@ -6,7 +6,7 @@ Advanced ZIP file creation, compression, and encryption library for Node.js and 
 
 **Format note:** See **[NEOZIP_APPNOTE.md](./NEOZIP_APPNOTE.md)** for the NeoZip ZIP profile (compression methods, Extra Field `0x014E`, `META-INF` integrity and blockchain sidecars). Kit backlog: **[docs/FUTURE_ENHANCEMENTS.md](docs/FUTURE_ENHANCEMENTS.md)**.
 
-> **Stable 1.5:** NeoZipKit **1.5.0** (Zip64, Extra Field `0x014F`, browser/buffer zstd). See [NEOZIP_APPNOTE.md](./NEOZIP_APPNOTE.md) and [WHATS_NEW.md](WHATS_NEW.md). Please report issues on [GitHub](https://github.com/NeoWareInc/neozipkit/issues).
+> **Stable 1.5:** NeoZipKit **1.5.1** (Zip64, Extra Field `0x014F`, browser/buffer zstd; pairs with `neozip-blockchain@1.5.0`). See [NEOZIP_APPNOTE.md](./NEOZIP_APPNOTE.md) and [WHATS_NEW.md](WHATS_NEW.md). Please report issues on [GitHub](https://github.com/NeoWareInc/neozipkit/issues).
 
 
 
