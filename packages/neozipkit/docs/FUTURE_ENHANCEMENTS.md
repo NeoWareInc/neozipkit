@@ -75,22 +75,46 @@ computation — ZipWiki (or a later E4b) owns those.
 
 ---
 
-## E4a — ZipWiki-compatible ZipkitNode writer ✅
+## E4a — ZipWiki-shaped writer helpers (optional scaffolding)
 
-**Status:** Done on `dev` (unreleased until the next kit publish).
+**Status:** Present on `dev` as an example / parity check — **not** the preferred
+long-term integration surface. ZipWiki does **not** need a first-class
+`zipwiki/` module inside NeoZipKit.
 
-ZipWiki pack frames ZIPs in its own `writeZipBuffer`. NeoZipKit now mirrors
-that container shape so ZipWiki can swap writers later:
+What exists today (`writeZipWiki*`, minimal manifest, CD-order helpers) shows
+that `buildZipBufferSync` / `writeMembersSync` + `0x014F` / `0x014E` can match
+ZipWiki’s ZIP frame. Product rules (CD order, store-by-suffix, full AI
+manifest, parse, OKF) stay in **ZipWiki**. Prefer **E7** hooks over growing
+more ZipWiki-named APIs in the kit.
 
-- `writeZipWikiBufferSync` / `writeZipWikiFileSync` /
-  `ZipkitNode.writeZipWikiMembersSync`
-- CD order META-INF → `{aiRoot}/` → primaries (`sortZipWikiMembers`)
-- Origin locator → Extra Field `0x014F`; optional global `0x014E`
-- Store-by-suffix defaults matching ZipWiki binaries
-- Tests: `tests/unit/node/ZipWikiWriter.test.ts`
-- Example: `examples/create-zipwiki.ts`
+**Still ZipWiki-only:** LlamaParse/LiteParse, OKF generation, full AI manifest,
+pack UX.
 
-**Still ZipWiki-only:** LlamaParse/LiteParse, OKF generation, full AI manifest.
+---
+
+## E7 — General ZipkitNode extension hooks (for ZipWiki and others)
+
+**Status:** Backlog — preferred path for future ZipWiki (and similar) integration.
+
+NeoZipKit should stay a ZIP codec with clear extension points so apps like
+ZipWiki compose product behavior **on top of** ZipkitNode, without baking
+app-specific writers into the kit. Candidates (refine when integrating):
+
+- Stable member write model: `additionalExtra`, `useSHA256`, `precompressed`,
+  method/level, Zip64 — already largely there; document as the integration
+  contract
+- Optional **entry transform / filter hooks** on create and copy (reorder,
+  inject META-INF, drop/replace members) without forking the writer
+- Optional **extra-field registry / builders** (compose multiple caller blocks
+  beside `0x014E` / crypto extras) so apps do not hand-concatenate TLV
+- Clear **read** hooks: list with extras preserved, stream verified payloads,
+  origin/`0x014F` parse already exported — keep that pattern for new fields
+- Avoid ZipWiki-/AI-specific types in public kit APIs; keep those in ZipWiki
+  (or a thin adapter in the ZipWiki repo)
+
+**Done when:** ZipWiki (or another app) can replace its hand-rolled ZIP frame
+using documented ZipkitNode primitives + hooks, with little or no
+kit-side ZipWiki-named surface.
 
 ---
 
@@ -121,7 +145,8 @@ full spanning is optional and low priority.
 | E1 | Zip64 read + write | **Done** |
 | E2 | Browser Zstd | — |
 | E3 | META-INF JSON Schema | — |
-| E4 | Minimal manifest writer | **Done** |
-| E4a | ZipWiki-compatible writer | **Done** (`dev`) |
+| E4 | Minimal manifest writer | **Done** (optional) |
+| E4a | ZipWiki-shaped helpers | Optional scaffolding on `dev` |
 | E5 | Path-bound Merkle | — |
 | E6 | Split/spanned | — |
+| E7 | General ZipkitNode hooks | Preferred for ZipWiki-class apps |
