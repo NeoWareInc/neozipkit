@@ -122,6 +122,7 @@
     "audit": "pnpm audit",
     "publish:dry-run": "npm publish --access public --dry-run",
     "example:create-zip": "npx ts-node examples/create-zip.ts",
+    "example:create-zipwiki": "npx ts-node examples/create-zipwiki.ts",
     "example:create-zip64": "npx ts-node examples/create-zip64.ts",
     "example:extract-zip": "npx ts-node examples/extract-zip.ts",
     "example:list-zip": "npx ts-node examples/list-zip.ts",

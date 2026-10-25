@@ -40,6 +40,26 @@ export type {
   ZipPrecompressedMember,
   BuildZipBufferOptions,
 } from './buildZipBuffer';
+export {
+  ZIPWIKI_PACKAGE_SPEC_VERSION,
+  ZIPWIKI_DEFAULT_AI_ROOT,
+  ZIPWIKI_MANIFEST_ENTRY,
+  ZIPWIKI_DEFAULT_STORE_SUFFIXES,
+  classifyZipWikiEntry,
+  sortZipWikiMembers,
+  shouldStoreZipWikiBySuffix,
+  buildMinimalZipWikiManifest,
+  serializeZipWikiManifest,
+  toZipWikiBufferMembers,
+  writeZipWikiBufferSync,
+  writeZipWikiFileSync,
+} from './zipwiki';
+export type {
+  ZipWikiEntryClass,
+  ZipWikiMemberInput,
+  WriteZipWikiOptions,
+  MinimalZipWikiManifestInput,
+} from './zipwiki';
 export { inflateZipPayloadSync } from './inflateZipPayload';
 export type {
   CopyOptions,

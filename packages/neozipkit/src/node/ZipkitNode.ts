@@ -36,6 +36,11 @@ import {
 } from './LegacyZstd';
 import { writeZipFileSync, type ZipBufferMember, type BuildZipBufferOptions } from './buildZipBuffer';
 export type { ZipBufferMember };
+import {
+  writeZipWikiFileSync,
+  type WriteZipWikiOptions,
+  type ZipWikiMemberInput,
+} from './zipwiki/ZipWikiWriter';
 import * as fs from 'fs';
 import * as path from 'path';
 import { minimatch } from 'minimatch';
@@ -1255,6 +1260,19 @@ export default class ZipkitNode extends Zipkit {
     options?: BuildZipBufferOptions
   ): void {
     writeZipFileSync(filePath, members, options);
+  }
+
+  /**
+   * Write a ZipWiki-shaped package (CD order, optional 0x014F origins,
+   * store-by-suffix, optional 0x014E). Same wire layout as ZipWiki's
+   * `writeZipBuffer` / pack ZIP frame — parse and OKF stay in ZipWiki.
+   */
+  writeZipWikiMembersSync(
+    filePath: string,
+    members: ZipWikiMemberInput[],
+    options?: WriteZipWikiOptions
+  ): void {
+    writeZipWikiFileSync(filePath, members, options);
   }
 
   // ============================================================================

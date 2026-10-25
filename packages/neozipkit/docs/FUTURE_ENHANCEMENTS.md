@@ -58,16 +58,39 @@ without guessing field names.
 
 ---
 
-## E4 — Optional AI-aware `META-INF/manifest.json` writer
+## E4 — Optional AI-aware `META-INF/manifest.json` writer ✅ (minimal)
 
-[WHATS_NEW.md](../WHATS_NEW.md) (1.0.5): the kit aligns with APPNOTE wire
-foundations and Merkle; optional AI-aware `manifest.json` is still
-forthcoming. ZipWiki writes that file; this package only needs to **preserve**
-it on copy and **discover** it case-insensitively (already done).
+**Status:** Done for the **minimal** APPNOTE body. Full AI/OKF detail remains
+ZipWiki-owned.
 
-**Done when (if the kit owns create):** an opt-in helper to emit a minimal
-valid `manifest.json` (`format`, `specVersion`, `createdAt`) without pulling
-in ZipWiki parse/OKF.
+- Helpers: `buildMinimalZipWikiManifest` / `serializeZipWikiManifest`
+  (`src/node/zipwiki/ZipWikiWriter.ts`)
+- Emits `format`, `specVersion`, `createdAt`, `profiles`; optional empty `ai`
+  block (`includeAi`) for ZipWiki-shaped packages
+- ZipWiki still writes the full AI manifest at pack time; this package
+  **preserves** it on copy and **discovers** it case-insensitively (already done)
+
+**Out of scope:** parse/OKF fields, `ai.primaries[]` population, Merkle digest
+computation — ZipWiki (or a later E4b) owns those.
+
+---
+
+## E4a — ZipWiki-compatible ZipkitNode writer ✅
+
+**Status:** Done on `dev` (unreleased until the next kit publish).
+
+ZipWiki pack frames ZIPs in its own `writeZipBuffer`. NeoZipKit now mirrors
+that container shape so ZipWiki can swap writers later:
+
+- `writeZipWikiBufferSync` / `writeZipWikiFileSync` /
+  `ZipkitNode.writeZipWikiMembersSync`
+- CD order META-INF → `{aiRoot}/` → primaries (`sortZipWikiMembers`)
+- Origin locator → Extra Field `0x014F`; optional global `0x014E`
+- Store-by-suffix defaults matching ZipWiki binaries
+- Tests: `tests/unit/node/ZipWikiWriter.test.ts`
+- Example: `examples/create-zipwiki.ts`
+
+**Still ZipWiki-only:** LlamaParse/LiteParse, OKF generation, full AI manifest.
 
 ---
 
@@ -98,6 +121,7 @@ full spanning is optional and low priority.
 | E1 | Zip64 read + write | **Done** |
 | E2 | Browser Zstd | — |
 | E3 | META-INF JSON Schema | — |
-| E4 | Optional manifest writer | — |
+| E4 | Minimal manifest writer | **Done** |
+| E4a | ZipWiki-compatible writer | **Done** (`dev`) |
 | E5 | Path-bound Merkle | — |
 | E6 | Split/spanned | — |

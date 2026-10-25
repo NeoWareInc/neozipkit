@@ -57,6 +57,25 @@ pnpm example:create-zip
 - Uses simple compression options
 - Shows basic error handling
 
+### 1a. Create ZipWiki-shaped package (`create-zipwiki.ts`)
+
+Builds a minimal `.zipwiki` with NeoZipKit’s ZipWiki-compatible writer:
+`META-INF/manifest.json`, a parse under `wiki/parsed/`, a primary with Extra
+Field `0x014F`, and store-by-suffix for the fake PDF. Parse/OKF generation
+remains ZipWiki’s job — this example is the container layer only.
+
+**Usage:**
+```bash
+pnpm example:create-zipwiki
+# or
+ts-node examples/create-zipwiki.ts
+```
+
+**What it does:**
+- Writes `examples/output/example.zipwiki` via `ZipkitNode.writeZipWikiMembersSync`
+- Reorders members into ZipWiki CD order
+- Lists compression methods and runs CRC integrity (`testOnly`)
+
 ### 1b. Force Zip64 create / list / test (`create-zip64.ts`)
 
 Creates a Zip64 archive from the same small `test-files/` sources using `forceZip64: true`, lists entries (sizes + `usesZip64Extra`), then runs integrity test without extracting.

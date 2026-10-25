@@ -2,6 +2,23 @@
 
 Release notes for people who install and use **`neozipkit`** from npm. For blockchain timestamping and NFTs, see the sibling package [`neozip-blockchain`](https://www.npmjs.com/package/neozip-blockchain).
 
+## Unreleased (`dev`)
+
+### ZipWiki-compatible writer
+
+Helpers for ZipWiki-shaped packages without pulling parse/OKF into the kit:
+
+- `writeZipWikiBufferSync` / `writeZipWikiFileSync` /
+  `ZipkitNode.writeZipWikiMembersSync`
+- CD order META-INF → `wiki/` → primaries; Extra Field `0x014F` from `origin`;
+  store-by-suffix for PDF/images; optional Extra Field `0x014E`
+- `buildMinimalZipWikiManifest` (E4 minimal `META-INF/manifest.json`)
+- Example: `pnpm example:create-zipwiki`
+- Tests: `tests/unit/node/ZipWikiWriter.test.ts`
+
+AppNote on `dev` tracks ZipWiki **0.2.0-draft** (not yet in the npm 1.5.x
+tarball).
+
 ## 1.5.1 (2026-10-25)
 
 Same contents as **1.5.0**. Republished because npm left `neozipkit@1.5.0` in a stuck “staged” state that blocked publish (`E409`). Sibling **`neozip-blockchain@1.5.0`** is unchanged.

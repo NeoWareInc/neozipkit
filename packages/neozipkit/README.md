@@ -197,6 +197,7 @@ As of **v0.6.1**, `loadZipFile()` automatically **closes any prior read handle**
 - **STORED (0)** – No compression
 - **DEFLATED (8)** – Deflate (default)
 - **ZSTD (93)** – Zstandard. Node uses native `zlib` (streams and `Buffer` / `ArrayBuffer`). The browser bundle uses `CompressionStream` zstd. `ZipkitNode.writeMembersSync` / `buildZipBufferSync` default to raw zstd level 7. Caller extra blocks such as ZipWiki `0x014F` go on `ZipEntry.additionalExtra` and are written beside `0x014E`.
+- **ZipWiki-shaped create (`dev`)** – `writeZipWikiBufferSync` / `ZipkitNode.writeZipWikiMembersSync` apply ZipWiki CD order, store-by-suffix, origins, and optional `0x014E`. Minimal `META-INF/manifest.json` via `buildMinimalZipWikiManifest`. Parse/OKF stay in ZipWiki. Example: `pnpm example:create-zipwiki`.
 
 
 
