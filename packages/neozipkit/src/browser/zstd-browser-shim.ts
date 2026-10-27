@@ -98,7 +98,14 @@ export async function decompress(data: ZstdInput): Promise<Buffer> {
     return toBuffer(await transformZstd(bytes, 'decompress'));
   } catch (nativeErr) {
     try {
-      const { decompress: fzstdDecompress } = await import('fzstd');
+      let fzstdDecompress: (data: Uint8Array) => Uint8Array;
+      try {
+        ({ decompress: fzstdDecompress } = await import('fzstd'));
+      } catch {
+        // Jest (CJS) blocks dynamic import without --experimental-vm-modules.
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        ({ decompress: fzstdDecompress } = require('fzstd') as typeof import('fzstd'));
+      }
       return toBuffer(fzstdDecompress(bytes));
     } catch (fallbackErr) {
       throw new Error(

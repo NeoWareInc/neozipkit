@@ -109,23 +109,23 @@
   "homepage": "https://github.com/NeoWareInc/neozipkit/tree/main/packages/neozip-blockchain#readme",
   "license": "MIT",
   "dependencies": {
-    "@noble/curves": "^1.2.0",
-    "@noble/hashes": "^1.3.2",
-    "ethers": "^6.0.0",
-    "moment-timezone": "^0.6.0"
+    "@noble/curves": "^1.9.7",
+    "@noble/hashes": "^1.8.0",
+    "ethers": "^6.17.0",
+    "moment-timezone": "^0.6.5"
   },
   "devDependencies": {
     "@types/jest": "^29.5.12",
     "@types/node": "^25.0.3",
-    "dotenv": "^16.4.5",
-    "dotenv-cli": "^7.4.2",
+    "dotenv": "^16.6.1",
+    "dotenv-cli": "^7.4.4",
     "jest": "^29.7.0",
-    "jest-util": "^30.2.0",
+    "jest-util": "^30.5.1",
     "neozipkit": "workspace:*",
-    "ts-jest": "^29.1.2",
+    "ts-jest": "^29.4.15",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.9.3"
   },
   "peerDependencies": {
     "@lit-protocol/lit-node-client": ">=6.0.0",

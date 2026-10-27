@@ -9,6 +9,7 @@
     "test:quick": "pnpm --filter neozipkit run test && pnpm --filter neozip-blockchain run test",
     "test:unit": "pnpm -r run test:unit",
     "clean": "pnpm -r run clean",
+    "audit": "pnpm audit",
     "version:set": "node scripts/version-sync.js",
     "version:patch": "node scripts/version-sync.js patch",
     "version:minor": "node scripts/version-sync.js minor",
@@ -17,5 +18,36 @@
     "publish:dry-run": "bash scripts/publish-dry-run.sh",
     "publish:neozipkit": "pnpm --filter neozipkit run build && pnpm --filter neozipkit exec npx --yes npm@11 publish --access public",
     "publish:neozip-blockchain": "pnpm --filter neozip-blockchain run build && pnpm --filter neozip-blockchain exec npx --yes npm@11 publish --access public"
+  },
+  "pnpm": {
+    "overrides": {
+      "protobufjs": ">=7.6.3",
+      "undici": ">=6.29.1",
+      "serialize-javascript": ">=7.0.5",
+      "brace-expansion": "5.0.12",
+      "ws@>=8": ">=8.21.0",
+      "ws@^7": ">=7.5.11",
+      "js-yaml": "4.3.2",
+      "adm-zip": "-",
+      "fast-uri": ">=3.1.9",
+      "cookie": ">=0.7.0",
+      "tmp": ">=0.2.6",
+      "follow-redirects": ">=1.16.1",
+      "browserslist": ">=4.28.7",
+      "baseline-browser-mapping": ">=2.11.0",
+      "@fastify/busboy": ">=3.2.2",
+      "decode-uri-component": ">=0.5.0",
+      "moment": ">=2.31.0",
+      "diff@>=6": ">=8.0.3",
+      "uuid": ">=11.1.1"
+    },
+    "peerDependencyRules": {
+      "ignoreMissing": [
+        "@lit-protocol/lit-node-client"
+      ],
+      "allowedVersions": {
+        "@lit-protocol/lit-node-client": "*"
+      }
+    }
   }
 }
