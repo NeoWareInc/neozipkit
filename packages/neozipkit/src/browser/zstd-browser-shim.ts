@@ -1,6 +1,7 @@
 /**
  * Browser zstd codec for in-memory buffers.
  * Uses CompressionStream / DecompressionStream ('zstd') so the old WASM codec stays out.
+ * Decompress falls back to `fzstd` (lazy import) when the native stream is unavailable.
  * Node builds use src/node/ZstdNode.ts (native zlib) instead of this file.
  */
 
@@ -87,8 +88,24 @@ export async function compress(data: ZstdInput, _level?: number): Promise<Buffer
   return toBuffer(await transformZstd(asBytes(data), 'compress'));
 }
 
+/**
+ * Decompress zstd. Tries the native `DecompressionStream('zstd')` first; when the
+ * browser lacks it (or it fails), falls back to `fzstd` (pure JS, loaded lazily).
+ */
 export async function decompress(data: ZstdInput): Promise<Buffer> {
-  return toBuffer(await transformZstd(asBytes(data), 'decompress'));
+  const bytes = asBytes(data);
+  try {
+    return toBuffer(await transformZstd(bytes, 'decompress'));
+  } catch (nativeErr) {
+    try {
+      const { decompress: fzstdDecompress } = await import('fzstd');
+      return toBuffer(fzstdDecompress(bytes));
+    } catch (fallbackErr) {
+      throw new Error(
+        `zstd decompress failed (native: ${(nativeErr as Error).message}; fzstd: ${(fallbackErr as Error).message})`
+      );
+    }
+  }
 }
 
 export function compressSync(_data: ZstdInput, _level?: number): Buffer {

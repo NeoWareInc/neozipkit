@@ -15,6 +15,7 @@ export * from '../core';
 
 // Browser-specific class
 export { default as ZipkitBrowser } from './ZipkitBrowser';
+export { ZipReaderBrowser, ZipIntegrityError, type ZipReaderBrowserEntry } from './ZipReaderBrowser';
 
 // Re-export ZipEntry as named export for convenience
 export { default as ZipEntry } from '../core/ZipEntry';

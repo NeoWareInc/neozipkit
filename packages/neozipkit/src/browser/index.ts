@@ -9,6 +9,7 @@ export default Zipkit;
 
 // Browser-only exports
 export { default as ZipkitBrowser } from './ZipkitBrowser';
+export { ZipReaderBrowser, ZipIntegrityError, type ZipReaderBrowserEntry } from './ZipReaderBrowser';
 
 // Platform-specific conditional exports
 export const PlatformUtils = {

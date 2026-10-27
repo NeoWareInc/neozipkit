@@ -32,6 +32,19 @@ changes. The manifest remains the control surface for advanced features.
   paths). Use `META_TS_SUBMIT_NZIP` / `META_TIMESTAMP_NZIP`.
 - Removed the `opentimestamps` type declarations.
 
+### Browser reader and zstd fallback
+
+- **`ZipReaderBrowser`** (`neozipkit/browser`): `fromArrayBuffer` / `fromBlob` /
+  `fromReadAt(readAt, size)` parse the central directory (classic + Zip64) with
+  async positioned reads and no Node `fs`. `readEntry` verifies size, CRC-32 and
+  `0x014E` (SHA-256 via `crypto.subtle`); `readRaw`, `verifyAll`, and
+  `readManifest` mirror the Node reader. Exports `ZipIntegrityError` and
+  `ZipReaderBrowserEntry`. Deflate uses pako; it never loads `ZstdNode`.
+- **zstd in browsers:** the browser codec now tries
+  `DecompressionStream('zstd')` first and, if that is missing or fails, lazily
+  imports [`fzstd`](https://www.npmjs.com/package/fzstd) (pure JS). `fzstd`
+  (`^0.1.1`) is a new dependency of `neozipkit`. Compression is still native-only.
+
 ### Reader, rewrite, manifest, and Extra Field helpers
 
 - **`ZipReaderNode`** (`neozipkit/node`): `open(path)` / `fromBuffer(buf)` parse the

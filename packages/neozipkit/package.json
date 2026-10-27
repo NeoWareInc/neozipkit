@@ -175,6 +175,7 @@
   },
   "dependencies": {
     "buffer": "^6.0.3",
+    "fzstd": "^0.1.1",
     "minimatch": "^10.2.1",
     "pako": "^2.1.0",
     "uuid": "^9.0.0"
