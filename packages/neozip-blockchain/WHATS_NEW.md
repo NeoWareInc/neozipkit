@@ -4,6 +4,8 @@ Release notes for people who install and use **`neozip-blockchain`** from npm (a
 
 ## 2.0.0 (unreleased)
 
+**Release train:** publish with sibling **`neozipkit@1.6.0`** (git tag **`v1.6.0`**). This release must ship **before** the next **ZipWiki** and **neozip-cli** releases (they should depend on `neozipkit@^1.6.0` / `neozip-blockchain@^2.0.0`).
+
 ### Breaking changes
 
 - **OpenTimestamps removed.** The `neozip-blockchain/ots` subpath export, `src/ots/` (`ZipkitOTS`), the `opentimestamps` dependency, the `TS_SUBMIT_OTS` / `TIMESTAMP_OTS` metadata constants, and the `example:ots-stamp` / `example:ots-verify` examples are gone. Use NeoZip Token Service timestamping instead: `META-INF/TS-SUBMIT.NZIP` (pending) and `META-INF/TIMESTAMP.NZIP` (confirmed).

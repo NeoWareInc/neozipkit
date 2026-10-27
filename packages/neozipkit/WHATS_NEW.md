@@ -4,6 +4,8 @@ Release notes for people who install and use **`neozipkit`** from npm. For block
 
 ## 1.6.0 (2026-10-27)
 
+**Release train:** publish with sibling **`neozip-blockchain@2.0.0`**. This release must ship **before** the next **ZipWiki** and **neozip-cli** releases (they should depend on `neozipkit@^1.6.0` / `neozip-blockchain@^2.0.0`).
+
 ### AppNote 0.3.0-draft
 
 `NEOZIP_APPNOTE.md` is now **0.3.0-draft** and carries the wire-level rules that
