@@ -2,7 +2,7 @@
 
 Monorepo for NeoZip packages — advanced ZIP file creation, compression, encryption, and blockchain integration.
 
-> **Stable 1.0:** [`neozipkit`](packages/neozipkit/) and [`neozip-blockchain`](packages/neozip-blockchain/) **1.0.5** (first non-beta was **1.0.2**). Format profile: [`NEOZIP_APPNOTE.md`](packages/neozipkit/NEOZIP_APPNOTE.md).
+> **Next release (publish before ZipWiki / neozip-cli):** [`neozipkit`](packages/neozipkit/) **1.6.0** and [`neozip-blockchain`](packages/neozip-blockchain/) **2.0.0**. This npm train must ship **before** the next releases of **ZipWiki** and **neozip-cli**, which depend on these versions. Format profile: [`NEOZIP_APPNOTE.md`](packages/neozipkit/NEOZIP_APPNOTE.md) (0.3.0-draft with 1.6.0).
 
 ## Native / compiled kits
 
@@ -39,7 +39,7 @@ pnpm test:unit
 
 ## Version management
 
-Both packages share the same version number. Use the root scripts to bump:
+Packages may use **independent semver** when a major is needed on only one side (e.g. next train: **neozipkit 1.6.0** + **neozip-blockchain 2.0.0**). The root / git tag follows **neozipkit**. `pnpm version:*` still syncs both package.json versions when you want them locked together:
 
 ```bash
 pnpm version:patch   # 0.7.0 → 0.7.1
@@ -48,9 +48,13 @@ pnpm version:major   # 0.7.0 → 1.0.0
 pnpm version:set 1.0.0
 ```
 
+### Downstream release order
+
+Publish this monorepo **before** cutting the next **ZipWiki** and **neozip-cli** releases so those products can depend on `neozipkit@^1.6.0` and `neozip-blockchain@^2.0.0`.
+
 ## Release (automated npm publish)
 
-Publishing is handled by [`.github/workflows/publish.yml`](.github/workflows/publish.yml): on push of a tag `v*` (e.g. `v0.7.1`), CI builds, tests, publishes **`neozipkit`** then **`neozip-blockchain`** to npm, and opens a GitHub Release.
+Publishing is handled by [`.github/workflows/publish.yml`](.github/workflows/publish.yml): on push of a tag `v*` matching **neozipkit** (e.g. `v1.6.0`), CI builds, tests, publishes **`neozipkit`** then **`neozip-blockchain`** (each at its own `package.json` version) to npm, and opens a GitHub Release.
 
 ### One-time GitHub setup
 
@@ -88,10 +92,11 @@ Publishing is handled by [`.github/workflows/publish.yml`](.github/workflows/pub
 
 ### Release steps
 
-1. Bump both package versions: `pnpm version:patch` (or `version:minor` / `version:major`).
-2. Commit and tag: `git commit -am "release: v0.7.1" && git tag v0.7.1`.
-3. Push branch and tags: `git push origin <branch> && git push origin v0.7.1`.
-4. The tag **must** match `version` in both `packages/neozipkit/package.json` and `packages/neozip-blockchain/package.json` (the workflow enforces this).
+1. Set package versions (locked via `pnpm version:*`, or edit independently for a split train such as kit **1.6.0** / blockchain **2.0.0**). Keep root `package.json` version aligned with **neozipkit**.
+2. Commit and tag with the kit version: `git commit -am "release: v1.6.0" && git tag v1.6.0`.
+3. Push branch and tags: `git push origin <branch> && git push origin v1.6.0`.
+4. The tag **must** match `version` in `packages/neozipkit/package.json` (the workflow enforces this). `neozip-blockchain` may differ and is published from its own `package.json` version.
+5. After this train is on npm, proceed with the next **ZipWiki** and **neozip-cli** releases.
 
 ### “Re-run” does **not** load a newer workflow file
 

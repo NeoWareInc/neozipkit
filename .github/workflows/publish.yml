@@ -106,16 +106,16 @@ jobs:
 
       - run: pnpm test:quick
 
-      - name: Verify tag matches package versions
+      - name: Verify tag matches neozipkit version
         run: |
           TAG="${GITHUB_REF#refs/tags/v}"
           VER_KIT=$(node -p "require('./packages/neozipkit/package.json').version")
           VER_BC=$(node -p "require('./packages/neozip-blockchain/package.json').version")
-          if [ "$TAG" != "$VER_KIT" ] || [ "$TAG" != "$VER_BC" ]; then
-            echo "::error::Tag v$TAG does not match package versions (neozipkit=$VER_KIT, neozip-blockchain=$VER_BC)"
+          if [ "$TAG" != "$VER_KIT" ]; then
+            echo "::error::Tag v$TAG must match neozipkit version ($VER_KIT). neozip-blockchain may differ (currently $VER_BC)."
             exit 1
           fi
-          echo "Tag v$TAG matches both package versions."
+          echo "Tag v$TAG matches neozipkit@$VER_KIT; will also publish neozip-blockchain@$VER_BC."
 
       - name: Preflight (npm CLI for publish)
         run: npx --yes npm@11 --version
