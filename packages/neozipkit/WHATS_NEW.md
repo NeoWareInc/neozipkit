@@ -2,22 +2,69 @@
 
 Release notes for people who install and use **`neozipkit`** from npm. For blockchain timestamping and NFTs, see the sibling package [`neozip-blockchain`](https://www.npmjs.com/package/neozip-blockchain).
 
-## Unreleased (`dev`)
+## 1.6.0 (2026-10-27)
 
-### ZipWiki-compatible writer
+### AppNote 0.3.0-draft
 
-Helpers for ZipWiki-shaped packages without pulling parse/OKF into the kit:
+`NEOZIP_APPNOTE.md` is now **0.3.0-draft** and carries the wire-level rules that
+used to live only in the ZipWiki AppNote: omit-original semantics
+(`sourceIncluded: false`), parsed-entry timestamps, the `0x014F` placement
+profile, collision rewrite paths, and integrity interaction (CRC-32 default,
+`0x014E` / Merkle opt-in). The Blockchain section documents the
+TS-SUBMIT → TIMESTAMP → TOKEN lifecycle, drops OpenTimestamps, and requires
+writers to remove or invalidate those sidecars when non-`META-INF/` content
+changes. The manifest remains the control surface for advanced features.
 
-- `writeZipWikiBufferSync` / `writeZipWikiFileSync` /
-  `ZipkitNode.writeZipWikiMembersSync`
-- CD order META-INF → `wiki/` → primaries; Extra Field `0x014F` from `origin`;
-  store-by-suffix for PDF/images; optional Extra Field `0x014E`
-- `buildMinimalZipWikiManifest` (E4 minimal `META-INF/manifest.json`)
-- Example: `pnpm example:create-zipwiki`
-- Tests: `tests/unit/node/ZipWikiWriter.test.ts`
+### ZipWiki helpers removed from the public API
 
-AppNote on `dev` tracks ZipWiki **0.2.0-draft** (not yet in the npm 1.5.x
-tarball).
+- Removed `writeZipWikiBufferSync`, `writeZipWikiFileSync`,
+  `ZipkitNode.writeZipWikiMembersSync`, `buildMinimalZipWikiManifest`, and the
+  other `ZIPWIKI_*` / `*ZipWiki*` exports (and `src/node/zipwiki/`). E4a is
+  retired; prefer the general E7 hooks.
+- Use `buildZipBufferSync` / `writeZipFileSync` / `writeMembersSync` with
+  `makeOriginExtra` and `META_MANIFEST_JSON`. `examples/create-zipwiki.ts` shows
+  the pattern with an inline manifest.
+
+### OpenTimestamps meta paths removed
+
+- Removed `META_TS_SUBMIT_OTS`, `META_TIMESTAMP_OTS`, and the deprecated
+  `TIMESTAMP_SUBMITTED` / `TIMESTAMP_METADATA` aliases (they pointed at `.OTS`
+  paths). Use `META_TS_SUBMIT_NZIP` / `META_TIMESTAMP_NZIP`.
+- Removed the `opentimestamps` type declarations.
+
+### Reader, rewrite, manifest, and Extra Field helpers
+
+- **`ZipReaderNode`** (`neozipkit/node`): `open(path)` / `fromBuffer(buf)` parse the
+  central directory (classic + Zip64) with positioned reads. `readEntry` inflates
+  and verifies size, CRC-32, and `0x014E`; `readRaw` returns stored bytes plus
+  extras; `openReadStream` streams stored / deflate / zstd members and verifies at
+  end of stream. Failures throw `ZipIntegrityError` (`crc` | `sha256` | `size` |
+  `structure`).
+- **`rewriteZip` / `applyMetaSidecars`**: keep / replace / add / drop members and
+  add or remove `META-INF/**` sidecars; kept members are copied byte-identical
+  (payload, CRC, DOS time, extras) and the result is renamed into place atomically.
+  `ZipkitNode.updateZipFile` now maps onto `rewriteZip`.
+- **Writer** (`buildZipBufferSync` / `writeZipFileSync`): `extras` (composed after
+  `additionalExtra`, wins on duplicate ids), `utf8Flag` / `emitUnicodePath`,
+  `dataPath` (read into memory), async `buildZipBuffer` / `writeZipFile`, and
+  `computeMerkle: 'v0' | 'v1'` which makes the build return `{ buffer, merkleRoot }`.
+- **Extra Field registry**: `parseExtraFields`, `composeExtraFields`,
+  `replaceExtraField`, `getExtraField`; `verifyOriginPayload` checks `0x014F`
+  CRC-32 / size / SHA-256 against original bytes.
+- **Manifest layer**: `validateManifest`, `createManifest`, `serializeManifest`
+  (stable key order), `add/removeProfile`, `registerManifestBlock`, `classifyEntry`,
+  `checkPairing`, `parseManifestJson` (browser-safe), plus Node `readManifest` /
+  `updateManifest`. `validateReservedMeta` rejects duplicate or case-variant
+  reserved `META-INF/` names. The envelope JSON Schema ships in `schemas/`.
+- **Merkle from a reader**: `computeMerkleRootFromReader` and
+  `matchMerkleRootFromReader` (aliases keep core `matchMerkleRoot` unchanged).
+
+### Packaging
+
+- `engines.node` is now `>=22.15.0`.
+- `node-esm.mjs` is generated after compile by `scripts/generate-node-esm.mjs`
+  (`npm run generate-node-esm`), so `neozipkit/node` exposes every named export
+  from the CommonJS build.
 
 ## 1.5.1 (2026-10-25)
 
@@ -144,7 +191,7 @@ Ships **[NEOZIP_APPNOTE.md](./NEOZIP_APPNOTE.md)** in the npm package (also link
 
 - Extra Field **`0x014E`** — per-entry SHA-256 of uncompressed payload (when `useSHA256: true`)
 - Zstd method **93** when you opt in with `useZstd: true` (Node ≥ 22.15; Deflate remains the library default)
-- **ASCII case-insensitive** discovery of reserved `META-INF/` paths (`TOKEN.NZIP`, `TIMESTAMP.NZIP`, `TS-SUBMIT.NZIP`, OTS twins, `manifest.json`)
+- **ASCII case-insensitive** discovery of reserved `META-INF/` paths (`TOKEN.NZIP`, `TIMESTAMP.NZIP`, `TS-SUBMIT.NZIP`, `manifest.json`; `.OTS` twins were removed in 1.6.0)
 - Merkle leaves exclude all **`META-INF/**`** entries
 
 **Merkle root (APPNOTE §6):**

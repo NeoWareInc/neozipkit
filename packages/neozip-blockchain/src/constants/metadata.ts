@@ -1,13 +1,12 @@
 /**
- * Centralized metadata filenames for NZIP and OTS ZIP archives.
+ * Centralized metadata filenames for NZIP ZIP archives.
  *
- * All META-INF metadata file names used across core, token-service, and OTS
+ * All META-INF metadata file names used across core and token-service
  * are defined here to avoid duplication and drift. Other modules re-export
  * these with domain-specific names (e.g. TOKENIZED_METADATA, SUBMIT_METADATA).
  *
  * Naming convention: TYPE.EXT
  * - .NZIP = neozip-blockchain token-service timestamp/NFT metadata
- * - .OTS  = OpenTimestamps (Bitcoin) proof metadata
  */
 
 // ---------------------------------------------------------------------------
@@ -24,9 +23,3 @@ export const TOKEN_NZIP_LEGACY = 'META-INF/NZIP.TOKEN';
 export const TS_SUBMIT_NZIP = 'META-INF/TS-SUBMIT.NZIP';
 export const TIMESTAMP_NZIP = 'META-INF/TIMESTAMP.NZIP';
 
-// ---------------------------------------------------------------------------
-// OpenTimestamps metadata (Bitcoin OTS proof)
-// Pending: TS-SUBMIT.OTS. Confirmed: TIMESTAMP.OTS.
-// ---------------------------------------------------------------------------
-export const TS_SUBMIT_OTS = 'META-INF/TS-SUBMIT.OTS';
-export const TIMESTAMP_OTS = 'META-INF/TIMESTAMP.OTS';

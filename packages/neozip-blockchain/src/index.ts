@@ -1,6 +1,6 @@
 /**
  * neozip-blockchain
- * Blockchain functionality for NeoZip - NFT minting, verification, wallet management, and OpenTimestamps
+ * Blockchain functionality for NeoZip - NFT minting, verification, and wallet management
  * 
  * This package provides standalone blockchain operations that work with neozipkit or independently.
  */

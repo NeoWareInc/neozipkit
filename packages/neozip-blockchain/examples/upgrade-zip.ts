@@ -4,7 +4,7 @@
  * Upgrades a pending timestamp (TS-SUBMIT.NZIP) to a confirmed timestamp (TIMESTAMP.NZIP)
  * once the batch has been minted on the blockchain.
  * 
- * Similar to OpenTimestamps' `ots upgrade` command:
+ * Upgrades a pending timestamp to a confirmed one:
  * - Checks if the batch has been confirmed on the blockchain
  * - If confirmed, downloads the complete proof data (merkle proof, transaction hash, etc.)
  * - Creates a new ZIP file with TIMESTAMP.NZIP containing complete proof

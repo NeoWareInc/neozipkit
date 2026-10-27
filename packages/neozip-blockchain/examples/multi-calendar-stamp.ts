@@ -2,7 +2,7 @@
  * Multi-Calendar Timestamping Example
  * 
  * Demonstrates using multiple calendar servers for redundancy,
- * similar to OpenTimestamps' approach of submitting to multiple calendars.
+ * submitting to multiple calendar servers.
  * 
  * Benefits of multi-calendar:
  * - Redundancy: If one server is unavailable, others can still timestamp

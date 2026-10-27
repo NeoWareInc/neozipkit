@@ -35,12 +35,9 @@ import {
   type LegacyZstdDetectResult,
 } from './LegacyZstd';
 import { writeZipFileSync, type ZipBufferMember, type BuildZipBufferOptions } from './buildZipBuffer';
+import { rewriteZip } from './rewriteZip';
+import { mapCompressionLevel } from './ZstdNode';
 export type { ZipBufferMember };
-import {
-  writeZipWikiFileSync,
-  type WriteZipWikiOptions,
-  type ZipWikiMemberInput,
-} from './zipwiki/ZipWikiWriter';
 import * as fs from 'fs';
 import * as path from 'path';
 import { minimatch } from 'minimatch';
@@ -1242,9 +1239,35 @@ export default class ZipkitNode extends Zipkit {
       remove?: string[]; // Entry names to remove
     }
   ): Promise<void> {
-    // Placeholder for future implementation
-    // This would require significant ZIP file manipulation logic
-    throw new Error('updateZipFile() - Full implementation pending. Use neozip CLI for now.');
+    // Thin mapping onto rewriteZip(): untouched members are kept byte-identical.
+    const load = async (
+      filePath: string,
+      name: string | undefined,
+      options: CompressOptions | undefined
+    ) => {
+      if (options?.password) {
+        throw new Error('updateZipFile(): encrypted updates are not supported');
+      }
+      const level = options?.level;
+      const method: 0 | 8 | 93 = level === 0 ? 0 : options?.useZstd ? 93 : 8;
+      return {
+        name: name ?? path.basename(filePath),
+        data: await fs.promises.readFile(filePath),
+        method,
+        level:
+          method === 93
+            ? level === undefined ? 7 : mapCompressionLevel(level)
+            : level,
+        useSHA256: options?.useSHA256,
+      };
+    };
+    const add = await Promise.all(
+      (updates.add ?? []).map((a) => load(a.filePath, a.entryName, a.options))
+    );
+    const replace = await Promise.all(
+      (updates.update ?? []).map((u) => load(u.filePath, u.entryName, u.options))
+    );
+    await rewriteZip(zipPath, zipPath, { add, replace, drop: updates.remove });
   }
 
   /**
@@ -1260,19 +1283,6 @@ export default class ZipkitNode extends Zipkit {
     options?: BuildZipBufferOptions
   ): void {
     writeZipFileSync(filePath, members, options);
-  }
-
-  /**
-   * Write a ZipWiki-shaped package (CD order, optional 0x014F origins,
-   * store-by-suffix, optional 0x014E). Same wire layout as ZipWiki's
-   * `writeZipBuffer` / pack ZIP frame — parse and OKF stay in ZipWiki.
-   */
-  writeZipWikiMembersSync(
-    filePath: string,
-    members: ZipWikiMemberInput[],
-    options?: WriteZipWikiOptions
-  ): void {
-    writeZipWikiFileSync(filePath, members, options);
   }
 
   // ============================================================================

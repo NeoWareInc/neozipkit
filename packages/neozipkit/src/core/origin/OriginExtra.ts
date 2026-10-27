@@ -201,6 +201,25 @@ export function parseOriginFromExtra(extra: Buffer | null | undefined): OriginLo
   return null;
 }
 
+/**
+ * Check original bytes against the attributes declared in a `0x014F` locator.
+ * Each field is `null` when the locator does not carry that tag, otherwise
+ * `true` / `false` for match / mismatch.
+ */
+export function verifyOriginPayload(
+  locator: OriginLocator,
+  bytes: Buffer
+): { crcOk: boolean | null; sizeOk: boolean | null; sha256Ok: boolean | null } {
+  const crcOk =
+    locator.crc32 === undefined ? null : originCrc32Of(bytes) === locator.crc32 >>> 0;
+  const sizeOk = locator.size === undefined ? null : bytes.length === locator.size;
+  let sha256Ok: boolean | null = null;
+  if (locator.sha256 !== undefined) {
+    sha256Ok = originSha256Of(bytes).equals(originSha256Bytes(locator.sha256));
+  }
+  return { crcOk, sizeOk, sha256Ok };
+}
+
 /** Read origin locator from a ZipEntry's preserved caller extras. */
 export function parseOriginFromEntry(entry: {
   additionalExtra?: Buffer | null;

@@ -135,15 +135,6 @@ Use the NeoZip Token Service to stamp a ZIP (submit digest), upgrade once the ba
 - `WalletManagerNode` - Node.js wallet management
 - `ZipkitWallet` - Wallet utilities
 
-## OpenTimestamps (OTS) add-on
-
-**NeoZip Token Service timestamping is the recommended and supported path.** OpenTimestamps (OTS) is provided as an **optional add-on** for Bitcoin-backed timestamps and backward compatibility. OTS may be **deprecated in a future release** in favor of NeoZip Token Service timestamps.
-
-- **Access**: OTS is **not** on the main package entry. Use the subpath: `import { createTimestamp, verifyOtsZip } from 'neozip-blockchain/ots'`
-- **Metadata**: OTS uses `TIMESTAMP.OTS` / `TS-SUBMIT.OTS`; NeoZip Token Service uses `TIMESTAMP.NZIP` / `TS-SUBMIT.NZIP`.
-- **Functions**: `createTimestamp()`, `verifyOts()`, `verifyOtsZip()`, `deserializeOts()`, `parseVerifyResult()`, `upgradeOTS()`, `createOtsMetadataEntry()`, `getOtsEntry()`, `getOtsBuffer()`, `getMerkleRootSafe()`, `bufferToArrayBuffer()`
-- **Note**: `upgradeOTS()` requires a Zipkit instance from neozipkit for ZIP file manipulation; pass it as the third argument.
-
 ## Integration with neozipkit
 
 Both packages live in the same [monorepo](../../README.md) and share a locked version number. Use **[neozipkit](../neozipkit/)** for ZIP creation, merkle roots, and file handling; use this package for blockchain timestamping, NFT minting, and verification. They work together for full NZIP workflows:

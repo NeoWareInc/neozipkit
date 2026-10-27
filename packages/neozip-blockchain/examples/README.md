@@ -9,7 +9,6 @@ NZIP (NeoZip) files are ZIP archives with embedded blockchain proofs. These exam
 - **Timestamping**: Create timestamped ZIP files via NeoZip Token Service (Ethereum blockchain)
 - **NFT Proof**: Mint NFT tokens that prove ownership and link to timestamps
 - **Verification**: Verify ZIP files against the blockchain (pending, confirmed, or NFT proofs)
-- **OpenTimestamps**: Legacy Bitcoin-based timestamping (add-on)
 
 ## Quick Reference
 
@@ -25,8 +24,6 @@ NZIP (NeoZip) files are ZIP archives with embedded blockchain proofs. These exam
 | `example:token` | [token.ts](token.ts) | Create ZIP + mint NFT (ZipkitMinter, v2.51) | Wallet NFT | Wallet |
 | `example:verify-token` | [verify-token.ts](verify-token.ts) | Verify tokenized ZIP (simpler) | Verify | None |
 | `example:token-service` | [token-create.ts](token-create.ts) | Create ZIP + mint NFT (UnifiedNFT) | Direct NFT | Wallet |
-| `example:ots-stamp` | [ots-stamp-zip.ts](ots-stamp-zip.ts) | Create ZIP + OpenTimestamps proof | OTS | None |
-| `example:ots-verify` | [ots-verify-zip.ts](ots-verify-zip.ts) | Verify OTS proof | OTS | None |
 
 ## Workflows
 
@@ -54,9 +51,6 @@ flowchart LR
     T2[token-create]
     T1 --> V2[verify-token or verify-zip]
     T2 --> V2
-  end
-  subgraph ots [OTS legacy]
-    O1[ots-stamp-zip] --> O2[ots-verify-zip]
   end
 ```
 
@@ -174,7 +168,7 @@ Universal verifier that supports three modes:
 2. **CONFIRMED (TIMESTAMP.NZIP)** - Direct blockchain verification
    - Uses embedded merkle proof to verify on-chain
    - No NeoZip Token Service required (self-contained proof)
-   - Similar to OpenTimestamps upgraded timestamps
+   - Confirmed timestamps carry a self-contained merkle proof
 
 3. **NFT TOKEN (TOKEN.NZIP; legacy NZIP.TOKEN accepted)** - NFT proof verification
    - Verifies NFT ownership on TimestampProofNFT contract
@@ -297,57 +291,6 @@ ts-node examples/verify-token.ts examples/output/token.nzip
 - Tokenized ZIP file with `META-INF/TOKEN.NZIP` (legacy `META-INF/NZIP.TOKEN` accepted for verification)
 - No private keys required (read-only blockchain operations)
 
-### OpenTimestamps (Legacy)
-
-Bitcoin-based timestamping using OpenTimestamps protocol. This is a legacy/add-on feature. For primary timestamping, use the NeoZip Token Service flow above.
-
-#### OTS Stamp ZIP (`ots-stamp-zip.ts`)
-
-Creates a ZIP file with OpenTimestamps proof.
-
-**What it does:**
-- Creates a ZIP from input files
-- Computes merkle root
-- Requests an OpenTimestamps proof
-- Adds `META-INF/TS-SUBMIT.OTS` to the archive
-
-**Usage:**
-```bash
-# Using pnpm script
-pnpm example:ots-stamp examples/output/ots.nzip examples/test-files/*
-
-# Using ts-node directly
-ts-node examples/ots-stamp-zip.ts examples/output/ots.nzip examples/test-files/*
-```
-
-**Requirements:**
-- No wallet or server needed
-- OpenTimestamps calendar servers must be accessible
-
-**Output:**
-- Creates `examples/output/ots.nzip` with `META-INF/TS-SUBMIT.OTS`
-- Displays OTS proof size
-
-#### OTS Verify ZIP (`ots-verify-zip.ts`)
-
-Verifies OpenTimestamps proof in a ZIP file.
-
-**Usage:**
-```bash
-# Using pnpm script
-pnpm example:ots-verify examples/output/ots.nzip
-
-# Using ts-node directly
-ts-node examples/ots-verify-zip.ts examples/output/ots.nzip
-```
-
-**Requirements:**
-- ZIP file with `META-INF/TS-SUBMIT.OTS` or `META-INF/TIMESTAMP.OTS`
-
-**Output:**
-- Verification status (valid/pending/error)
-- Bitcoin block height (if attested)
-- Attestation date (if available)
 
 ## Prerequisites
 
@@ -391,7 +334,7 @@ echo "TOKEN_SERVICE_URL=https://testnet.token-service.neozip.io" >> .env
 
 ## NeoZip Token Service Setup
 
-The NeoZip Token Service flow examples require a NeoZip Token Service to be running. The NeoZip Token Service handles blockchain transactions on behalf of users, similar to OpenTimestamps calendar servers.
+The NeoZip Token Service flow examples require a NeoZip Token Service to be running. The NeoZip Token Service handles blockchain transactions on behalf of users and acts as a calendar/aggregation service.
 
 ### Quick Start
 
@@ -422,16 +365,6 @@ The NeoZip Token Service requires:
 
 See the NeoZip Token Service project README for detailed setup instructions.
 
-### Comparison with OpenTimestamps
-
-| Feature | OpenTimestamps | ETH Timestamping |
-|---------|---------------|------------------|
-| Blockchain | Bitcoin | Ethereum (Base, Arbitrum, etc.) |
-| Protocol | OTS | NZIP Tokens |
-| User Wallet | Not required | Not required |
-| Aggregation | Calendar servers | Direct token minting |
-| Verification | Bitcoin block headers | Ethereum contract calls |
-| Metadata Format | Binary OTS proof | JSON metadata |
 
 ## Example File Structure
 
@@ -444,16 +377,13 @@ examples/
 ├── token.ts                  # Create ZIP + mint NFT (ZipkitMinter, v2.51)
 ├── verify-token.ts           # Verify tokenized ZIP (simpler)
 ├── token-create.ts           # Create ZIP + mint NFT (UnifiedNFT)
-├── ots-stamp-zip.ts          # Create ZIP + OpenTimestamps proof
-├── ots-verify-zip.ts         # Verify OTS proof
 ├── README.md                 # This file
 ├── output/                   # Generated ZIP files
 │   ├── stamp.nzip           # Timestamped ZIP (pending)
 │   ├── stamp-upgrade.nzip   # Timestamped ZIP (confirmed)
 │   ├── stamp-upgrade-nft.nzip # Timestamped ZIP with NFT
 │   ├── token.nzip           # Tokenized NZIP (ZipkitMinter, v2.51)
-│   ├── token-test.nzip      # Tokenized ZIP (UnifiedNFT)
-│   └── ots.nzip             # OTS timestamped ZIP
+│   └── token-test.nzip      # Tokenized ZIP (UnifiedNFT)
 └── test-files/              # Test data files
     ├── document.txt
     ├── data.json

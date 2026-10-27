@@ -202,7 +202,7 @@ The system uses two separate metadata files (TS-SUBMIT.NZIP and TIMESTAMP.NZIP) 
 - **Clear state indication**: The filename immediately shows whether a timestamp is pending or confirmed
 - **External tool compatibility**: Tools like neolist can determine state without parsing JSON
 - **Immutable submission record**: Original TS-SUBMIT.NZIP is preserved in the original file
-- **Industry standard**: Follows the OpenTimestamps pattern
+- **Calendar pattern**: Submit to calendar servers, then upgrade to confirmed
 - **Backward compatibility**: Easy to detect old vs new format
 
 When a batch is confirmed on the blockchain, `upgrade-zip.ts` creates a new ZIP file with TIMESTAMP.NZIP (replacing TS-SUBMIT.NZIP), preserving the original file with its submission metadata.

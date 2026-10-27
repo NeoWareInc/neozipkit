@@ -59,9 +59,10 @@ pnpm example:create-zip
 
 ### 1a. Create ZipWiki-shaped package (`create-zipwiki.ts`)
 
-Builds a minimal `.zipwiki` with NeoZipKit’s ZipWiki-compatible writer:
-`META-INF/manifest.json`, a parse under `wiki/parsed/`, a primary with Extra
-Field `0x014F`, and store-by-suffix for the fake PDF. Parse/OKF generation
+Builds a minimal `.zipwiki` with the general `writeZipFileSync` /
+`makeOriginExtra` APIs (no ZipWiki-named kit API; the manifest builder and
+member ordering are inline in the example): `META-INF/manifest.json`, a parse under `wiki/parsed/`, a primary with Extra
+Field `0x014F`, and a stored (uncompressed) fake PDF. Parse/OKF generation
 remains ZipWiki’s job — this example is the container layer only.
 
 **Usage:**
@@ -72,8 +73,8 @@ ts-node examples/create-zipwiki.ts
 ```
 
 **What it does:**
-- Writes `examples/output/example.zipwiki` via `ZipkitNode.writeZipWikiMembersSync`
-- Reorders members into ZipWiki CD order
+- Writes `examples/output/example.zipwiki` via `writeZipFileSync`
+- Lays members out in ZipWiki CD order (META-INF → `wiki/` → primaries)
 - Lists compression methods and runs CRC integrity (`testOnly`)
 
 ### 1b. Force Zip64 create / list / test (`create-zip64.ts`)
@@ -215,7 +216,6 @@ For production-ready CLI tools with:
 See the [neozipkit-examples](https://github.com/NeoWareInc/neozipkit-examples) package which includes:
 - `neozip` - Full-featured ZIP creation tool
 - `neozip-legacy` - Legacy format support
-- `neozip-ots` - OpenTimestamps integration
 
 ## Modifying Examples
 

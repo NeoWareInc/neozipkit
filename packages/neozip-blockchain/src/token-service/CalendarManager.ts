@@ -1,8 +1,7 @@
 /**
  * CalendarManager - Multi-calendar support for redundancy
  * 
- * Similar to OpenTimestamps' approach of submitting to multiple calendars,
- * this class manages multiple NeoZip Token Service calendars for reliability.
+ * This class manages multiple NeoZip Token Service calendars for reliability.
  * 
  * **Use Cases:**
  * - Submit timestamps to multiple calendars for redundancy

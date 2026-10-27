@@ -351,8 +351,7 @@ Add utilities for working with multiple calendar servers for redundancy.
 /**
  * CalendarManager - Multi-calendar support for redundancy
  * 
- * Similar to OpenTimestamps' approach of submitting to multiple calendars,
- * this class manages multiple token-service calendars for reliability.
+ * This class manages multiple token-service calendars for reliability.
  */
 
 import { TokenServiceClient, type CalendarIdentity, type HealthCheckResponse } from './TokenServiceClient';

@@ -1,6 +1,6 @@
 {
   "name": "neozipkit",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "description": "NeoZipKit - Advanced ZIP file creation, compression, and encryption",
   "main": "index.js",
   "types": "index.d.ts",
@@ -88,9 +88,13 @@
       "default": "./src/components/*.ts"
     }
   },
+  "engines": {
+    "node": ">=22.15.0"
+  },
   "files": [
     "dist/",
     "src/",
+    "schemas/",
     "node-esm.mjs",
     "README.md",
     "WHATS_NEW.md",
@@ -100,7 +104,8 @@
     "clean": "node scripts/clean.js",
     "compile": "tsc",
     "create-browser-entry": "node scripts/create-browser-entry.js",
-    "build": "npm run clean && npm run compile && npm run create-browser-entry && npm run build:browser",
+    "generate-node-esm": "node scripts/generate-node-esm.mjs",
+    "build": "npm run clean && npm run compile && npm run generate-node-esm && npm run create-browser-entry && npm run build:browser",
     "build:browser": "npm run build:browser:esm && npm run build:browser:umd",
     "build:browser:esm": "node scripts/build-browser-bundle.js --esm",
     "build:browser:umd": "node scripts/build-browser-bundle.js --umd",
@@ -108,10 +113,11 @@
     "dev:clean": "node scripts/dev-clean.js",
     "dev:compile": "tsc --project tsconfig.dev.json",
     "dev:create-browser-entry": "node scripts/dev-create-browser-entry.js",
-    "dev:build": "npm run dev:clean && npm run dev:compile && npm run dev:create-browser-entry",
+    "dev:generate-node-esm": "node scripts/generate-node-esm.mjs dev-dist",
+    "dev:build": "npm run dev:clean && npm run dev:compile && npm run dev:generate-node-esm && npm run dev:create-browser-entry",
     "dev:watch": "tsc --project tsconfig.dev.json --watch",
     "build:auto": "node scripts/auto-build.js",
-    "build:ci": "node scripts/check-branch.js && npm run clean && npm run compile && npm run create-browser-entry",
+    "build:ci": "node scripts/check-branch.js && npm run clean && npm run compile && npm run generate-node-esm && npm run create-browser-entry",
     "test": "jest",
     "test:unit": "jest tests/unit",
     "test:examples": "pnpm exec ts-node scripts/test-examples.ts",

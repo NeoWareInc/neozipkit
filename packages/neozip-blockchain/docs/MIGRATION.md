@@ -18,10 +18,7 @@ The `neozip-blockchain` package contains all blockchain-related functionality th
 | NFT minting | ✅ | ✅ |
 | Token verification | ✅ | ✅ |
 | Wallet management | ✅ | ✅ |
-| OpenTimestamps | ✅ | ✅ (partial*) |
 | Smart contracts | ✅ | ✅ |
-
-*OpenTimestamps functions that require ZIP manipulation need a Zipkit instance passed in.
 
 ## Import Changes
 
@@ -32,9 +29,7 @@ import {
   ZipkitMinter, 
   ZipkitVerifier,
   WalletManagerBrowser,
-  WalletManagerNode,
-  createTimestamp,
-  verifyOts
+  WalletManagerNode
 } from '@neozip/neozipkit/blockchain';
 
 import { TokenMetadata, NetworkConfig } from '@neozip/neozipkit';
@@ -48,8 +43,6 @@ import {
   ZipkitVerifier,
   WalletManagerBrowser,
   WalletManagerNode,
-  createTimestamp,
-  verifyOts,
   TokenMetadata,
   NetworkConfig
 } from 'neozip-blockchain';
@@ -64,22 +57,7 @@ import { WalletManagerNode } from 'neozip-blockchain/node';
 
 Most APIs remain identical. The main differences are:
 
-### 1. ZipkitOTS Functions
-
-Functions like `upgradeOTS` that need to modify ZIP files now accept an optional Zipkit instance:
-
-```typescript
-// Before (in neozipkit)
-await upgradeOTS(zipFilePath, upgradedOts);
-
-// After (in neozip-blockchain)
-import ZipkitNode from '@neozip/neozipkit/node';
-
-const zipkit = new ZipkitNode();
-await upgradeOTS(zipFilePath, upgradedOts, zipkit);
-```
-
-### 2. TokenVerifierBrowser
+### 1. TokenVerifierBrowser
 
 The browser token verifier now accepts a generic `ZipkitLike` interface instead of requiring a specific `ZipkitBrowser` instance:
 

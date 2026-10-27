@@ -28,6 +28,8 @@ export { ProgressTracker } from './components/ProgressTracker';
 export * from './merkle/MerkleRoot';
 export * from './zip64/Zip64';
 export * from './origin/OriginExtra';
+export * from './extra';
+export * from './manifest';
 
 // Encryption functionality
 export { EncryptionManager } from './encryption/Manager';
@@ -42,13 +44,13 @@ export {
   META_TOKEN_NZIP_LEGACY,
   META_TS_SUBMIT_NZIP,
   META_TIMESTAMP_NZIP,
-  META_TS_SUBMIT_OTS,
-  META_TIMESTAMP_OTS,
   META_MANIFEST_JSON,
   asciiPathEqualsIgnoreCase,
   isMetaInfPath,
   isReservedMetaPath,
   findReservedMetaEntry,
+  canonicalReservedMetaName,
+  validateReservedMeta,
 } from './constants/MetaPaths';
 export * from './constants/Errors';
 export * from './version';

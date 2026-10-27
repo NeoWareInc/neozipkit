@@ -110,7 +110,7 @@ NeoZipKit can be integrated into any application, enabling developers to:
 NeoZipKit provides comprehensive APIs for:
 
 - **ZIP File Operations**: Create, extract, and list ZIP archives with full format compatibility
-- **Blockchain Integration**: NFT tokenization, verification, and OpenTimestamps support
+- **Blockchain Integration**: NFT tokenization, verification, and Token Service timestamping
 - **Multiple Compression Methods**: Support for Deflate, ZStandard, and Stored compression
 - **Streaming Support**: Memory-efficient processing for large files
 - **Progress Tracking**: Real-time progress callbacks for long-running operations

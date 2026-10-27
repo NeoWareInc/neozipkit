@@ -3,8 +3,8 @@
  * TokenServiceAPI.ts - NeoZip Token Service API integration
  * ======================================
  * 
- * This module provides timestamping functionality using the NeoZip Token Service API,
- * similar to OpenTimestamps but using Ethereum blockchain.
+ * This module provides timestamping functionality using the NeoZip Token Service API
+ * and the Ethereum blockchain.
  * 
  * Key Features:
  * - Ethereum blockchain timestamping via NeoZip Token Service

@@ -13,7 +13,7 @@
  * 2. CONFIRMED (TIMESTAMP.NZIP) - Direct blockchain verification
  *    - Uses embedded merkle proof to verify on-chain
  *    - No NeoZip Token Service required (self-contained proof)
- *    - Similar to OpenTimestamps upgraded timestamps
+ *    - Upgraded (confirmed) timestamps
  *    - Works offline with --offline flag
  * 
  * 3. NFT TOKEN (TOKEN.NZIP; legacy NZIP.TOKEN accepted) - NFT proof verification

@@ -127,6 +127,11 @@ export default class ZipEntry implements ZipFileEntry {
    * sizes/offsets fit classic u16/u32 fields (APPNOTE MAY; for testing).
    */
   forceZip64: boolean = false;
+  /**
+   * When true, local/central headers carry the filename as raw UTF-8 bytes
+   * (instead of ASCII with '?' substitution). Used by the buffer writer's `utf8Flag`.
+   */
+  utf8Filename: boolean = false;
 
   fileData?: FileData;
 
@@ -379,11 +384,23 @@ export default class ZipEntry implements ZipFileEntry {
   }
 
   /**
+   * Filename bytes for local / central headers. Default: ASCII with non-ASCII
+   * characters replaced by '?' (pair with 0x7075). With `utf8Filename`: raw UTF-8
+   * (callers should also set GP_FLAG.EFS in `bitFlags`).
+   */
+  private headerNameBuffer(): Buffer {
+    if (this.utf8Filename) return Buffer.from(this.filename, 'utf8');
+    return Buffer.from(this.filename.replace(/[^\x00-\x7E]/g, '?'));
+  }
+
+  /**
    * Checks if the filename contains characters that require Unicode handling
    * @returns true if the filename contains non-ASCII characters or special characters
    */
   needsUnicodeHandling(): boolean {
     if (!this.emitUnicodePath) return false;
+    // UTF-8 names are written verbatim; 0x7075 would be redundant.
+    if (this.utf8Filename) return false;
     // Check if filename contains non-ASCII characters or special characters like apostrophes
     return /[^\x00-\x7E]|['"]/.test(this.filename);
   }
@@ -488,7 +505,8 @@ export default class ZipEntry implements ZipFileEntry {
 
     extraFieldLen += sha256LocalLen + callerExtraLen + zip64LocalLen;
     
-    const data = Buffer.alloc(LOCAL_HDR.SIZE + this.filename.length + extraFieldLen);
+    const fnameBuf = this.headerNameBuffer();
+    const data = Buffer.alloc(LOCAL_HDR.SIZE + fnameBuf.length + extraFieldLen);
     
     // "PK\003\004"
     data.writeUInt32LE(LOCAL_HDR.SIGNATURE, 0);
@@ -513,14 +531,11 @@ export default class ZipEntry implements ZipFileEntry {
       LOCAL_HDR.UNCMP_SIZE
     );
     // filename length
-    data.writeUInt16LE(this.filename.length, LOCAL_HDR.FNAME_LEN);
+    data.writeUInt16LE(fnameBuf.length, LOCAL_HDR.FNAME_LEN);
     // extra field length
     data.writeUInt16LE(extraFieldLen, LOCAL_HDR.EXTRA_LEN);
 
-    // Write filename - use ASCII filename (replacing non-ASCII with ?)
-    // This ensures compatibility with older ZIP readers
-    const asciiName = this.filename.replace(/[^\x00-\x7E]/g, '?');
-    const fnameBuf = Buffer.from(asciiName);
+    // Write filename - ASCII (non-ASCII → '?') unless utf8Filename is set
     fnameBuf.copy(data, LOCAL_HDR.SIZE);
 
     let extraOffset = LOCAL_HDR.SIZE + fnameBuf.length;
@@ -653,8 +668,8 @@ export default class ZipEntry implements ZipFileEntry {
       zip64CentralLen;
 
     // Calculate actual filename length (ASCII conversion may change length)
-    const asciiName = this.filename.replace(/[^\x00-\x7E]/g, '?');
-    const fnameLen = asciiName.length;
+    const fnameBuf = this.headerNameBuffer();
+    const fnameLen = fnameBuf.length;
     
     // Central directory header size (46 Bytes + filename + comment + extra fields)
     const data = Buffer.alloc(CENTRAL_DIR.SIZE + fnameLen + commentLen + extraLen);
@@ -684,7 +699,7 @@ export default class ZipEntry implements ZipFileEntry {
       CENTRAL_DIR.UNCMP_SIZE
     );
     // Filename Length
-    data.writeUInt16LE(this.filename.length, CENTRAL_DIR.FNAME_LEN);
+    data.writeUInt16LE(fnameLen, CENTRAL_DIR.FNAME_LEN);
     // Extra Field Length
     data.writeUInt16LE(extraLen, CENTRAL_DIR.EXTRA_LEN);
     // File Comment Length
@@ -706,7 +721,6 @@ export default class ZipEntry implements ZipFileEntry {
 
     // Write filename - use ASCII filename (replacing non-ASCII with ?)
     // This ensures compatibility with older ZIP readers
-    const fnameBuf = Buffer.from(asciiName);
     fnameBuf.copy(data, CENTRAL_DIR.SIZE);
 
     // Add file comment immediately after filename (InfoZip format)

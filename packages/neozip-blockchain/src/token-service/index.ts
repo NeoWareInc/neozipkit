@@ -1,8 +1,8 @@
 /**
  * NeoZip Token Service (TokenService) module
  *
- * Provides timestamping functionality using the NeoZip Token Service API,
- * similar to OpenTimestamps but using Ethereum blockchain.
+ * Provides timestamping functionality using the NeoZip Token Service API
+ * and the Ethereum blockchain.
  * 
  * **Authentication:**
  * - Verification endpoints are PUBLIC (no API key required)
@@ -10,7 +10,6 @@
  * 
  * **Multi-Calendar Support:**
  * - Use `CalendarManager` to submit to multiple calendars for redundancy
- * - Similar to OpenTimestamps' approach of using multiple calendar servers
  */
 
 import {

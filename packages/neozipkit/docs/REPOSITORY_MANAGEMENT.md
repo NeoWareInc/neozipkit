@@ -29,7 +29,7 @@ neozipkit/
 │   ├── core/              # Core ZIP functionality
 │   ├── browser/           # Browser-specific implementations
 │   ├── server/            # Server-specific implementations
-│   ├── blockchain/        # Blockchain integration (NFT, OTS)
+│   ├── blockchain/        # Blockchain integration (NFT, timestamping)
 │   ├── encryption/        # Encryption utilities
 │   └── types/             # TypeScript type definitions
 ├── dist/                  # Production build output (NOT tracked in git, built during CI)

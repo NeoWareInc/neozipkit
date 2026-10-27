@@ -2,6 +2,20 @@
 
 Release notes for people who install and use **`neozip-blockchain`** from npm (alongside [`neozipkit`](https://www.npmjs.com/package/neozipkit)).
 
+## 2.0.0 (unreleased)
+
+### Breaking changes
+
+- **OpenTimestamps removed.** The `neozip-blockchain/ots` subpath export, `src/ots/` (`ZipkitOTS`), the `opentimestamps` dependency, the `TS_SUBMIT_OTS` / `TIMESTAMP_OTS` metadata constants, and the `example:ots-stamp` / `example:ots-verify` examples are gone. Use NeoZip Token Service timestamping instead: `META-INF/TS-SUBMIT.NZIP` (pending) and `META-INF/TIMESTAMP.NZIP` (confirmed).
+- **Peer dependency:** `neozipkit@^1.6.0` (was `^1.5.0`).
+- **Engines:** Node.js `>=22.15.0`.
+
+```bash
+npm install neozipkit@^1.6.0 neozip-blockchain@^2.0.0
+```
+
+---
+
 ## 1.5.0 (2026-10-25)
 
 Released with sibling **`neozipkit@1.5.0`** (Zip64, Extra Field `0x014F`, browser/buffer zstd, `forceZip64`).
@@ -51,7 +65,7 @@ Structured errors can surface `membershipRequired` when a network needs an activ
 
 Requires **`neozipkit@^1.0.5`**.
 
-- Token, timestamp, and OTS sidecar lookup follows [NEOZIP_APPNOTE.md](https://github.com/NeoWareInc/neozipkit/blob/main/packages/neozipkit/NEOZIP_APPNOTE.md) §2.3 (canonical uppercase writes; **ASCII case-insensitive** discovery).
+- Token and timestamp sidecar lookup follows [NEOZIP_APPNOTE.md](https://github.com/NeoWareInc/neozipkit/blob/main/packages/neozipkit/NEOZIP_APPNOTE.md) §2.3 (canonical uppercase writes; **ASCII case-insensitive** discovery).
 - Mint / stamp / verify helpers prefer **`getMerkleRootAsync()`** so digests match APPNOTE **§6.3** (domain-separated content leaves, path-normalized sort; stream leaves when the kit captured them). Sync `getMerkleRoot()` alone is not enough for new v1 roots when only Extra Field digests are present.
 
 **Helpers:** `getMerkleRootSafeAsync(zip)` (preferred), `getMerkleRootSafe(zip)` (sync only).
@@ -127,4 +141,4 @@ You must also install **`neozipkit`** yourself (peer dependency). It is not bund
 - NeoZip Token Service client for stamp → upgrade → mint workflows
 - NZIP contracts (v2.50 default; also v2.11 / v2.10)
 - Wallet helpers (browser and Node), ZipkitMinter, ZipkitVerifier
-- OpenTimestamps (OTS) support for Bitcoin-backed timestamps
+- OpenTimestamps (OTS) support for Bitcoin-backed timestamps (removed in 2.0.0)

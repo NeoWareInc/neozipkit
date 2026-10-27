@@ -34,32 +34,29 @@ export type { LegacyZstdDetectResult, LegacyZstdConfidence, DetectLegacyZstdOpti
 
 // Efficient ZIP copying using ZipEntry directly
 export { ZipCopyNode } from './ZipCopyNode';
-export { buildZipBufferSync, writeZipFileSync } from './buildZipBuffer';
+export {
+  buildZipBuffer,
+  buildZipBufferSync,
+  writeZipFile,
+  writeZipFileSync,
+} from './buildZipBuffer';
 export type {
   ZipBufferMember,
   ZipPrecompressedMember,
   BuildZipBufferOptions,
+  BuildZipBufferMerkleResult,
 } from './buildZipBuffer';
+export { ZipReaderNode, ZipIntegrityError } from './ZipReaderNode';
+export type { ZipReaderEntry, ZipReaderRaw } from './ZipReaderNode';
+export { rewriteZip, applyMetaSidecars } from './rewriteZip';
+export type { RewriteMember, RewritePlan } from './rewriteZip';
+// Aliased: `matchMerkleRoot` from core (entry-array form) keeps its name on this barrel.
 export {
-  ZIPWIKI_PACKAGE_SPEC_VERSION,
-  ZIPWIKI_DEFAULT_AI_ROOT,
-  ZIPWIKI_MANIFEST_ENTRY,
-  ZIPWIKI_DEFAULT_STORE_SUFFIXES,
-  classifyZipWikiEntry,
-  sortZipWikiMembers,
-  shouldStoreZipWikiBySuffix,
-  buildMinimalZipWikiManifest,
-  serializeZipWikiManifest,
-  toZipWikiBufferMembers,
-  writeZipWikiBufferSync,
-  writeZipWikiFileSync,
-} from './zipwiki';
-export type {
-  ZipWikiEntryClass,
-  ZipWikiMemberInput,
-  WriteZipWikiOptions,
-  MinimalZipWikiManifestInput,
-} from './zipwiki';
+  computeMerkleRoot as computeMerkleRootFromReader,
+  matchMerkleRoot as matchMerkleRootFromReader,
+} from './merkleFromReader';
+export { readManifest, updateManifest, DEFAULT_MANIFEST_SPEC_VERSION } from './manifest';
+export type { ManifestReaderLike } from './manifest';
 export { inflateZipPayloadSync } from './inflateZipPayload';
 export type {
   CopyOptions,

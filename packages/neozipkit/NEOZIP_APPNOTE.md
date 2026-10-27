@@ -3,9 +3,9 @@
 | | |
 | :---- | :---- |
 | **Format** | `.nzip` (ZIP profile) |
-| **Specification version** | **0.2.0-draft** |
+| **Specification version** | **0.3.0-draft** |
 | **Status** | Draft — extends PKWARE APPNOTE 6.3.10 |
-| **Document date** | 2026-09-02 |
+| **Document date** | 2026-10-27 |
 | **Canonical publication** | [https://neozip.io/spec/appnote](https://neozip.io/spec/appnote) |
 | **Version history (web)** | [https://neozip.io/spec/appnote/history](https://neozip.io/spec/appnote/history) |
 | **Base specification** | [APPNOTE.TXT](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT) (PKWARE `.ZIP` File Format Specification, Version 6.3.10) |
@@ -47,9 +47,11 @@ for **advanced package features** (§2) — AI / ZipWiki discovery is one consum
 not the only one.
 
 This note is only the **on-wire** contract for a single `.nzip` package.
-Product architecture (ingest phases, UI) is out of scope. ZipWiki writer
-conventions (`.zipwiki` filename, stage tree, omit-original extension set,
-collision rewrite, extra parser fields) live in
+Product architecture (ingest phases, UI) is out of scope. Wire-level rules for
+omit-original packages, `0x014F` placement, parsed-entry timestamps, collision
+rewrite, and integrity interaction are normative **here** (§3.2, §3.5, §5.4,
+§7.1.1.2, §7.6). ZipWiki product conventions (`.zipwiki` filename, stage tree,
+CLI flags, pack-time origin sidecar resolution, parser registry fields) live in
 [ZIPWIKI_APPNOTE.md](https://github.com/NeoWareInc/format-specs/blob/main/ZIPWIKI_APPNOTE.md).
 
 ---
@@ -140,8 +142,7 @@ top-level directory name.
 **Readers MUST** match reserved `META-INF/**` paths with ASCII
 case-insensitive comparison for discovery
 (`META-INF/manifest.json`, `TOKEN.NZIP`, `NZIP.TOKEN`, `TIMESTAMP.NZIP`,
-`TS-SUBMIT.NZIP`, `ACCESS.NZIP`, and OTS equivalents as defined by NeoZip
-tooling). If more than one central-directory entry matches the same reserved
+`TS-SUBMIT.NZIP`, `ACCESS.NZIP`). If more than one central-directory entry matches the same reserved
 meta target under ASCII case-insensitive comparison, the archive is
 **malformed**: readers **MUST** reject it and **MUST NOT** silently pick one
 spelling.
@@ -256,17 +257,7 @@ Applies when an AI root is present (and thus a manifest):
 - Asset paths under `R/parsed/P.assets/` **MUST** have primary `P`; **SHOULD**
   also have matching `R/parsed/P.md`.
 - Absence of parse or OKF for a primary is **normal**.
-- **Omit-original (extract-only) packages:** When a writer stores only the parse
-  for an omittable document type (PDF, Office, …) and sets
-  `ai.primaries[].sourceIncluded: false`, the parse path still uses `P` as if
-  the primary existed. Readers **MUST** treat CD absence of `P` as intentional
-  in that case — not as an orphan-parse failure. Plain text and images
-  **SHOULD** remain as primaries even when a parse exists. When a remote or
-  out-of-package original locator is known, writers **SHOULD** place Extra Field
-  `0x014F` (§7.1.1) on `{R}/parsed/{P}.md` with every original attribute they
-  actually know (URI, CRC-32, uncompressed size, Unix mtime); readers **SHOULD**
-  read that field instead of treating the original as gone. Omit any attribute
-  that was not observed — including CRC-32 if it was never calculated.
+- **Omit-original (extract-only) packages:** See §3.2.1.
 - **Unparsed primaries:** A primary **MAY** appear at zip root with
   `hasParsed: false` and still have an OKF concept that cites it (agents learn
   the file is in the package even when extract failed).
@@ -276,6 +267,41 @@ Applies when an AI root is present (and thus a manifest):
 **Merkle construction** (§7) uses every non-`META-INF/` central-directory entry,
 including the AI root when present. Classification above is for open/routing
 only and does **not** require a manifest.
+
+### 3.2.1 Omit-original wire semantics
+
+A writer **MAY** store only the parse for a primary `P` when a successful parse
+exists and `P` belongs to an **omittable document family**. When it does:
+
+1. There is **no** central-directory or local entry for `P`.
+2. `ai.primaries[]` for `P` **MUST** set `sourceIncluded` to `false` (§4.3.1).
+3. The parse path remains `{R}/parsed/{P}.md` as if `P` existed.
+4. Readers **MUST** treat CD absence of `P` as intentional when
+   `sourceIncluded` is `false` — not as an orphan-parse failure. Orphan checks
+   still apply when the field is absent or `true`.
+5. The parse member **SHOULD** carry Extra Field `0x014F` (§7.1.1) with every
+   original attribute the writer actually observed (URI, CRC-32 or SHA-256,
+   size, Unix mtime). Omit unobserved attributes; omit the whole field when
+   nothing is known. Placement of URI / size / mtime is further profiled in
+   §7.1.1.2.
+6. OKF `sources` for `P` **MAY** cite the original locator and the in-package
+   parse path (§6.3). `0x014F` (and, per §7.1.1.2, the manifest) answers “where
+   are the original bytes?”; OKF remains prose / provenance.
+
+**Omittable document families** (originals MAY be dropped when a parse exists):
+
+| Family | Extensions |
+| :---- | :---- |
+| PDF | `.pdf` |
+| Word-like | `.doc`, `.docx`, `.docm`, `.dot`, `.dotm`, `.dotx`, `.odt`, `.ott`, `.rtf`, `.pages` |
+| Presentations | `.ppt`, `.pptx`, `.pptm`, `.pot`, `.potm`, `.potx`, `.odp`, `.otp`, `.key` |
+| Spreadsheets | `.xls`, `.xlsx`, `.xlsm`, `.xlsb`, `.ods`, `.ots`, `.numbers` |
+| Raster images | `.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`, `.tiff`, `.tif`, `.webp` |
+
+**Never omit** (always store primary bytes): plain text, markdown, CSV / TSV,
+logs, and any type without a successful parse. Whether a given writer omits
+by default is product policy; the families above bound what is conformant to
+omit.
 
 ### 3.3 Minimal integrity-only archive
 
@@ -355,6 +381,19 @@ Single- and multi-primary packages use the same layout. ZipWiki writers
 **MAY** order central-directory entries as manifest → AI tree → primaries; that
 order is a producer preference, **not** an APPNOTE requirement (see §10).
 
+### 3.5 Path collisions (writer rewrite)
+
+When two inputs would produce the same primary entry name (typically the same
+basename), a writer **MAY** rewrite the later primary paths to keep names
+unique, for example `report.pdf`, `content/2/report.pdf`, `content/3/report.pdf`.
+Parse and asset paths follow the rewritten `P`
+(`{R}/parsed/content/2/report.pdf.md`). OKF concept filenames **MAY** continue
+to use the basename stem (`report.md`), so OKF stems alone are not unique.
+
+Rewrite policy is a producer convention. **Readers MUST treat central-directory
+names as authoritative** and **MUST NOT** assume any collision-rewrite scheme;
+agents needing unique identity follow `ai.primaries[].path` and the parse path.
+
 ---
 
 ## 4. `META-INF/manifest.json` schema
@@ -420,6 +459,7 @@ Do **not** duplicate data already authoritative elsewhere:
 | `mimeType` | string | OPTIONAL |
 | `documentType` | string | OPTIONAL ZipWiki category / OKF type hint |
 | `hasParsed` | boolean | `true` when `{ai.root}/parsed/{path}.md` is present |
+| `origin` | object | OPTIONAL. Original locator summary: `uri` (absolute URI), `size` (uint64), `mtime` (Unix seconds UTC). Same semantics as `0x014F` tags `0x01` / `0x03` / `0x04` (§7.1.1.2). CRC-32 / SHA-256 are **not** carried here |
 | `sourceIncluded` | boolean | OPTIONAL. When `false`, primary bytes were intentionally omitted from the ZIP (extract-only / omit-original for an omittable document type that has a successful parse). Omit the field or set `true` when the primary entry is present. Readers **MUST NOT** treat CD absence of `path` as an orphan-parse failure when this is `false`. |
 
 **Path construction:**
@@ -640,6 +680,21 @@ root.
 3. Resolve relative image refs under `{R}/parsed/{P}.assets/`.
 4. Open `P` when original bytes are required.
 
+### 5.4 Parsed entry timestamps
+
+The ZIP DOS date/time on `{R}/parsed/{P}.md` (and `.assets/`) members is **not**
+the original primary’s modification time.
+
+- **Default:** writers stamp parsed members with **pack time**.
+- **Optional:** a writer **MAY** stamp a parsed member with the source file’s
+  modification time. This is a producer option and has no wire marker.
+- Manifest `createdAt` and OKF timestamps remain pack time.
+- Primaries that are stored in the package use the source file’s modification
+  time as usual.
+- The original’s mtime, when recorded, belongs in `0x014F` tag `0x04` or
+  `ai.primaries[].origin.mtime` (§7.1.1.2), never in the parse member’s DOS
+  fields alone.
+
 ---
 
 ## 6. OKF bundle
@@ -793,6 +848,42 @@ Readers **MUST** skip the field when the first data byte is not `0x01`.
 This field does **not** belong on a missing primary entry (there is no CD
 record when omitted). Pairing remains via the parse path naming `P`.
 
+#### 7.1.1.2 Parse-member placement profile
+
+This profile applies to AI-root packages (§1.2) and constrains **where** each
+original attribute lives. Wire layout is §7.1.1.1.
+
+| Attribute | Where it may appear |
+| :---- | :---- |
+| URI, size, mtime | `ai.primaries[].origin` in `META-INF/manifest.json` (`uri`, `size`, `mtime`), and/or `0x014F` tags `0x01` / `0x03` / `0x04` on `{R}/parsed/{P}.md` |
+| CRC-32 (tag `0x02`) or SHA-256 (tag `0x05`) | `0x014F` on `{R}/parsed/{P}.md` **only**; not duplicated into the manifest |
+
+Rules:
+
+1. **Default record mode** is manifest-first: when an origin exists, URI, size,
+   and mtime are written to `ai.primaries[].origin`; the digest tag stays on
+   `0x014F`. A writer **MAY** instead keep URI / size / mtime on `0x014F` only,
+   or write both copies. Writers **MUST** emit `0x014F` whenever it carries any
+   attribute (including the digest tag).
+2. **Readers** take URI, size, and mtime from the manifest `origin` first, then
+   from `0x014F` (older archives and CD-only record mode). The extra field on
+   the parse entry remains authoritative for digest tags; the manifest
+   **MUST NOT** be the only copy of CRC-32 / SHA-256.
+3. There is **no** CD record for an omitted primary, so the extra field is
+   always on the parse member, never on a missing `P`.
+4. A writer stores **one** original digest: CRC-32 by default, or SHA-256 when
+   requested; it **MUST NOT** emit both tags.
+5. Fetching an original from `uri` **MUST** verify the payload against the
+   recorded CRC-32 (or SHA-256) and `size` when those values are present.
+   `mtime` is advisory.
+6. This field is **not** PKWARE/Xceed `0x4f4c` (“original location”). Readers
+   **MUST** ignore unknown Extra Fields, including `0x4f4c`.
+7. **URI resolution is out of scope for this note.** Writers resolve a URI
+   (from sidecars, rule files, CLI options, or other product input) **before**
+   writing any tags and **MUST NOT** invent one. Sidecar and rule-file formats
+   are pack-time inputs that **MUST NOT** be stored as package members; they
+   are defined by the writing product (for ZipWiki, in ZIPWIKI_APPNOTE.md).
+
 ### 7.2 Purpose and algorithms
 
 A single digest binds Token Service timestamps and blockchain tokens to
@@ -931,6 +1022,22 @@ on-chain record):**
   because a v0 root matched when a v1 root also could have been tried first —
   the fallback order above is mandatory so v1 is preferred whenever it matches.
 
+### 7.6 Integrity interaction (defaults and opt-in)
+
+| Feature | Rule |
+| :---- | :---- |
+| ZIP CRC-32 | **MUST** be written on every member (local + central). This is the **default** integrity check |
+| Extra Field `0x014E` | **MAY** be written when requested; SHA-256 of **this entry’s** uncompressed payload. Writers that claim the `"integrity"` profile **SHOULD** emit it on content entries |
+| Extra Field `0x014F` | **MAY** be written on parse members (§7.1.1.2). Digest / size / mtime describe the **original** primary, not the parse |
+| Merkle v1 root | Computed and bound **only** when a blockchain sidecar (`TOKEN.NZIP` / `TIMESTAMP.NZIP`, and `TS-SUBMIT.NZIP` once submitted) requires it. Leaves are all non-`META-INF/` CD entries, **including** the AI root |
+| Merkle v0 | Legacy verify only (§7.5) |
+| `META-INF/**` sidecars | **Excluded** from Merkle leaves (`manifest.json`, `TOKEN.NZIP`, `TIMESTAMP.NZIP`, `TS-SUBMIT.NZIP`, `ACCESS.NZIP`, …) |
+| Manifest | Convenience for agents; **MUST NOT** be the sole source of content hashes |
+
+Because parses and OKF are Merkle leaves, changing any non-`META-INF/` entry
+(enriching OKF, updating a primary, adding or removing a parse) changes the
+Merkle root. Any sidecar already bound to the old root is then stale: see §8.6.
+
 ---
 
 ## 8. Blockchain and Token Service
@@ -999,22 +1106,62 @@ for verification:
 | `contractVersion` | Contract ABI/version tag |
 | `encryptedHash` | Optional binding when archive is encrypted |
 
-### 8.4 Timestamp flow (informative)
+### 8.4 Timestamp lifecycle: TS-SUBMIT → TIMESTAMP → TOKEN
 
-1. Token Service submit → `META-INF/TS-SUBMIT.NZIP` (pending).
-2. After confirmation → `META-INF/TIMESTAMP.NZIP` (pending submit entry removed or
-   left inert per implementation).
-3. If `manifest.json` is present, discovery summaries **MAY** be updated and
-   `profiles` may include `"timestamped"`.
+Token Service timestamping and tokenization are sequential stages over the same
+v1 Merkle root (§7.4). Each stage has one sidecar under `META-INF/`:
 
-OpenTimestamps is an optional product feature and **MAY** be advertised with a
-future profile flag `"ots"`.
+| Stage | Sidecar | Written when | Meaning |
+| :---- | :---- | :---- | :---- |
+| 1. Submit | `META-INF/TS-SUBMIT.NZIP` | Token Service accepts the digest | **Pending** — the root has been submitted but not confirmed |
+| 2. Timestamp | `META-INF/TIMESTAMP.NZIP` | Submission is confirmed on the network | **Confirmed** proof bound to the Merkle root |
+| 3. Token | `META-INF/TOKEN.NZIP` | A mint succeeds | On-chain token bound to the Merkle root |
+
+1. Writers compute the v1 root after every non-`META-INF/` member is final, then
+   submit it. On submit, the writer adds `TS-SUBMIT.NZIP`.
+2. After confirmation, the writer adds `TIMESTAMP.NZIP`. The pending
+   `TS-SUBMIT.NZIP` is then **superseded**: writers **SHOULD** remove it;
+   readers **MUST** prefer `TIMESTAMP.NZIP` when both exist and **MUST NOT**
+   treat a lone `TS-SUBMIT.NZIP` as a confirmed timestamp.
+3. A mint (§8.2) adds `TOKEN.NZIP`. Tokenization does not require a prior
+   timestamp (L3 does not require L2), but when both are present they **MUST**
+   bind the same `merkleRoot`.
+4. If `manifest.json` is present, discovery summaries **MAY** be updated and
+   `profiles` **MAY** include `"timestamped"` / `"tokenized"`. Sidecars remain
+   authoritative for proofs.
+
+### 8.4.1 Optional features
+
+Other timestamp or anchoring mechanisms are not part of this profile
+generation. Unknown `profiles` values **MUST** be ignored by readers.
 
 ### 8.5 Data Wallet / connection store (out of band)
 
 Credentials (wallet passkeys, Token Service email/token, network prefs) live in
 a user connection store — **not** inside the archive. Archives carry proofs, not
 private keys.
+
+### 8.6 Content change invalidates sidecars
+
+`TS-SUBMIT.NZIP`, `TIMESTAMP.NZIP`, and `TOKEN.NZIP` are proofs of **one
+specific Merkle root**. When any non-`META-INF/` content changes (an entry is
+added, removed, renamed, or its uncompressed bytes change — i.e. the Merkle root
+changes):
+
+1. Writers **MUST** remove or otherwise invalidate `TS-SUBMIT.NZIP`,
+   `TIMESTAMP.NZIP`, and `TOKEN.NZIP` in the rewritten archive. Copying them
+   forward unchanged is **invalid**.
+2. Writers **MAY** clear the related `profiles` claims (`"timestamped"`,
+   `"tokenized"`) in `manifest.json`; if the sidecar is removed, they
+   **SHOULD**.
+3. Readers that find a sidecar whose `merkleRoot` does not match the recomputed
+   root (§7.5) **MUST** treat the proof as invalid for that archive, not as a
+   proof of the current content.
+4. Re-stamping or re-minting produces new sidecars bound to the new root.
+
+Changes confined to `META-INF/**` (for example updating `manifest.json`
+summaries) do not change the Merkle root and do not by themselves invalidate
+these sidecars.
 
 ---
 
@@ -1253,6 +1400,19 @@ remain ciphertext without the matching private key; the sidecar still leaks
 L4 and **+Access** are additive: they never substitute for L1–L3 cryptographic
 requirements. Absence of `manifest.json` does not lower L1–L3 validity.
 
+**L4 writer checklist (wire level):**
+
+- [ ] Exactly one AI root, declared as `ai.root`
+- [ ] `format` = `"neozip"` and `specVersion` ≥ `"0.2.0"`
+- [ ] Parse paths `{R}/parsed/{P}.md`; no AI materials under `META-INF/`
+- [ ] Orphan parses rejected unless `sourceIncluded: false` for that `P` (§3.2.1)
+- [ ] `ai.okf` matches the CD (present iff OKF members exist)
+- [ ] ZIP CRC-32 on every member; `0x014E` only when requested (§7.6)
+- [ ] `0x014F` on parse members when any original attribute is known; never
+      invented values; omit unknown tags; one digest tag only (§7.1.1.2)
+- [ ] Merkle root computed / bound only for `TOKEN.NZIP` / `TIMESTAMP.NZIP`; stale
+      proof sidecars removed on content change (§8.6)
+
 ---
 
 ## 12. Compatibility
@@ -1289,20 +1449,21 @@ WinZip AES wire forms.
 | :---- | :---- |
 | Current Application Note | [https://neozip.io/spec/appnote](https://neozip.io/spec/appnote) |
 | Version history | [https://neozip.io/spec/appnote/history](https://neozip.io/spec/appnote/history) |
-| This package AppNote (synced from ZipWiki) | `packages/neozipkit/NEOZIP_APPNOTE.md` |
+| This package AppNote (consolidates ZipWiki wire rules) | `packages/neozipkit/NEOZIP_APPNOTE.md` |
 | ZipWiki AI extensions | [ZIPWIKI_APPNOTE.md](https://github.com/NeoWareInc/format-specs/blob/main/ZIPWIKI_APPNOTE.md) |
-| NeoZipKit core profile (0.1.1) | Historical kit profile superseded by this 0.2.0-draft note |
+| NeoZipKit core profile (0.1.1) | Historical kit profile superseded by this 0.3.0-draft note |
 
 ---
 
 ## 14. Change log
 
-While **0.2.0** remains a draft, keep a **single** summary row for it. Do not
+While **0.3.0** remains a draft, keep a **single** summary row for it. Do not
 append minor edit rows. When the draft is finalized, that row becomes the
-released change summary since **0.1.1**.
+released change summary since **0.2.0-draft** (and **0.1.1**).
 
 | Date | Version | Change |
 | :---- | :---- | :---- |
-| 2026-09-02 | **0.2.0-draft** | **Working summary of changes since 0.1.1** (replace this text when the draft is complete): ZipWiki packaging on the NeoZip core profile — AI roots `wiki/` (default) / `ai/` / `context/` with optional `parsed/` and optional `okf/`; **per-primary OKF concepts** `{stem}.md` + `index.md` (legacy package-level `document.md` still valid); OKF `sources` are package-relative from `{R}/okf/`; OKF **MAY** cite primaries with no parse; packages **MAY** omit OKF entirely; **`ai.primaries[].sourceIncluded: false`** for extract-only / omit-original document formats; Extra Field **`0x014F` v1 TLV** original attributes (optional URI, CRC-32, uint64 size, int64 Unix mtime, optional SHA-256 of original primary bytes as tag `0x05`; field version stays 1 until first release); ZipWiki default integrity is ZIP CRC-32 (Extra Field `0x014E` and Merkle root values are opt-in / blockchain-only); `META-INF/manifest.json` as an advanced features control surface (not AI-exclusive; global MUST fields `format` / `specVersion` / `createdAt`; recommended minimum `specVersion` `"0.1.1"`, ZipWiki AI-root packages at least `"0.2.0"`; `ai` registry only when AI materials exist); L4 ZipWiki AI conformance; L1–L3 and **+Access** remain independent of the manifest; inherits 0.1.1 crypto/chain (Merkle v1/v0, Extra Fields, `ACCESS.NZIP`, Zstd, NeoEncrypt / WinZip AES). See (historical 0.1.1, not in this repo) for the 0.1.x baseline. |
+| 2026-10-27 | **0.3.0-draft** | **Working summary of changes since 0.2.0-draft** (replace this text when the draft is complete): **AppNote consolidation** — ZipWiki wire rules now live in this note (omit-original semantics and omittable families §3.2.1, collision rewrite §3.5, parsed entry timestamps §5.4, `0x014F` parse-member placement profile §7.1.1.2 with `ai.primaries[].origin`, integrity interaction §7.6, L4 wire checklist §11); pack-time URI/sidecar resolution stays ZipWiki-only; **OpenTimestamps / `.OTS` / profile `"ots"` removed**; TS-SUBMIT → TIMESTAMP → TOKEN lifecycle documented (§8.4); **sidecar invalidation** — non-`META-INF/` content changes MUST remove or invalidate `TS-SUBMIT` / `TIMESTAMP` / `TOKEN` (§8.6); `META-INF/manifest.json` remains the advanced-features control surface. |
+| 2026-09-02 | 0.2.0-draft (superseded by 0.3.0-draft) | **Working summary of changes since 0.1.1:** ZipWiki packaging on the NeoZip core profile — AI roots `wiki/` (default) / `ai/` / `context/` with optional `parsed/` and optional `okf/`; **per-primary OKF concepts** `{stem}.md` + `index.md` (legacy package-level `document.md` still valid); OKF `sources` are package-relative from `{R}/okf/`; OKF **MAY** cite primaries with no parse; packages **MAY** omit OKF entirely; **`ai.primaries[].sourceIncluded: false`** for extract-only / omit-original document formats; Extra Field **`0x014F` v1 TLV** original attributes (optional URI, CRC-32, uint64 size, int64 Unix mtime, optional SHA-256 of original primary bytes as tag `0x05`; field version stays 1 until first release); ZipWiki default integrity is ZIP CRC-32 (Extra Field `0x014E` and Merkle root values are opt-in / blockchain-only); `META-INF/manifest.json` as an advanced features control surface (not AI-exclusive; global MUST fields `format` / `specVersion` / `createdAt`; recommended minimum `specVersion` `"0.1.1"`, ZipWiki AI-root packages at least `"0.2.0"`; `ai` registry only when AI materials exist); L4 ZipWiki AI conformance; L1–L3 and **+Access** remain independent of the manifest; inherits 0.1.1 crypto/chain (Merkle v1/v0, Extra Fields, `ACCESS.NZIP`, Zstd, NeoEncrypt / WinZip AES). See (historical 0.1.1, not in this repo) for the 0.1.x baseline. |
 | 2026-08-14 | 0.1.1 | NeoZipKit core: `ACCESS.NZIP` recipient / hybrid encryption. See (historical 0.1.1, not in this repo) §13. |
 | 2026-08-09 | 0.1.0 | NeoZipKit core: initial release / NeoEncrypt default. See (historical 0.1.1, not in this repo) §13. |

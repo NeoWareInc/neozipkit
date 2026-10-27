@@ -63,10 +63,11 @@ without guessing field names.
 **Status:** Done for the **minimal** APPNOTE body. Full AI/OKF detail remains
 ZipWiki-owned.
 
-- Helpers: `buildMinimalZipWikiManifest` / `serializeZipWikiManifest`
-  (`src/node/zipwiki/ZipWikiWriter.ts`)
-- Emits `format`, `specVersion`, `createdAt`, `profiles`; optional empty `ai`
-  block (`includeAi`) for ZipWiki-shaped packages
+- Helpers (`buildMinimalZipWikiManifest` / `serializeZipWikiManifest`) were
+  **removed from the public API in 1.6.0**; `examples/create-zipwiki.ts` inlines
+  a minimal manifest builder instead
+- Minimal body: `format`, `specVersion`, `createdAt`, `profiles`; optional empty
+  `ai` block
 - ZipWiki still writes the full AI manifest at pack time; this package
   **preserves** it on copy and **discovers** it case-insensitively (already done)
 
@@ -75,20 +76,16 @@ computation — ZipWiki (or a later E4b) owns those.
 
 ---
 
-## E4a — ZipWiki-shaped writer helpers (optional scaffolding)
+## E4a — ZipWiki-shaped writer helpers ❌ (removed in 1.6.0)
 
-**Status:** Present on `dev` as an example / parity check — **not** the preferred
-long-term integration surface. ZipWiki does **not** need a first-class
-`zipwiki/` module inside NeoZipKit.
+**Status:** Removed. `writeZipWiki*`, `ZipkitNode.writeZipWikiMembersSync`, and
+the `src/node/zipwiki/` module are gone from the public API. Prefer **E7**
+(general ZipkitNode hooks) over any ZipWiki-named kit API.
 
-What exists today (`writeZipWiki*`, minimal manifest, CD-order helpers) shows
-that `buildZipBufferSync` / `writeMembersSync` + `0x014F` / `0x014E` can match
-ZipWiki’s ZIP frame. Product rules (CD order, store-by-suffix, full AI
-manifest, parse, OKF) stay in **ZipWiki**. Prefer **E7** hooks over growing
-more ZipWiki-named APIs in the kit.
-
-**Still ZipWiki-only:** LlamaParse/LiteParse, OKF generation, full AI manifest,
-pack UX.
+The same ZIP frame is reachable with `buildZipBufferSync` / `writeZipFileSync` /
+`writeMembersSync` plus `0x014F` (`makeOriginExtra`) and `0x014E`.
+`examples/create-zipwiki.ts` shows the pattern with local helpers. Product rules
+(CD order, store-by-suffix, full AI manifest, parse, OKF) stay in **ZipWiki**.
 
 ---
 
@@ -146,7 +143,7 @@ full spanning is optional and low priority.
 | E2 | Browser Zstd | — |
 | E3 | META-INF JSON Schema | — |
 | E4 | Minimal manifest writer | **Done** (optional) |
-| E4a | ZipWiki-shaped helpers | Optional scaffolding on `dev` |
+| E4a | ZipWiki-shaped helpers | **Removed** in 1.6.0 (prefer E7) |
 | E5 | Path-bound Merkle | — |
 | E6 | Split/spanned | — |
 | E7 | General ZipkitNode hooks | Preferred for ZipWiki-class apps |

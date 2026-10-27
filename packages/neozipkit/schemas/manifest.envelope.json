@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://neozip.io/schemas/manifest.envelope.json",
+  "title": "NeoZip manifest envelope",
+  "description": "META-INF/manifest.json envelope fields (NEOZIP_APPNOTE §4.1–4.2). Registries such as `ai` and unknown keys are allowed and not described here.",
+  "type": "object",
+  "required": ["format", "specVersion", "createdAt"],
+  "properties": {
+    "format": { "const": "neozip" },
+    "specVersion": { "type": "string", "minLength": 1 },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "profiles": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "additionalProperties": true
+}

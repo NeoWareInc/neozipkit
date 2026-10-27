@@ -14,11 +14,7 @@ export {
   ZipkitMinter,
   ZipkitVerifier,
   CoreWalletManager,
-  WalletAnalyzer,
-  // DISABLED: ZipkitOTS exports (requires neozipkit)
-  // createTimestamp,
-  // verifyOts,
-  // verifyOtsZip
+  WalletAnalyzer
 } from '../core';
 export type {
   MintingOptions,
@@ -31,11 +27,6 @@ export type {
   CommonTokenConfig,
   WalletBasicInfo,
   TokenScanResult,
-  NZipTokenDetails,
-  // DISABLED: ZipkitOTS types (requires neozipkit)
-  // TimestampResult,
-  // TimestampInfo,
-  // DeserializeOtsResult,
-  // OtsVerifyResult
+  NZipTokenDetails
 } from '../core';
 

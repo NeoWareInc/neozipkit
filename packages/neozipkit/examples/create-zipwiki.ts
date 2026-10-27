@@ -1,21 +1,34 @@
 #!/usr/bin/env node
 
 /**
- * Create a ZipWiki-shaped `.zipwiki` with NeoZipKit.
+ * Create a ZipWiki-shaped `.zipwiki` with the general NeoZipKit writer APIs.
  *
- * Demonstrates CD order (META-INF → wiki/ → primaries), Extra Field 0x014F
- * on a primary, store-by-suffix for PDF, and a minimal META-INF/manifest.json.
- * Full parse/OKF generation stays in ZipWiki — this is the container layer.
+ * Uses only `writeZipFileSync` / `makeOriginExtra` / `META_MANIFEST_JSON`.
+ * Member order, store-by-suffix, and a minimal manifest are done inline here —
+ * the kit has no ZipWiki-named API. Parse/OKF generation and full manifest
+ * rules stay in ZipWiki.
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
-import ZipkitNode from '../src/node';
 import {
-  ZIPWIKI_MANIFEST_ENTRY,
-  buildMinimalZipWikiManifest,
-  serializeZipWikiManifest,
-} from '../src/node/zipwiki';
+  META_MANIFEST_JSON,
+  makeOriginExtra,
+  writeZipFileSync,
+  ZipkitNode,
+  type ZipBufferMember,
+} from '../src/node';
+
+function buildMinimalManifest(): Buffer {
+  const manifest = {
+    format: 'neozip',
+    specVersion: '0.3.0',
+    createdAt: new Date().toISOString(),
+    profiles: ['zipwiki'],
+    ai: { root: 'wiki', parsedDir: 'parsed', primaries: [] as unknown[] },
+  };
+  return Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+}
 
 async function main() {
   console.log('Creating ZipWiki-shaped package with NeoZipKit...\n');
@@ -28,48 +41,36 @@ async function main() {
   }
 
   const primaryBytes = fs.readFileSync(sourceMd);
-  // Pretend PDF so store-by-suffix kicks in (ZipWiki default for binaries).
-  const fakePdf = Buffer.concat([
-    Buffer.from('%PDF-1.4\n', 'utf8'),
-    primaryBytes,
-  ]);
+  // Pretend PDF so we can store it uncompressed (binary-like primary).
+  const fakePdf = Buffer.concat([Buffer.from('%PDF-1.4\n', 'utf8'), primaryBytes]);
   const parseMd = Buffer.from(
     '# Document\n\nParsed stand-in for document.md (ZipWiki would emit real parse).\n',
     'utf8'
   );
-  const manifest = Buffer.from(
-    serializeZipWikiManifest(
-      buildMinimalZipWikiManifest({
-        includeAi: true,
-        profiles: ['zipwiki'],
-      })
-    ),
-    'utf8'
-  );
+
+  // CD order: META-INF → wiki/ → primaries (ZipWiki convention, not required by the AppNote).
+  const members: ZipBufferMember[] = [
+    { name: META_MANIFEST_JSON, data: buildMinimalManifest(), method: 0 },
+    { name: 'wiki/parsed/docs/document.pdf.md', data: parseMd, method: 93, level: 7 },
+    {
+      name: 'docs/document.pdf',
+      data: fakePdf,
+      method: 0,
+      // Extra Field 0x014F: origin locator (kit helper resolves nothing; caller supplies URI).
+      additionalExtra: makeOriginExtra({
+        uri: 'https://example.org/docs/document.pdf',
+        size: fakePdf.length,
+      }),
+    },
+  ];
 
   const outDir = path.join(__dirname, 'output');
   fs.mkdirSync(outDir, { recursive: true });
   const outPath = path.join(outDir, 'example.zipwiki');
 
-  const zip = new ZipkitNode();
-  zip.writeZipWikiMembersSync(
-    outPath,
-    [
-      // Intentionally out of CD order — writer reorders.
-      {
-        name: 'docs/document.pdf',
-        data: fakePdf,
-        origin: {
-          uri: 'https://example.org/docs/document.pdf',
-          size: fakePdf.length,
-        },
-      },
-      { name: 'wiki/parsed/docs/document.pdf.md', data: parseMd },
-      { name: ZIPWIKI_MANIFEST_ENTRY, data: manifest, method: 0 },
-    ],
-    { method: 93, level: 7 }
-  );
+  writeZipFileSync(outPath, members);
 
+  const zip = new ZipkitNode();
   const listed = await zip.loadZipFile(outPath);
   console.log(`Wrote ${outPath} (${fs.statSync(outPath).size} bytes)\n`);
   console.log('Central directory order:');
@@ -89,9 +90,7 @@ async function main() {
     testOnly: true,
     skipHashCheck: false,
   });
-  console.log(
-    `\nIntegrity OK: ${result.filesExtracted} members, CRC-32 verified.`
-  );
+  console.log(`\nIntegrity OK: ${result.filesExtracted} members, CRC-32 verified.`);
 }
 
 main().catch((err) => {

@@ -4,7 +4,7 @@ Advanced ZIP file creation, compression, and encryption library for Node.js and 
 
 **Scope of this package:** NeoZipKit focuses solely on creating and manipulating ZIP files (compression, encryption, extraction). All blockchain-related functionality—timestamping, NFT tokenization, verification, wallet integration, and smart contracts—lives in the sibling **[neozip-blockchain](../neozip-blockchain/)** package within this monorepo. Use that package when you need to link ZIPs to the blockchain.
 
-**Format note:** See **[NEOZIP_APPNOTE.md](./NEOZIP_APPNOTE.md)** (**0.2.0-draft**, synced from ZipWiki on `dev` — not yet in the npm 1.5.x tarball). Covers the NeoZip ZIP profile, Extra Fields `0x014E` / `0x014F`, AI roots, and `META-INF` integrity / blockchain sidecars. Kit backlog: **[docs/FUTURE_ENHANCEMENTS.md](docs/FUTURE_ENHANCEMENTS.md)**.
+**Format note:** See **[NEOZIP_APPNOTE.md](./NEOZIP_APPNOTE.md)** (**0.3.0-draft**, consolidates ZipWiki wire rules; ships with 1.6.0). Covers the NeoZip ZIP profile, Extra Fields `0x014E` / `0x014F`, AI roots, and `META-INF` integrity / blockchain sidecars. Kit backlog: **[docs/FUTURE_ENHANCEMENTS.md](docs/FUTURE_ENHANCEMENTS.md)**.
 
 > **Stable 1.5:** NeoZipKit **1.5.1** (Zip64, Extra Field `0x014F`, browser/buffer zstd; pairs with `neozip-blockchain@1.5.0`). See [NEOZIP_APPNOTE.md](./NEOZIP_APPNOTE.md) and [WHATS_NEW.md](WHATS_NEW.md). Please report issues on [GitHub](https://github.com/NeoWareInc/neozipkit/issues).
 
@@ -85,7 +85,7 @@ npx ts-node examples/create-zip.ts
 
 ## Blockchain integration
 
-All blockchain code lives in the sibling **[neozip-blockchain](../neozip-blockchain/)** package within this monorepo. For timestamping, NFT tokenization, on-chain verification, wallet management, and OpenTimestamps, install `neozip-blockchain` alongside this package. It depends on `neozipkit` for ZIP handling and adds all blockchain features on top. NeoZipKit itself contains no blockchain, contract, or wallet code.
+All blockchain code lives in the sibling **[neozip-blockchain](../neozip-blockchain/)** package within this monorepo. For timestamping, NFT tokenization, on-chain verification, wallet management, and Token Service timestamping, install `neozip-blockchain` alongside this package. It depends on `neozipkit` for ZIP handling and adds all blockchain features on top. NeoZipKit itself contains no blockchain, contract, or wallet code.
 
 ## Package layout
 
@@ -197,7 +197,7 @@ As of **v0.6.1**, `loadZipFile()` automatically **closes any prior read handle**
 - **STORED (0)** – No compression
 - **DEFLATED (8)** – Deflate (default)
 - **ZSTD (93)** – Zstandard. Node uses native `zlib` (streams and `Buffer` / `ArrayBuffer`). The browser bundle uses `CompressionStream` zstd. `ZipkitNode.writeMembersSync` / `buildZipBufferSync` default to raw zstd level 7. Caller extra blocks such as ZipWiki `0x014F` go on `ZipEntry.additionalExtra` and are written beside `0x014E`.
-- **ZipWiki-shaped create (`dev`)** – `writeZipWikiBufferSync` / `ZipkitNode.writeZipWikiMembersSync` apply ZipWiki CD order, store-by-suffix, origins, and optional `0x014E`. Minimal `META-INF/manifest.json` via `buildMinimalZipWikiManifest`. Parse/OKF stay in ZipWiki. Example: `pnpm example:create-zipwiki`.
+- **ZipWiki-shaped create** – The kit no longer exports ZipWiki-named helpers (`writeZipWiki*`, removed from the public API in 1.6.0). Use `buildZipBufferSync` / `writeZipFileSync` / `ZipkitNode.writeMembersSync` with `makeOriginExtra` and `META_MANIFEST_JSON`. Example: `pnpm example:create-zipwiki`.
 
 
 

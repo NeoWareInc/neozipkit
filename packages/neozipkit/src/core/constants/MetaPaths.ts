@@ -8,14 +8,8 @@ export const META_TOKEN_NZIP = 'META-INF/TOKEN.NZIP';
 export const META_TOKEN_NZIP_LEGACY = 'META-INF/NZIP.TOKEN';
 export const META_TS_SUBMIT_NZIP = 'META-INF/TS-SUBMIT.NZIP';
 export const META_TIMESTAMP_NZIP = 'META-INF/TIMESTAMP.NZIP';
-export const META_TS_SUBMIT_OTS = 'META-INF/TS-SUBMIT.OTS';
-export const META_TIMESTAMP_OTS = 'META-INF/TIMESTAMP.OTS';
 export const META_MANIFEST_JSON = 'META-INF/manifest.json';
 
-/** @deprecated Prefer META_TS_SUBMIT_OTS — kept for existing imports. */
-export const TIMESTAMP_SUBMITTED = META_TS_SUBMIT_OTS;
-/** @deprecated Prefer META_TIMESTAMP_OTS — kept for existing imports. */
-export const TIMESTAMP_METADATA = META_TIMESTAMP_OTS;
 /** @deprecated Prefer META_TOKEN_NZIP — kept for existing imports (canonical TOKEN.NZIP). */
 export const TOKENIZED_METADATA = META_TOKEN_NZIP;
 
@@ -24,8 +18,6 @@ const RESERVED_CANONICAL = [
   META_TOKEN_NZIP_LEGACY,
   META_TS_SUBMIT_NZIP,
   META_TIMESTAMP_NZIP,
-  META_TS_SUBMIT_OTS,
-  META_TIMESTAMP_OTS,
   META_MANIFEST_JSON,
 ] as const;
 
@@ -55,6 +47,42 @@ export function isReservedMetaPath(filename: string): boolean {
  */
 export function isMetadataFile(filename: string): boolean {
   return isMetaInfPath(filename);
+}
+
+/** Canonical spelling for a reserved meta path (any casing), or null when not reserved. */
+export function canonicalReservedMetaName(filename: string): string | null {
+  const lower = filename.toLowerCase();
+  return RESERVED_CANONICAL.find((c) => c.toLowerCase() === lower) ?? null;
+}
+
+/**
+ * Reject malformed reserved-meta layouts (APPNOTE §1.3): throws when two
+ * central-directory entries match the same reserved canonical name under ASCII
+ * case-folding — either two copies of the same spelling or different spellings
+ * (e.g. `META-INF/manifest.json` and `meta-inf/MANIFEST.JSON`).
+ *
+ * Accepts entries shaped `{ filename }` (ZipEntry) or `{ name }` (reader entries).
+ */
+export function validateReservedMeta(
+  entries: ReadonlyArray<{ filename?: string; name?: string }>
+): void {
+  const seen = new Map<string, string>();
+  for (const e of entries) {
+    const n = e.filename ?? e.name;
+    if (typeof n !== 'string') continue;
+    const canonical = canonicalReservedMetaName(n);
+    if (!canonical) continue;
+    const prior = seen.get(canonical);
+    if (prior === undefined) {
+      seen.set(canonical, n);
+    } else if (prior === n) {
+      throw new Error(`malformed archive: duplicate reserved entry "${n}"`);
+    } else {
+      throw new Error(
+        `malformed archive: reserved entry ${canonical} appears as both "${prior}" and "${n}"`
+      );
+    }
+  }
 }
 
 /**
