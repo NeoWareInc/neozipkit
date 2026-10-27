@@ -14,6 +14,20 @@ Release notes for people who install and use **`neozip-blockchain`** from npm (a
 npm install neozipkit@^1.6.0 neozip-blockchain@^2.0.0
 ```
 
+### New: archive-level flows (`neozip-blockchain/archive`)
+
+Path-based stamping, upgrading, minting and verification for **any** ZIP (including ZipWiki `.zipwiki` packages). No `ZipkitLike` is needed: the v1 Merkle root comes from neozipkit's `ZipReaderNode` + `computeMerkleRootFromReader` (every flow also accepts a precomputed `merkleRoot`), and sidecars are written with `applyMetaSidecars`, so content members (and `0x014F`) stay byte-identical.
+
+- `stampArchive(path, { email, merkleRoot?, chainId?, network?, serverUrl?, write?, force? })` — submit the root, write `META-INF/TS-SUBMIT.NZIP`. Refuses to drop a `TIMESTAMP`/`TOKEN` bound to the same root unless `force`.
+- `upgradeTimestamp(path, { wait?, timeoutMs?, pollIntervalMs?, serverUrl? })` — `TS-SUBMIT` → `TIMESTAMP.NZIP` once confirmed (`'confirmed' | 'pending' | 'already-confirmed' | 'none'`). Rejects a submit whose root no longer matches the content.
+- `mintTimestampProof(path, { walletPrivateKey, accessToken?, network?, rpcUrl? })` — requires `TIMESTAMP.NZIP`; `prepareMint` + `mintWithTimestampProof`; writes `TOKEN.NZIP`, removes `TS-SUBMIT`, keeps `TIMESTAMP`. Reuses an existing token if the digest is already minted.
+- `mintDirect(path, { walletPrivateKey, network, merkleRoot? })` — wallet mint via `ZipkitMinter`, writes `TOKEN.NZIP`.
+- `verifyArchive(pathOrReader, { online?, rpcUrlIndex?, serverUrl?, merkleRoot? })` → `{ kind: 'none'|'submit'|'timestamp'|'token', merkle: { algorithm?, security?, match, root? }, status, details? }`. Offline by default (Merkle binding + embedded timestamp proof); `online` also asks the Token Service / `ZipkitVerifier`. Tampered content yields `match: false` (`merkle-mismatch` / `integrity-error`), never an exception.
+- Sidecars (`neozip-blockchain/sidecars`, also re-exported from `./archive`): `buildSubmitSidecar`, `buildTimestampSidecar`, `buildTokenSidecar`, `writeSidecars(path, { add?, remove?, updateProfiles? })`. Per AppNote §8.4/§8.6, adding `TS-SUBMIT` removes `TIMESTAMP`/`TOKEN`; adding `TIMESTAMP` or `TOKEN` removes `TS-SUBMIT`. If `manifest.json` exists, `profiles` `"timestamped"` / `"tokenized"` are kept in sync (a manifest is never created for you).
+- `loadNeozipConnection({ dir? })` (`neozip-blockchain/node`) — reads `NEOZIP_RECIPIENT_EMAIL`, `NEOZIP_TOKEN_SERVICE_ACCESS_TOKEN`, `NEOZIP_WALLET_PASSKEY`, `TOKEN_SERVICE_URL`, `TOKEN_SERVICE_NETWORK`; fills email / network / URL from the CLI store's public `public.json` when unset. The encrypted `secrets.enc` is not decrypted and the macOS keychain is never touched; use env vars for the access token and wallet key.
+
+The package root exports only the pure sidecar builders and the flow types; import the flows from `neozip-blockchain/archive` (it loads `ethers` and `neozipkit/node`).
+
 ---
 
 ## 1.5.0 (2026-10-25)

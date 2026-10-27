@@ -31,6 +31,31 @@ export type { LogLevel, LoggerConfig } from './utils/Logger';
 // Export NeoZip Token Service (TokenService) API functionality
 export * from './token-service';
 
+// Archive-agnostic sidecar builders (pure; no ZIP I/O).
+// The flows that touch archives (stampArchive, upgradeTimestamp, mintTimestampProof,
+// mintDirect, verifyArchive, writeSidecars) live in `neozip-blockchain/archive`
+// so the root entry does not load `neozipkit/node` for them.
+export {
+  buildSubmitSidecar,
+  buildTimestampSidecar,
+  buildTokenSidecar,
+  type Sidecar,
+} from './sidecars/builders';
+export type {
+  StampArchiveOptions,
+  StampArchiveResult,
+  UpgradeTimestampOptions,
+  UpgradeTimestampResult,
+  UpgradeTimestampStatus,
+  MintTimestampProofOptions,
+  MintTimestampProofResult,
+  MintDirectOptions,
+  MintDirectResult,
+  VerifyArchiveOptions,
+  VerifyArchiveResult,
+  VerifyArchiveStatus,
+} from './archive';
+
 // Export package version (keep in sync with package.json version)
 export { VERSION } from './version';
 

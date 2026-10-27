@@ -8,6 +8,11 @@
  */
 
 export { WalletManagerNode, ZipkitWallet } from './WalletManagerNode';
+export {
+  loadNeozipConnection,
+  type NeozipConnection,
+  type LoadNeozipConnectionOptions,
+} from './loadNeozipConnection';
 
 // Re-export specific core functionality to avoid duplicates
 export { 

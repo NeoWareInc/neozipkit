@@ -25,6 +25,14 @@
       "types": "./dist/token-service/index.d.ts",
       "default": "./dist/token-service/index.js"
     },
+    "./archive": {
+      "types": "./dist/archive/index.d.ts",
+      "default": "./dist/archive/index.js"
+    },
+    "./sidecars": {
+      "types": "./dist/sidecars/index.d.ts",
+      "default": "./dist/sidecars/index.js"
+    },
     "./constants/metadata": {
       "types": "./dist/constants/metadata.d.ts",
       "default": "./dist/constants/metadata.js"

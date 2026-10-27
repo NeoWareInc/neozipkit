@@ -101,6 +101,26 @@ await wallet.setupWallet(privateKey);
 
 Use the NeoZip Token Service to stamp a ZIP (submit digest), upgrade once the batch is confirmed (get TIMESTAMP.NZIP), then mint an NFT. See examples: `stamp-zip`, `upgrade-zip`, `mint-nft`, `token-create`.
 
+### Archive flows (any ZIP, `.nzip`, `.zipwiki`)
+
+`neozip-blockchain/archive` works on a file path and needs no `ZipkitLike`: the v1 Merkle root is computed with neozipkit's `ZipReaderNode` (or pass your own `merkleRoot`), and proofs are written as `META-INF/` sidecars via `applyMetaSidecars`. Content members stay byte-identical (including `0x014F`).
+
+```typescript
+import { stampArchive, upgradeTimestamp, mintTimestampProof, verifyArchive } from 'neozip-blockchain/archive';
+import { loadNeozipConnection } from 'neozip-blockchain/node';
+
+const conn = loadNeozipConnection(); // env first (NEOZIP_RECIPIENT_EMAIL, NEOZIP_WALLET_PASSKEY, …)
+
+await stampArchive('wiki.zipwiki', { email: conn!.email!, network: 'base-sepolia' }); // TS-SUBMIT.NZIP
+await upgradeTimestamp('wiki.zipwiki', { wait: true });                              // TIMESTAMP.NZIP
+await mintTimestampProof('wiki.zipwiki', { walletPrivateKey: conn!.walletPrivateKey! }); // TOKEN.NZIP
+
+const r = await verifyArchive('wiki.zipwiki'); // offline by default; { online: true } asks the server / chain
+// r.kind: 'none' | 'submit' | 'timestamp' | 'token'; r.merkle.match; r.status
+```
+
+Changing content invalidates sidecars (AppNote §8.6); `writeSidecars` drops stale conflicting ones. `mintDirect` mints straight from the wallet without a timestamp. Importing `neozip-blockchain/archive` loads `ethers` and `neozipkit/node`; the package root only exports the pure `build*Sidecar` helpers and flow types. The encrypted CLI secret store (`secrets.enc`) is not read: set `NEOZIP_TOKEN_SERVICE_ACCESS_TOKEN` / `NEOZIP_WALLET_PASSKEY`.
+
 ## Supported Networks
 
 | Network | Chain ID | Status | NFT (library default) |
