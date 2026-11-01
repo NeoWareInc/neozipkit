@@ -212,7 +212,7 @@ As of **v0.6.1**, `loadZipFile()` automatically **closes any prior read handle**
 
 ## What’s new
 
-See [WHATS_NEW.md](WHATS_NEW.md) for release notes (**1.6.0**, released with **`neozip-blockchain@2.0.0`**, before the next ZipWiki / neozip-cli cuts).
+See [WHATS_NEW.md](WHATS_NEW.md) for release notes (**1.6.0**, locked with **`neozip-blockchain@1.6.0`**, before the next ZipWiki / neozip-cli cuts).
 
 ## Security
 

@@ -2,9 +2,9 @@
 
 Release notes for people who install and use **`neozip-blockchain`** from npm (alongside [`neozipkit`](https://www.npmjs.com/package/neozipkit)).
 
-## 2.0.0 (unreleased)
+## 1.6.0 (unreleased)
 
-**Release train:** publish with sibling **`neozipkit@1.6.0`** (git tag **`v1.6.0`**). This release must ship **before** the next **ZipWiki** and **neozip-cli** releases (they should depend on `neozipkit@^1.6.0` / `neozip-blockchain@^2.0.0`).
+**Release train:** locked with sibling **`neozipkit@1.6.0`** (git tag **`v1.6.0`**). This release must ship **before** the next **ZipWiki** and **neozip-cli** releases (they should depend on `neozipkit@^1.6.0`). ZipWiki does not consume this package yet; the bump stays in lockstep with the kit.
 
 ### Breaking changes
 
@@ -13,7 +13,7 @@ Release notes for people who install and use **`neozip-blockchain`** from npm (a
 - **Engines:** Node.js `>=22.15.0`.
 
 ```bash
-npm install neozipkit@^1.6.0 neozip-blockchain@^2.0.0
+npm install neozipkit@^1.6.0 neozip-blockchain@^1.6.0
 ```
 
 ### New: archive-level flows (`neozip-blockchain/archive`)
@@ -157,4 +157,4 @@ You must also install **`neozipkit`** yourself (peer dependency). It is not bund
 - NeoZip Token Service client for stamp → upgrade → mint workflows
 - NZIP contracts (v2.50 default; also v2.11 / v2.10)
 - Wallet helpers (browser and Node), ZipkitMinter, ZipkitVerifier
-- OpenTimestamps (OTS) support for Bitcoin-backed timestamps (removed in 2.0.0)
+- OpenTimestamps (OTS) support for Bitcoin-backed timestamps (removed in 1.6.0)

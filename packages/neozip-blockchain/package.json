@@ -1,6 +1,6 @@
 {
   "name": "neozip-blockchain",
-  "version": "2.0.0",
+  "version": "1.6.0",
   "description": "Blockchain functionality for NeoZip and companion to neozipkit — NFT minting, verification, wallet management, identity-based encryption",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
