@@ -2,7 +2,7 @@
 
 Release notes for people who install and use **`neozipkit`** from npm. For blockchain timestamping and NFTs, see the sibling package [`neozip-blockchain`](https://www.npmjs.com/package/neozip-blockchain).
 
-## 1.6.0 (2026-10-27)
+## 1.6.0 (2026-11-01)
 
 **Release train:** publish with sibling **`neozip-blockchain@1.6.0`** (versions locked). This release must ship **before** the next **ZipWiki** and **neozip-cli** releases (they should depend on `neozipkit@^1.6.0`).
 
