@@ -6,24 +6,21 @@ on:
   pull_request:
     branches: [main, dev]
 
-# Opt JavaScript actions into Node 24 on the runner (see GitHub deprecation notice for Node 20).
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6.0.2
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
       - uses: actions/setup-node@v6.3.0
         with:
           node-version: 22
-          cache: pnpm
+
+      - name: Enable pnpm (Corepack)
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.9 --activate
+          pnpm --version
 
       - run: pnpm install --frozen-lockfile
 
