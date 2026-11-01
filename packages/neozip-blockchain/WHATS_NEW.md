@@ -2,9 +2,17 @@
 
 Release notes for people who install and use **`neozip-blockchain`** from npm (alongside [`neozipkit`](https://www.npmjs.com/package/neozipkit)).
 
+## 1.6.1 (2026-11-01)
+
+**Release train:** locked with sibling **`neozipkit@1.6.1`** (git tag **`v1.6.1`**). Same contents as **1.6.0**; patch republish because **`1.6.0` was staged** on npm (`E409` / incomplete CLI auth) and could not be finalized.
+
+```bash
+npm install neozipkit@^1.6.1 neozip-blockchain@^1.6.1
+```
+
 ## 1.6.0 (2026-11-01)
 
-**Release train:** locked with sibling **`neozipkit@1.6.0`** (git tag **`v1.6.0`**). This release must ship **before** the next **ZipWiki** and **neozip-cli** releases (they should depend on `neozipkit@^1.6.0`). ZipWiki does not consume this package yet; the bump stays in lockstep with the kit.
+**Release train:** locked with sibling **`neozipkit@1.6.0`** (git tag **`v1.6.0`**). This release must ship **before** the next **ZipWiki** and **neozip-cli** releases (they should depend on `neozipkit@^1.6.0`). ZipWiki does not consume this package yet; the bump stays in lockstep with the kit. *(Staged on npm — use **1.6.1**.)*
 
 ### Breaking changes
 
