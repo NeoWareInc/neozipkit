@@ -4,13 +4,9 @@
 // This is a clean ES module entry point for browser bundles
 // All exports are named exports for better tree-shaking support
 
-// Buffer polyfill for browser
-import { Buffer } from 'buffer';
-if (typeof globalThis !== 'undefined') {
-  (globalThis as any).Buffer = Buffer;
-}
-
 // Core exports
+// Bare `Buffer` in core is wired by esbuild `inject` (scripts/buffer-inject.js)
+// — do not assign globalThis.Buffer; host apps (e.g. ZipWiki) need no shim.
 export * from '../core';
 
 // Browser-specific class

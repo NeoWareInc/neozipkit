@@ -2,13 +2,17 @@
 
 Release notes for people who install and use **`neozip-blockchain`** from npm (alongside [`neozipkit`](https://www.npmjs.com/package/neozipkit)).
 
-## 1.6.1 (2026-11-01)
+## 1.6.2 (2026-11-01)
 
-**Release train:** locked with sibling **`neozipkit@1.6.1`** (git tag **`v1.6.1`**). Same contents as **1.6.0**; **`latest`** points here after the initial **1.6.0** publish was briefly staged. ZipWiki / neozip-cli should depend on `neozipkit@^1.6.1` / `neozip-blockchain@^1.6.1`.
+**Release train:** locked with sibling **`neozipkit@1.6.2`** (git tag **`v1.6.2`**). No blockchain API changes; ships in lockstep with the kit browser-Buffer fix. Prefer `neozipkit@^1.6.2` / `neozip-blockchain@^1.6.2`.
 
 ```bash
-npm install neozipkit@^1.6.1 neozip-blockchain@^1.6.1
+npm install neozipkit@^1.6.2 neozip-blockchain@^1.6.2
 ```
+
+## 1.6.1 (2026-11-01)
+
+**Release train:** locked with sibling **`neozipkit@1.6.1`** (git tag **`v1.6.1`**). Same contents as **1.6.0**; superseded on `latest` by **1.6.2**.
 
 ## 1.6.0 (2026-11-01)
 

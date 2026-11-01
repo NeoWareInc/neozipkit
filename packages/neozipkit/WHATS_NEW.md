@@ -2,6 +2,12 @@
 
 Release notes for people who install and use **`neozipkit`** from npm. For blockchain timestamping and NFTs, see the sibling package [`neozip-blockchain`](https://www.npmjs.com/package/neozip-blockchain).
 
+## 1.6.2 (2026-11-01)
+
+**Release train:** locked with sibling **`neozip-blockchain@1.6.2`**.
+
+- **Browser ESM/UMD:** bare `Buffer` is provided via esbuild `inject` (`scripts/buffer-inject.js`) instead of assigning `globalThis.Buffer`. Host apps (ZipWiki, etc.) no longer need a Buffer shim before importing `neozipkit/browser-esm`.
+
 ## 1.6.1 (2026-11-01)
 
 **Release train:** locked with sibling **`neozip-blockchain@1.6.1`**. Same feature set as **1.6.0**; use **1.6.1** as `latest` (1.6.0 remains on the registry). Prefer `neozipkit@^1.6.1` for ZipWiki / neozip-cli.

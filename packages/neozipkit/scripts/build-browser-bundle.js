@@ -45,6 +45,8 @@ const commonOptions = {
   sourcemap: true,
   target: 'es2020',
   platform: 'browser',
+  // Wire bare `Buffer` to the `buffer` package without polluting globalThis.
+  inject: [resolve(__dirname, 'buffer-inject.js')],
   // Define global for browser
   define: {
     'process.env.NODE_ENV': '"production"',
