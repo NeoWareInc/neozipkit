@@ -182,6 +182,28 @@ describe('rewriteZip', () => {
     ).rejects.toThrow(/META-INF/);
   });
 
+  test('applyMetaSidecars compresses a sidecar when given a method', async () => {
+    const json = Buffer.from(JSON.stringify({ entries: Array(200).fill({ name: 'x', size: 1 }) }));
+    await applyMetaSidecars(src, {
+      add: [
+        { name: 'META-INF/BIG.NZIP', bytes: json, method: 93 },
+        { name: 'META-INF/DEFLATED.NZIP', bytes: json, method: 8 },
+        { name: META_TOKEN_NZIP, bytes: Buffer.from('token') },
+      ],
+    });
+    const r = open(src);
+    try {
+      expect(r.getEntry('META-INF/BIG.NZIP')!.method).toBe(93);
+      expect(r.getEntry('META-INF/DEFLATED.NZIP')!.method).toBe(8);
+      expect(r.getEntry(META_TOKEN_NZIP)!.method).toBe(0);
+      expect(r.getEntry('META-INF/BIG.NZIP')!.compressedSize).toBeLessThan(json.length);
+      expect(r.readEntry('META-INF/BIG.NZIP').equals(json)).toBe(true);
+      expect(r.readEntry('META-INF/DEFLATED.NZIP').equals(json)).toBe(true);
+    } finally {
+      r.close();
+    }
+  });
+
   test('applyMetaSidecars inPlace:false writes destPath and leaves the source', async () => {
     const before = fs.readFileSync(src);
     const dest = path.join(dir, 'copy.zip');

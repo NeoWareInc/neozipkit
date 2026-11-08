@@ -215,8 +215,9 @@ export async function rewriteZip(
 /**
  * Add / replace / remove `META-INF/**` sidecars (TOKEN.NZIP, manifest.json, …)
  * while every other member stays byte-identical. Reserved names are written with
- * their canonical spelling; added sidecars are stored uncompressed. Existing
- * names are replaced, others appended; `remove` of a missing name is a no-op.
+ * their canonical spelling. Each added sidecar uses its `method` (Store, Deflate
+ * or Zstd; NEOZIP_APPNOTE §9.1.1), default Store. Existing names are replaced,
+ * others appended; `remove` of a missing name is a no-op.
  *
  * `inPlace` (default true) rewrites `path` atomically. With `inPlace: false`,
  * `destPath` is required and `path` is left untouched.
@@ -224,7 +225,7 @@ export async function rewriteZip(
 export async function applyMetaSidecars(
   path: string,
   opts: {
-    add?: Array<{ name: string; bytes: Buffer }>;
+    add?: Array<{ name: string; bytes: Buffer; method?: 0 | 8 | 93 }>;
     remove?: string[];
     inPlace?: boolean;
     destPath?: string;
@@ -248,10 +249,11 @@ export async function applyMetaSidecars(
   }
   reader.close();
 
-  const replace: Array<{ name: string; data: Buffer; method: 0 }> = [];
-  const add: Array<{ name: string; data: Buffer; method: 0 }> = [];
+  const replace: Array<{ name: string; data: Buffer; method: 0 | 8 | 93 }> = [];
+  const add: Array<{ name: string; data: Buffer; method: 0 | 8 | 93 }> = [];
   for (const a of opts.add ?? []) {
-    (existing.has(a.name) ? replace : add).push({ name: a.name, data: a.bytes, method: 0 });
+    const member = { name: a.name, data: a.bytes, method: a.method ?? 0 };
+    (existing.has(a.name) ? replace : add).push(member);
   }
   await rewriteZip(path, dest, { replace, add, drop: opts.remove });
 }

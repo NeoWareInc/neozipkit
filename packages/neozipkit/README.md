@@ -4,7 +4,7 @@ Advanced ZIP file creation, compression, and encryption library for Node.js and 
 
 **Scope of this package:** NeoZipKit focuses solely on creating and manipulating ZIP files (compression, encryption, extraction). All blockchain-related functionality—timestamping, NFT tokenization, verification, wallet integration, and smart contracts—lives in the sibling **[neozip-blockchain](../neozip-blockchain/)** package within this monorepo. Use that package when you need to link ZIPs to the blockchain.
 
-**Format note:** See **[NEOZIP_APPNOTE.md](./NEOZIP_APPNOTE.md)** (**0.3.0-draft**, consolidates ZipWiki wire rules; ships with 1.6.0). Covers the NeoZip ZIP profile, Extra Fields `0x014E` / `0x014F`, AI roots, and `META-INF` integrity / blockchain sidecars. Kit backlog: **[docs/FUTURE_ENHANCEMENTS.md](docs/FUTURE_ENHANCEMENTS.md)**.
+**Format note:** See **[NEOZIP_APPNOTE.md](./NEOZIP_APPNOTE.md)** (**0.3.0**, consolidates ZipWiki wire rules; the latest revision is always at [neozip.io/spec/appnote](https://neozip.io/spec/appnote)). Covers the NeoZip ZIP profile, Extra Fields `0x014E` / `0x014F`, AI roots, and `META-INF` integrity / blockchain sidecars. Kit backlog: **[docs/FUTURE_ENHANCEMENTS.md](docs/FUTURE_ENHANCEMENTS.md)**.
 
 > **Stable 1.5:** NeoZipKit **1.5.1** (Zip64, Extra Field `0x014F`, browser/buffer zstd; pairs with `neozip-blockchain@1.5.0`). See [NEOZIP_APPNOTE.md](./NEOZIP_APPNOTE.md) and [WHATS_NEW.md](WHATS_NEW.md). Please report issues on [GitHub](https://github.com/NeoWareInc/neozipkit/issues).
 

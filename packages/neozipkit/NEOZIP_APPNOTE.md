@@ -3,19 +3,19 @@
 | | |
 | :---- | :---- |
 | **Format** | `.nzip` (ZIP profile) |
-| **Specification version** | **0.3.0-draft** |
-| **Status** | Draft — extends PKWARE APPNOTE 6.3.10 |
-| **Document date** | 2026-10-27 |
+| **Specification version** | **0.3.0** |
+| **Status** | Release — extends PKWARE APPNOTE 6.3.10 |
+| **Document date** | 2026-11-08 |
 | **Canonical publication** | [https://neozip.io/spec/appnote](https://neozip.io/spec/appnote) |
 | **Version history (web)** | [https://neozip.io/spec/appnote/history](https://neozip.io/spec/appnote/history) |
 | **Base specification** | [APPNOTE.TXT](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT) (PKWARE `.ZIP` File Format Specification, Version 6.3.10) |
 | **Related** | [ZIPWIKI_APPNOTE.md](https://github.com/NeoWareInc/format-specs/blob/main/ZIPWIKI_APPNOTE.md) (ZipWiki AI / `wiki/` extensions) · [OKF_SPEC.md](https://github.com/NeoWareInc/format-specs/blob/main/OKF_SPEC.md) · [OKF_ZIPWIKI_VS_SPEC.md](https://github.com/NeoWareInc/format-specs/blob/main/OKF_ZIPWIKI_VS_SPEC.md) |
 
-This file in the repository is the working draft. When a release is published,
-**https://neozip.io/spec/appnote** is the normative location for the current
-revision; earlier revisions and the full change log are linked from
-**https://neozip.io/spec/appnote/history**. When `META-INF/manifest.json` is
-present, it declares the specification version via `specVersion`.
+This copy is NeoZip Application Note **0.3.0**. The latest revision is always
+published at **https://neozip.io/spec/appnote**; earlier revisions and the full
+change log are linked from **https://neozip.io/spec/appnote/history**. When
+`META-INF/manifest.json` is present, it declares the specification version via
+`specVersion`.
 
 ---
 
@@ -209,7 +209,9 @@ operations even when the manifest summarizes them.
 2. **Position:** **SHOULD** be the first local-file entry and first central-
    directory entry (APPNOTE §4.1.11 / §4.7.2).
 3. **Encoding:** UTF-8 JSON.
-4. **Compression:** **RECOMMENDED** Store (0).
+4. **Compression:** writers are **encouraged** to use Store (0), so a tool
+   without a decompressor can still read the control file. Deflate (8) and Zstd
+   (93) are allowed; readers **MUST** accept methods 0, 8, and 93 (§9.1.1).
 5. **Encryption** of the manifest is **DISCOURAGED** when discovery matters
    (tools cannot find advanced feature metadata).
 6. **Discovery:** if `META-INF/manifest.json` has `"format": "neozip"`, treat
@@ -1174,7 +1176,7 @@ readers use the central directory and local file headers (APPNOTE).
 
 | Method | APPNOTE method ID | NeoZip default | Notes |
 | :---- | :---- | :---- | :---- |
-| Store | 0 | optional | Recommended for `manifest.json` and other small control entries; often best for already-compressed media |
+| Store | 0 | optional | Encouraged for `META-INF/manifest.json` (§2.2); often best for already-compressed media |
 | Deflate | 8 | Info-ZIP interop path | Stock Info-ZIP readable |
 | Zstd | **93** | **default** | Official PKWARE APPNOTE 6.3.8+ assignment (method 20 deprecated). Readable by Zstd-aware ZIP tools (e.g. WinZip 25+). Stock Info-ZIP `unzip` generally cannot inflate method 93. |
 
@@ -1188,6 +1190,24 @@ unsupported-method error (not silent data loss).
 instead of Zstd and omit NeoZip blockchain sidecars so stock Info-ZIP tooling
 can fully extract the content entries. That interop path is product policy; the
 on-wire methods remain 0 / 8 / 93 as above.
+
+#### 9.1.1 Metadata entries
+
+`META-INF/**` metadata entries (JSON sidecars such as `TOKEN.NZIP`,
+`TIMESTAMP.NZIP`, `TS-SUBMIT.NZIP`, `ACCESS.NZIP`, and extension manifests)
+**MAY** use Store (0), Deflate (8), or Zstd (93). Metadata can grow large (one
+record per content entry), and inflating it is cheap compared with the bytes
+Store leaves in the archive.
+
+1. Readers **MUST** inflate a metadata entry with the method recorded in its
+   central-directory header, the same way as content entries.
+2. For `META-INF/manifest.json`, writers are **encouraged** to use Store
+   (§2.2) so a reader without a decompressor can still discover the package's
+   features.
+3. Entries whose payload is already a compressed container (for example chunk
+   packs) **SHOULD** stay Stored so they are not compressed twice.
+4. Writers that need stock Info-ZIP `unzip` to read a metadata entry **SHOULD**
+   use Store or Deflate rather than Zstd.
 
 ### 9.2 Encryption
 
@@ -1263,8 +1283,7 @@ NeoZipKit Application Note **0.1.1** §4.3.
 #### 9.3.1 Write rules (when `ACCESS.NZIP` is present)
 
 1. Writers **MUST** emit the path exactly as `META-INF/ACCESS.NZIP`.
-2. The entry **SHOULD** use compression method **Store (0)** so tools can read
-   the JSON without inflate support beyond local headers.
+2. The entry **MAY** use Store (0), Deflate (8), or Zstd (93) per §9.1.1.
 3. The entry **MUST NOT** be encrypted with the same inner password / AES layer
    used for content entries. Recipient-aware tools and generic ZIP listers
    **MUST** be able to read `ACCESS.NZIP` without unwrapping any recipient key.
@@ -1445,25 +1464,28 @@ NeoZipKit Application Note **0.1.1** for Merkle algorithms, Extra Fields,
 sidecars (including `ACCESS.NZIP`), compression method **93**, and NeoEncrypt /
 WinZip AES wire forms.
 
+**Publication.** The latest released Application Note is always at
+https://neozip.io/spec/appnote. Projects carry a copy of a released revision as
+`NEOZIP_APPNOTE.md`; when a copy and the website differ, the website is the
+latest revision.
+
 | Resource | URL |
 | :---- | :---- |
-| Current Application Note | [https://neozip.io/spec/appnote](https://neozip.io/spec/appnote) |
+| Current Application Note (always latest) | [https://neozip.io/spec/appnote](https://neozip.io/spec/appnote) |
 | Version history | [https://neozip.io/spec/appnote/history](https://neozip.io/spec/appnote/history) |
-| This package AppNote (consolidates ZipWiki wire rules) | `packages/neozipkit/NEOZIP_APPNOTE.md` |
 | ZipWiki AI extensions | [ZIPWIKI_APPNOTE.md](https://github.com/NeoWareInc/format-specs/blob/main/ZIPWIKI_APPNOTE.md) |
-| NeoZipKit core profile (0.1.1) | Historical kit profile superseded by this 0.3.0-draft note |
+| NeoZipKit core profile (0.1.1) | Historical kit profile superseded by 0.3.0 |
 
 ---
 
 ## 14. Change log
 
-While **0.3.0** remains a draft, keep a **single** summary row for it. Do not
-append minor edit rows. When the draft is finalized, that row becomes the
-released change summary since **0.2.0-draft** (and **0.1.1**).
+One row per released revision. The 0.3.0 row summarizes changes since
+**0.2.0-draft** (and **0.1.1**).
 
 | Date | Version | Change |
 | :---- | :---- | :---- |
-| 2026-10-27 | **0.3.0-draft** | **Working summary of changes since 0.2.0-draft** (replace this text when the draft is complete): **AppNote consolidation** — ZipWiki wire rules now live in this note (omit-original semantics and omittable families §3.2.1, collision rewrite §3.5, parsed entry timestamps §5.4, `0x014F` parse-member placement profile §7.1.1.2 with `ai.primaries[].origin`, integrity interaction §7.6, L4 wire checklist §11); pack-time URI/sidecar resolution stays ZipWiki-only; **OpenTimestamps / `.OTS` / profile `"ots"` removed**; TS-SUBMIT → TIMESTAMP → TOKEN lifecycle documented (§8.4); **sidecar invalidation** — non-`META-INF/` content changes MUST remove or invalidate `TS-SUBMIT` / `TIMESTAMP` / `TOKEN` (§8.6); `META-INF/manifest.json` remains the advanced-features control surface. |
-| 2026-09-02 | 0.2.0-draft (superseded by 0.3.0-draft) | **Working summary of changes since 0.1.1:** ZipWiki packaging on the NeoZip core profile — AI roots `wiki/` (default) / `ai/` / `context/` with optional `parsed/` and optional `okf/`; **per-primary OKF concepts** `{stem}.md` + `index.md` (legacy package-level `document.md` still valid); OKF `sources` are package-relative from `{R}/okf/`; OKF **MAY** cite primaries with no parse; packages **MAY** omit OKF entirely; **`ai.primaries[].sourceIncluded: false`** for extract-only / omit-original document formats; Extra Field **`0x014F` v1 TLV** original attributes (optional URI, CRC-32, uint64 size, int64 Unix mtime, optional SHA-256 of original primary bytes as tag `0x05`; field version stays 1 until first release); ZipWiki default integrity is ZIP CRC-32 (Extra Field `0x014E` and Merkle root values are opt-in / blockchain-only); `META-INF/manifest.json` as an advanced features control surface (not AI-exclusive; global MUST fields `format` / `specVersion` / `createdAt`; recommended minimum `specVersion` `"0.1.1"`, ZipWiki AI-root packages at least `"0.2.0"`; `ai` registry only when AI materials exist); L4 ZipWiki AI conformance; L1–L3 and **+Access** remain independent of the manifest; inherits 0.1.1 crypto/chain (Merkle v1/v0, Extra Fields, `ACCESS.NZIP`, Zstd, NeoEncrypt / WinZip AES). See (historical 0.1.1, not in this repo) for the 0.1.x baseline. |
+| 2026-11-08 | **0.3.0** | **Release.** **Metadata compression** — `META-INF/**` metadata entries **MAY** use Store, Deflate, or Zstd and readers **MUST** honor the recorded method (§9.1.1); Store is encouraged only for `META-INF/manifest.json` (§2.2); `ACCESS.NZIP` no longer needs Store (§9.3.1); the latest revision is always published at https://neozip.io/spec/appnote (§13). Changes since 0.2.0-draft: **AppNote consolidation** — ZipWiki wire rules now live in this note (omit-original semantics and omittable families §3.2.1, collision rewrite §3.5, parsed entry timestamps §5.4, `0x014F` parse-member placement profile §7.1.1.2 with `ai.primaries[].origin`, integrity interaction §7.6, L4 wire checklist §11); pack-time URI/sidecar resolution stays ZipWiki-only; **OpenTimestamps / `.OTS` / profile `"ots"` removed**; TS-SUBMIT → TIMESTAMP → TOKEN lifecycle documented (§8.4); **sidecar invalidation** — non-`META-INF/` content changes MUST remove or invalidate `TS-SUBMIT` / `TIMESTAMP` / `TOKEN` (§8.6); `META-INF/manifest.json` remains the advanced-features control surface. |
+| 2026-09-02 | 0.2.0-draft (superseded by 0.3.0) | **Working summary of changes since 0.1.1:** ZipWiki packaging on the NeoZip core profile — AI roots `wiki/` (default) / `ai/` / `context/` with optional `parsed/` and optional `okf/`; **per-primary OKF concepts** `{stem}.md` + `index.md` (legacy package-level `document.md` still valid); OKF `sources` are package-relative from `{R}/okf/`; OKF **MAY** cite primaries with no parse; packages **MAY** omit OKF entirely; **`ai.primaries[].sourceIncluded: false`** for extract-only / omit-original document formats; Extra Field **`0x014F` v1 TLV** original attributes (optional URI, CRC-32, uint64 size, int64 Unix mtime, optional SHA-256 of original primary bytes as tag `0x05`; field version stays 1 until first release); ZipWiki default integrity is ZIP CRC-32 (Extra Field `0x014E` and Merkle root values are opt-in / blockchain-only); `META-INF/manifest.json` as an advanced features control surface (not AI-exclusive; global MUST fields `format` / `specVersion` / `createdAt`; recommended minimum `specVersion` `"0.1.1"`, ZipWiki AI-root packages at least `"0.2.0"`; `ai` registry only when AI materials exist); L4 ZipWiki AI conformance; L1–L3 and **+Access** remain independent of the manifest; inherits 0.1.1 crypto/chain (Merkle v1/v0, Extra Fields, `ACCESS.NZIP`, Zstd, NeoEncrypt / WinZip AES). See (historical 0.1.1, not in this repo) for the 0.1.x baseline. |
 | 2026-08-14 | 0.1.1 | NeoZipKit core: `ACCESS.NZIP` recipient / hybrid encryption. See (historical 0.1.1, not in this repo) §13. |
 | 2026-08-09 | 0.1.0 | NeoZipKit core: initial release / NeoEncrypt default. See (historical 0.1.1, not in this repo) §13. |
