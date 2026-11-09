@@ -19,6 +19,9 @@ Rust ports of `neozipkit` and `neozip-blockchain` (plus recipient encryption) li
 |---------|-------------|-----|
 | [`neozipkit`](packages/neozipkit/) | ZIP compression, encryption (AES-256, NeoEncrypt), and extraction | [neozipkit](https://www.npmjs.com/package/neozipkit) |
 | [`neozip-blockchain`](packages/neozip-blockchain/) | Blockchain features: NFT minting, verification, timestamps, wallets | [neozip-blockchain](https://www.npmjs.com/package/neozip-blockchain) |
+| [`neozip-wiki`](packages/neozip-wiki/) | ZipWiki `.zipwiki` packages: create from markdown with rules-based OKF, open, search, read, extract, verify, origin; Node and browser entry points | [neozip-wiki](https://www.npmjs.com/package/neozip-wiki) |
+
+`neozip-wiki` has its own version (starting at `0.1.0`) with `neozipkit` as a peer dependency. It is not part of the locked `neozipkit` / `neozip-blockchain` version train or the tag-driven publish workflow; publish it with `pnpm publish:neozip-wiki`.
 
 ## Examples
 

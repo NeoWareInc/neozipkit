@@ -27,3 +27,9 @@ jobs:
       - run: pnpm build
 
       - run: pnpm test:unit
+
+      - name: neozip-wiki (all tests, browser bundle check, example)
+        run: |
+          pnpm --filter neozip-wiki run test
+          pnpm --filter neozip-wiki run check:browser-bundle
+          pnpm --filter neozip-wiki run example
