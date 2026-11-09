@@ -23,6 +23,8 @@ Rust ports of `neozipkit` and `neozip-blockchain` (plus recipient encryption) li
 
 `neozip-wiki` has its own version (starting at `0.1.0`) with `neozipkit` as a peer dependency. It is not part of the locked `neozipkit` / `neozip-blockchain` version train or the tag-driven publish workflow; publish it with `pnpm publish:neozip-wiki`.
 
+`neozip-prune` (cross-file deduplication for `.nzip` archives: shared data stored once, every file rebuilt byte-for-byte and checked against its SHA-256) lives in [`packages/neozip-prune`](packages/neozip-prune/). It is proprietary (UNLICENSED), marked `private`, has its own version (starting at `0.1.0`) and is not published to npm.
+
 ## Examples
 
 ZIP-focused sample scripts live under [`packages/neozipkit/examples/`](packages/neozipkit/examples/). They are **not** included in the [`neozipkit`](https://www.npmjs.com/package/neozipkit) npm tarball (only `dist/`, `src/`, and `README.md` are published); clone this repository to run them. Blockchain-oriented examples are under [`packages/neozip-blockchain/examples/`](packages/neozip-blockchain/examples/) (also repo-only).

@@ -33,3 +33,9 @@ jobs:
           pnpm --filter neozip-wiki run test
           pnpm --filter neozip-wiki run check:browser-bundle
           pnpm --filter neozip-wiki run example
+
+      - name: neozip-prune (typecheck, lint, all tests)
+        run: |
+          pnpm --filter neozip-prune run typecheck
+          pnpm --filter neozip-prune run lint
+          pnpm --filter neozip-prune run test

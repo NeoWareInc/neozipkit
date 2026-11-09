@@ -6,7 +6,7 @@
   "scripts": {
     "build": "pnpm -r --sort run build",
     "test": "pnpm -r run test",
-    "test:quick": "pnpm --filter neozipkit run test && pnpm --filter neozip-blockchain run test && pnpm --filter neozip-wiki run test",
+    "test:quick": "pnpm --filter neozipkit run test && pnpm --filter neozip-blockchain run test && pnpm --filter neozip-wiki run test && pnpm --filter neozip-prune run test",
     "test:unit": "pnpm -r run test:unit",
     "clean": "pnpm -r run clean",
     "audit": "pnpm audit",
