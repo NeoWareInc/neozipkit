@@ -146,6 +146,9 @@ importers:
       '@eslint/js':
         specifier: ^9.39.5
         version: 9.39.5
+      '@llamaindex/liteparse':
+        specifier: 2.17.0
+        version: 2.17.0
       '@types/jest':
         specifier: 29.5.12
         version: 29.5.12
@@ -782,6 +785,46 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
+
+  '@llamaindex/liteparse-darwin-arm64@2.17.0':
+    resolution: {integrity: sha512-ha3yTgVXVi3zucs28MnZ7Sb9jiX8Pw2SX04kuPbjUDpXh6xw+kBZ+5kZhnt5ok2SMYcHYOMJJv6ptbXBzmtg8A==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@llamaindex/liteparse-darwin-x64@2.17.0':
+    resolution: {integrity: sha512-VsV2hzKMfHqJyW4j0FERGkaOulFSRYT9pvNH5S+oaSM8wns/5Vc1ayrtx0AcC297jL4ud1at3VVO4tqgVyALTg==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@llamaindex/liteparse-linux-arm64-gnu@2.17.0':
+    resolution: {integrity: sha512-XkMD8y5latC1klMWRvhWX6w71u6n6kCUHZtdgpY2hm4B+EfqyiBCTci6uxH+k1Bv1GjoE502U74/34YtbanrRQ==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@llamaindex/liteparse-linux-x64-gnu@2.17.0':
+    resolution: {integrity: sha512-XFpDIDV/TX+8iHSVyClAWvTqY+NfZQld1Bfrg/vo/7FD7+uYzgkjrYxkrHXcBeqr2d8NkQ5j2Smv0TmrZ6ZzFQ==}
+    cpu: [x64]
+    os: [linux]
+
+  '@llamaindex/liteparse-linux-x64-musl@2.17.0':
+    resolution: {integrity: sha512-tZWV2LMqHxA0jQObNjylKfJdx9289TrpG0aC5QWulsr5PfhIEWEG58aD20KWSY9ZFNkl7M/nD87X6UWil30VYw==}
+    cpu: [x64]
+    os: [linux]
+
+  '@llamaindex/liteparse-win32-arm64-msvc@2.17.0':
+    resolution: {integrity: sha512-vk+v3lncSUG/jG+bUZA6bHCp+FAJpUggRYvVCNuAR2PYW9bEWoNrC/PamaKKdKYCQWHoMXpl6biZ+t6NTq0l9Q==}
+    cpu: [arm64]
+    os: [win32]
+
+  '@llamaindex/liteparse-win32-x64-msvc@2.17.0':
+    resolution: {integrity: sha512-BKTY0nOrRwq11Jc8WL6Isv52b8EaRDmzZbEWevaPQCaJneh5WEntFbrm/GSYilkFS3qL086HR+9A9VN4ghtAcg==}
+    cpu: [x64]
+    os: [win32]
+
+  '@llamaindex/liteparse@2.17.0':
+    resolution: {integrity: sha512-ggWIViEXuqiyg7+YmpP83mxMZszljHzIEG8jh06dflLZiumImw8FyAShLtre1UXQorIqIHkttUPHXN6Gv806EQ==}
+    engines: {node: '>=18.0.0'}
+    hasBin: true
 
   '@noble/curves@1.2.0':
     resolution: {integrity: sha512-oYclrNgRaM9SsBUBVbb8M6DTV7ZHRTKugureoYEncY5c65HOmRzvSiTE3y5CYaPYJA/GVkrhXEoF0M3Ya9PMnw==}
@@ -3627,6 +3670,39 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
+
+  '@llamaindex/liteparse-darwin-arm64@2.17.0':
+    optional: true
+
+  '@llamaindex/liteparse-darwin-x64@2.17.0':
+    optional: true
+
+  '@llamaindex/liteparse-linux-arm64-gnu@2.17.0':
+    optional: true
+
+  '@llamaindex/liteparse-linux-x64-gnu@2.17.0':
+    optional: true
+
+  '@llamaindex/liteparse-linux-x64-musl@2.17.0':
+    optional: true
+
+  '@llamaindex/liteparse-win32-arm64-msvc@2.17.0':
+    optional: true
+
+  '@llamaindex/liteparse-win32-x64-msvc@2.17.0':
+    optional: true
+
+  '@llamaindex/liteparse@2.17.0':
+    dependencies:
+      commander: 12.1.0
+    optionalDependencies:
+      '@llamaindex/liteparse-darwin-arm64': 2.17.0
+      '@llamaindex/liteparse-darwin-x64': 2.17.0
+      '@llamaindex/liteparse-linux-arm64-gnu': 2.17.0
+      '@llamaindex/liteparse-linux-x64-gnu': 2.17.0
+      '@llamaindex/liteparse-linux-x64-musl': 2.17.0
+      '@llamaindex/liteparse-win32-arm64-msvc': 2.17.0
+      '@llamaindex/liteparse-win32-x64-msvc': 2.17.0
 
   '@noble/curves@1.2.0':
     dependencies:

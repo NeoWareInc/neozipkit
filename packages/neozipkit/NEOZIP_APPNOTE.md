@@ -3,15 +3,15 @@
 | | |
 | :---- | :---- |
 | **Format** | `.nzip` (ZIP profile) |
-| **Specification version** | **0.3.1** |
+| **Specification version** | **0.3.2** |
 | **Status** | Release — extends PKWARE APPNOTE 6.3.10 |
-| **Document date** | 2026-11-08 |
+| **Document date** | 2026-11-09 |
 | **Canonical publication** | [https://neozip.io/spec/appnote](https://neozip.io/spec/appnote) |
 | **Version history (web)** | [https://neozip.io/spec/appnote/history](https://neozip.io/spec/appnote/history) |
 | **Base specification** | [APPNOTE.TXT](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT) (PKWARE `.ZIP` File Format Specification, Version 6.3.10) |
 | **Related** | [ZIPWIKI_APPNOTE.md](https://github.com/NeoWareInc/format-specs/blob/main/ZIPWIKI_APPNOTE.md) (ZipWiki AI / `wiki/` extensions) · [OKF_SPEC.md](https://github.com/NeoWareInc/format-specs/blob/main/OKF_SPEC.md) · [OKF_ZIPWIKI_VS_SPEC.md](https://github.com/NeoWareInc/format-specs/blob/main/OKF_ZIPWIKI_VS_SPEC.md) |
 
-This copy is NeoZip Application Note **0.3.1**. The latest revision is always
+This copy is NeoZip Application Note **0.3.2**. The latest revision is always
 published at **https://neozip.io/spec/appnote**; earlier revisions and the full
 change log are linked from **https://neozip.io/spec/appnote/history**. When
 `META-INF/manifest.json` is present, it declares the specification version via
@@ -105,13 +105,14 @@ archive.nzip
 │   ├── manifest.json              # Advanced features manifest (when needed)
 │   └── TOKEN.NZIP                 # Blockchain metadata (optional)
 ├── document.pdf                   # Primary content (MAY be omitted when parsed — §3.2)
-├── notes.docx                     # Primary without parse still belongs at zip root
+├── notes.md                       # Text primary: never parsed, read as stored (§3.2.2)
+├── photo.jpg                      # Unindexed primary: no parse, no concept (§3.2.2)
 └── wiki/                          # AI root (ai.root)
     ├── okf/                       # Optional Open Knowledge Format tree (§6)
     │   ├── index.md               # Bundle listing + okf_version (ZipWiki SHOULD emit)
     │   ├── document.md            # Concept for document.pdf (stem = primary basename)
-    │   └── notes.md               # Concept for notes.docx (even when parse is missing)
-    └── parsed/                    # Optional parsed text per primary
+    │   └── notes.md               # Concept for notes.md (cites the primary itself)
+    └── parsed/                    # Optional parsed text per non-text primary
         ├── document.pdf.md
         └── document.pdf.assets/
             └── image_1.png
@@ -263,9 +264,8 @@ Applies when an AI root is present (and thus a manifest):
   also have matching `R/parsed/P.md`.
 - Absence of parse or OKF for a primary is **normal**.
 - **Omit-original (extract-only) packages:** See §3.2.1.
-- **Unparsed primaries:** A primary **MAY** appear at zip root with
-  `hasParsed: false` and still have an OKF concept that cites it (agents learn
-  the file is in the package even when extract failed).
+- **Text and unindexed primaries:** See §3.2.2. Text primaries have no parse
+  by design; other primaries without a parse **MAY** have no OKF concept.
 
 **Tables** live **inside** `R/parsed/P.md` as markdown.
 
@@ -307,6 +307,41 @@ exists and `P` belongs to an **omittable document family**. When it does:
 logs, and any type without a successful parse. Whether a given writer omits
 by default is product policy; the families above bound what is conformant to
 omit.
+
+### 3.2.2 Text primaries and unindexed primaries
+
+A package may hold primaries of any type. Each primary is one of three kinds:
+
+| Kind | Primary `P` | `{R}/parsed/{P}.md` | OKF concept | Readers index |
+| :---- | :---- | :---- | :---- | :---- |
+| **Text** | stored, never omitted | **MUST NOT** be written | **SHOULD** exist; cites `P` | `P` itself |
+| **Parsed** | stored, or omitted per §3.2.1 | present | **SHOULD** exist | the parse |
+| **Unindexed** | stored | absent | **MAY** be absent | nothing |
+
+**Text primaries.** A primary is text when its name has a text extension or
+basename (for example `.md`, `.markdown`, `.txt`, `.csv`, `.tsv`, `.json`,
+`.yaml`, `.yml`, `.xml`, `.html`, `.svg`, `.log`, source code, `README`,
+`LICENSE`, `Makefile`) and its bytes are UTF-8. The stored bytes already are
+the readable text, so a parse would only duplicate them:
+
+1. Writers **MUST NOT** write `{R}/parsed/{P}.md` for a text primary and
+   **MUST NOT** send it to a parser.
+2. `ai.primaries[]` records `hasParsed: false` and a textual `mimeType`
+   (`text/*`, `application/json`, `application/xml`, …) (§4.3.1).
+3. Search and agent reads use `P` directly. The OKF concept cites `P` (§6.3).
+4. Writers decide by name, not by inspecting content: a file with an unknown
+   extension is not a text primary even when its bytes happen to be text.
+5. Packages written before 0.3.2 may hold both `P` and `{R}/parsed/{P}.md` for
+   a text file. Readers **MUST** accept this; they **SHOULD** search the parse
+   and not count `P` a second time.
+
+**Unindexed primaries.** Any other primary without a parse (images, archives,
+unknown types, or a document type for which no parser was available or the
+parse failed) is stored with the writer's normal compression policy and listed
+in `ai.primaries[]` with `hasParsed: false` and its `mimeType`
+(`application/octet-stream` when unknown). Writers **MAY** omit its OKF
+concept; ZipWiki writers do. Readers do not search it. An agent that needs it
+reads the stored bytes of `P` and handles the type itself.
 
 ### 3.3 Minimal integrity-only archive
 
@@ -461,9 +496,9 @@ Do **not** duplicate data already authoritative elsewhere:
 | Field | Type | Description |
 | :---- | :---- | :---- |
 | `path` | string | Zip entry name (e.g. `report.pdf` or `content/2/report.pdf`) |
-| `mimeType` | string | OPTIONAL |
+| `mimeType` | string | OPTIONAL. Textual (`text/*`, `application/json`, …) for text primaries; `application/octet-stream` when the type is unknown (§3.2.2) |
 | `documentType` | string | OPTIONAL ZipWiki category / OKF type hint |
-| `hasParsed` | boolean | `true` when `{ai.root}/parsed/{path}.md` is present |
+| `hasParsed` | boolean | `true` when `{ai.root}/parsed/{path}.md` is present. Always `false` for text primaries and unindexed primaries (§3.2.2) |
 | `origin` | object | OPTIONAL. Original locator summary: `uri` (absolute URI), `size` (uint64), `mtime` (Unix seconds UTC). Same semantics as `0x014F` tags `0x01` / `0x03` / `0x04` (§7.1.1.2). CRC-32 / SHA-256 are **not** carried here |
 | `sourceIncluded` | boolean | OPTIONAL. When `false`, primary bytes were intentionally omitted from the ZIP (extract-only / omit-original for an omittable document type that has a successful parse). Omit the field or set `true` when the primary entry is present. Readers **MUST NOT** treat CD absence of `path` as an orphan-parse failure when this is `false`. |
 
@@ -547,9 +582,11 @@ packages that still carry a timestamp proof (§8.4).
 4. Let `R = ai.root`.
 5. If `ai.okf.present`, open OKF at `ai.okf.index` / `ai.okf.root` (§6).
 6. For primary `P`, open `{R}/{parsedDir}/{P}.md` when present; resolve assets under
-   `{R}/{parsedDir}/{P}.assets/`.
+   `{R}/{parsedDir}/{P}.assets/`. For a text primary (§3.2.2), read `P` itself
+   as the document text.
 7. Open original `P` when original bytes are required and
    `sourceIncluded` is not `false` (or when the CD still contains `P`).
+   Unindexed primaries are only reachable this way.
 8. If integrity or token profiles claim trust, verify using Extra Field `0x014E`
    and blockchain sidecars per §7–§8 (those checks succeed without a manifest if
    only L1–L3 features are claimed).
@@ -664,7 +701,7 @@ root.
 
 | Rule | Requirement |
 | :---- | :---- |
-| Presence | Optional per primary |
+| Presence | Optional per non-text primary; **MUST NOT** be written for a text primary (§3.2.2) |
 | Path | `{ai.root}/{ai.parsedDir or "parsed"}/{P}.md` |
 | Content | UTF-8 whole-document body (typically markdown from LiteParse or equivalent) |
 | Tables | Inside this file |
@@ -682,9 +719,9 @@ root.
 ### 5.3 Opening parsed content
 
 1. Resolve primary `P` from the central directory (or package routing).
-2. Open `{R}/parsed/{P}.md` if present.
+2. Open `{R}/parsed/{P}.md` if present. For a text primary, `P` is the text.
 3. Resolve relative image refs under `{R}/parsed/{P}.assets/`.
-4. Open `P` when original bytes are required.
+4. Open `P` when original bytes are required, or when `P` is unindexed.
 
 ### 5.4 Parsed entry timestamps
 
@@ -726,9 +763,11 @@ markdown files. ZipWiki writers **SHOULD** emit:
 Consumers **MUST NOT** reject a bundle for missing `index.md` (OKF §11).
 
 The entire `okf/` tree is **optional**. Packages **MAY** ship `parsed/` without
-OKF (omit `ai.okf` or set `present: false`). Packages **MAY** also ship OKF
-concepts for primaries that have **no** parse extract (filename / type context
-only) so agents still discover that the primary is part of the package.
+OKF (omit `ai.okf` or set `present: false`). Writers **SHOULD** ship a concept
+for each text primary and each parsed primary. For unindexed primaries
+(§3.2.2) a concept is **OPTIONAL**: a writer **MAY** emit one from filename /
+type context only, and **MAY** omit it, in which case agents discover the
+primary through `ai.primaries[]` and the central directory.
 
 ### 6.2 Declaration
 
@@ -743,8 +782,10 @@ writers **MUST** omit `ai.okf` or set `present: false`.
   `../../report.pdf`). Do **not** cite host staging paths outside the package.
 - Concepts **MAY** also cite `{R}/parsed/{P}.md` when a parse exists
   (e.g. `../parsed/report.pdf.md` from `wiki/okf/`).
-- When parse failed or was skipped, the concept **SHOULD** still cite the
-  primary so agents know the bytes live in the ZIP (or that
+- A concept for a text primary cites `P` only (e.g. `../../notes.md`); there
+  is no parse to cite.
+- A concept for a primary whose parse failed or was skipped **SHOULD** still
+  cite the primary so agents know the bytes live in the ZIP (or that
   `sourceIncluded: false` applies for extract-only parses).
 - Prefer **one concept file per primary** for multi-primary packages; a single
   shared `document.md` remains valid for simple packages.
@@ -808,7 +849,9 @@ Semantics:
 Present in local and/or central directory Extra Field on a **parsed** member
 `{R}/parsed/{P}.md` when the writer knows any out-of-package original attribute
 for primary `P` (especially when `sourceIncluded: false` and `P` is absent from
-the CD). Stock ZIP tools ignore unknown Extra Fields (APPNOTE §4.5).
+the CD). When `P` has **no** parse (a text or unindexed primary, §3.2.2), the
+field goes on the primary entry `P` itself. Stock ZIP tools ignore unknown
+Extra Fields (APPNOTE §4.5).
 
 Each attribute is independently optional. Presence is the only signal that a
 value is known: `0` is a valid CRC (empty original), a valid size (empty
@@ -853,7 +896,9 @@ writer omits `0x014E` (ZIP CRC-32 only) and may emit `0x014F` alone.
 Readers **MUST** skip the field when the first data byte is not `0x01`.
 
 This field does **not** belong on a missing primary entry (there is no CD
-record when omitted). Pairing remains via the parse path naming `P`.
+record when omitted). Pairing remains via the parse path naming `P`. On a
+stored primary with no parse, tag `0x02` equals that entry's own CD CRC-32 and
+**MAY** be omitted; tag `0x01` (URI) is the reason to write the field there.
 
 #### 7.1.1.2 Parse-member placement profile
 
@@ -862,8 +907,8 @@ original attribute lives. Wire layout is §7.1.1.1.
 
 | Attribute | Where it may appear |
 | :---- | :---- |
-| URI, size, mtime | `ai.primaries[].origin` in `META-INF/manifest.json` (`uri`, `size`, `mtime`), and/or `0x014F` tags `0x01` / `0x03` / `0x04` on `{R}/parsed/{P}.md` |
-| CRC-32 (tag `0x02`) or SHA-256 (tag `0x05`) | `0x014F` on `{R}/parsed/{P}.md` **only**; not duplicated into the manifest |
+| URI, size, mtime | `ai.primaries[].origin` in `META-INF/manifest.json` (`uri`, `size`, `mtime`), and/or `0x014F` tags `0x01` / `0x03` / `0x04` on `{R}/parsed/{P}.md` (or on `P` when there is no parse) |
+| CRC-32 (tag `0x02`) or SHA-256 (tag `0x05`) | `0x014F` on `{R}/parsed/{P}.md` (or on `P` when there is no parse) **only**; not duplicated into the manifest |
 
 Rules:
 
@@ -873,11 +918,13 @@ Rules:
    or write both copies. Writers **MUST** emit `0x014F` whenever it carries any
    attribute (including the digest tag).
 2. **Readers** take URI, size, and mtime from the manifest `origin` first, then
-   from `0x014F` (older archives and CD-only record mode). The extra field on
-   the parse entry remains authoritative for digest tags; the manifest
-   **MUST NOT** be the only copy of CRC-32 / SHA-256.
-3. There is **no** CD record for an omitted primary, so the extra field is
-   always on the parse member, never on a missing `P`.
+   from `0x014F` (older archives and CD-only record mode). The extra field
+   remains authoritative for digest tags; the manifest **MUST NOT** be the only
+   copy of CRC-32 / SHA-256.
+3. There is **no** CD record for an omitted primary, so the extra field is on
+   the parse member, never on a missing `P`. A primary without a parse is
+   always stored (§3.2.2), so its field is on `P`. Readers look on the parse
+   member first, then on `P`.
 4. A writer stores **one** original digest: CRC-32 by default, or SHA-256 when
    requested; it **MUST NOT** emit both tags.
 5. Fetching an original from `uri` **MUST** verify the payload against the
@@ -1452,10 +1499,14 @@ requirements. Absence of `manifest.json` does not lower L1–L3 validity.
 - [ ] `format` = `"neozip"` and `specVersion` ≥ `"0.2.0"`
 - [ ] Parse paths `{R}/parsed/{P}.md`; no AI materials under `META-INF/`
 - [ ] Orphan parses rejected unless `sourceIncluded: false` for that `P` (§3.2.1)
+- [ ] No parse for text primaries; `hasParsed: false` and a textual
+      `mimeType` for them (§3.2.2)
+- [ ] Unindexed primaries stored and listed in `ai.primaries[]` (§3.2.2)
 - [ ] `ai.okf` matches the CD (present iff OKF members exist)
 - [ ] ZIP CRC-32 on every member; `0x014E` only when requested (§7.6)
-- [ ] `0x014F` on parse members when any original attribute is known; never
-      invented values; omit unknown tags; one digest tag only (§7.1.1.2)
+- [ ] `0x014F` on parse members (or on `P` when there is no parse) when any
+      original attribute is known; never invented values; omit unknown tags;
+      one digest tag only (§7.1.1.2)
 - [ ] Merkle root computed / bound only for `TOKEN.NZIP` (or a preserved legacy
       `TIMESTAMP.NZIP`, deprecated §8.4); stale proof sidecars removed on
       content change (§8.6)
@@ -1471,7 +1522,7 @@ requirements. Absence of `manifest.json` does not lower L1–L3 validity.
 | WinZip 25+ / other APPNOTE 6.3.8+ Zstd readers | Can inflate method 93; NeoZip Extra Fields and `META-INF/*.NZIP` treated as ordinary data unless NeoZip-aware |
 | NeoZip-aware tools | Full L1–L3 verify from Extra Fields + `*.NZIP` sidecars; Zstd; NeoEncrypt / AES; mint/stamp **without** requiring `manifest.json`; apply §7.5; extract after hard integrity mismatch only when explicitly opted out |
 | NeoZip recipient / Pro tools | Discover `ACCESS.NZIP`, unwrap ECIES for a matching private key, decrypt content (§9.3 / **+Access**); Merkle still excludes `META-INF/**` |
-| ZipWiki tools | Prefer `manifest.json` + `ai.root` → `parsed/` and optional `okf/`; honor `sourceIncluded: false` |
+| ZipWiki tools | Prefer `manifest.json` + `ai.root` → `parsed/` and optional `okf/`; read text primaries as stored; honor `sourceIncluded: false` |
 | AI agents | Prefer `META-INF/manifest.json` when present (L4), then OKF index / per-primary concepts and/or `parsed/` as declared |
 
 ---
@@ -1513,6 +1564,7 @@ One row per released revision. The 0.3.0 row summarizes changes since
 
 | Date | Version | Change |
 | :---- | :---- | :---- |
+| 2026-11-09 | **0.3.2** | **Primaries of any type** (§3.2.2). Text primaries (known text extensions, UTF-8 bytes) are never parsed: writers **MUST NOT** write `{R}/parsed/{P}.md` for them, the manifest records `hasParsed: false` with a textual `mimeType`, and readers search `P` directly. Other primaries without a parse are *unindexed*: stored and listed in `ai.primaries[]` (`application/octet-stream` when the type is unknown), with an optional OKF concept. `0x014F` goes on `P` when there is no parse (§7.1.1, §7.1.1.2). Readers accept older packages that hold both `P` and a parse of a text file. No wire-format changes. |
 | 2026-11-08 | **0.3.1** | **Timestamp sidecars deprecated.** `META-INF/TIMESTAMP.NZIP`, `META-INF/TS-SUBMIT.NZIP`, the `"timestamped"` profile, and conformance level L2 are deprecated (§8.4, §11): writers **SHOULD NOT** create them; readers **SHOULD** still recognize and **MAY** verify them in existing archives; §8.6 invalidation still applies. `TOKEN.NZIP` is the supported blockchain proof. No wire-format changes. |
 | 2026-11-08 | **0.3.0** | **Release.** **Metadata compression** — `META-INF/**` metadata entries **MAY** use Store, Deflate, or Zstd and readers **MUST** honor the recorded method (§9.1.1); Store is encouraged only for `META-INF/manifest.json` (§2.2); `ACCESS.NZIP` no longer needs Store (§9.3.1); the latest revision is always published at https://neozip.io/spec/appnote (§13). Changes since 0.2.0-draft: **AppNote consolidation** — ZipWiki wire rules now live in this note (omit-original semantics and omittable families §3.2.1, collision rewrite §3.5, parsed entry timestamps §5.4, `0x014F` parse-member placement profile §7.1.1.2 with `ai.primaries[].origin`, integrity interaction §7.6, L4 wire checklist §11); pack-time URI/sidecar resolution stays ZipWiki-only; **OpenTimestamps / `.OTS` / profile `"ots"` removed**; TS-SUBMIT → TIMESTAMP → TOKEN lifecycle documented (§8.4); **sidecar invalidation** — non-`META-INF/` content changes MUST remove or invalidate `TS-SUBMIT` / `TIMESTAMP` / `TOKEN` (§8.6); `META-INF/manifest.json` remains the advanced-features control surface. |
 | 2026-09-02 | 0.2.0-draft (superseded by 0.3.0) | **Working summary of changes since 0.1.1:** ZipWiki packaging on the NeoZip core profile — AI roots `wiki/` (default) / `ai/` / `context/` with optional `parsed/` and optional `okf/`; **per-primary OKF concepts** `{stem}.md` + `index.md` (legacy package-level `document.md` still valid); OKF `sources` are package-relative from `{R}/okf/`; OKF **MAY** cite primaries with no parse; packages **MAY** omit OKF entirely; **`ai.primaries[].sourceIncluded: false`** for extract-only / omit-original document formats; Extra Field **`0x014F` v1 TLV** original attributes (optional URI, CRC-32, uint64 size, int64 Unix mtime, optional SHA-256 of original primary bytes as tag `0x05`; field version stays 1 until first release); ZipWiki default integrity is ZIP CRC-32 (Extra Field `0x014E` and Merkle root values are opt-in / blockchain-only); `META-INF/manifest.json` as an advanced features control surface (not AI-exclusive; global MUST fields `format` / `specVersion` / `createdAt`; recommended minimum `specVersion` `"0.1.1"`, ZipWiki AI-root packages at least `"0.2.0"`; `ai` registry only when AI materials exist); L4 ZipWiki AI conformance; L1–L3 and **+Access** remain independent of the manifest; inherits 0.1.1 crypto/chain (Merkle v1/v0, Extra Fields, `ACCESS.NZIP`, Zstd, NeoEncrypt / WinZip AES). See (historical 0.1.1, not in this repo) for the 0.1.x baseline. |
