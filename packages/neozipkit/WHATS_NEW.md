@@ -2,9 +2,12 @@
 
 Release notes for people who install and use **`neozipkit`** from npm. For blockchain timestamping and NFTs, see the sibling package [`neozip-blockchain`](https://www.npmjs.com/package/neozip-blockchain).
 
-## Unreleased
+## 1.6.3 (2026-11-09)
 
-- **AppNote 0.3.0 released.** `NEOZIP_APPNOTE.md` is now **0.3.0**; the latest revision is always at [neozip.io/spec/appnote](https://neozip.io/spec/appnote). `META-INF/**` metadata may use Store, Deflate, or Zstd (§9.1.1); Store stays encouraged for `META-INF/manifest.json`.
+**Release train:** locked with sibling **`neozip-blockchain@1.6.3`**.
+
+- **`require("neozipkit/browser")` fixed.** In 1.6.2 the CommonJS browser entry (`dist/browser.js`) pointed at `./ZipkitBrowser` and `./ZipReaderBrowser` instead of `./browser/…`, so Node and Jest consumers failed with "Cannot find module". Bundlers using the ESM entry were not affected.
+- **AppNote 0.3.2.** `NEOZIP_APPNOTE.md` is now **0.3.2**; the latest revision is always at [neozip.io/spec/appnote](https://neozip.io/spec/appnote). `META-INF/**` metadata may use Store, Deflate, or Zstd (§9.1.1); Store stays encouraged for `META-INF/manifest.json`.
 - **`applyMetaSidecars`:** each added sidecar accepts `method: 0 | 8 | 93` (default `0`). `updateManifest` still writes `manifest.json` stored.
 
 ## 1.6.2 (2026-11-01)
