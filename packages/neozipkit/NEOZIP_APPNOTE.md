@@ -3,7 +3,7 @@
 | | |
 | :---- | :---- |
 | **Format** | `.nzip` (ZIP profile) |
-| **Specification version** | **0.3.0** |
+| **Specification version** | **0.3.1** |
 | **Status** | Release — extends PKWARE APPNOTE 6.3.10 |
 | **Document date** | 2026-11-08 |
 | **Canonical publication** | [https://neozip.io/spec/appnote](https://neozip.io/spec/appnote) |
@@ -11,7 +11,7 @@
 | **Base specification** | [APPNOTE.TXT](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT) (PKWARE `.ZIP` File Format Specification, Version 6.3.10) |
 | **Related** | [ZIPWIKI_APPNOTE.md](https://github.com/NeoWareInc/format-specs/blob/main/ZIPWIKI_APPNOTE.md) (ZipWiki AI / `wiki/` extensions) · [OKF_SPEC.md](https://github.com/NeoWareInc/format-specs/blob/main/OKF_SPEC.md) · [OKF_ZIPWIKI_VS_SPEC.md](https://github.com/NeoWareInc/format-specs/blob/main/OKF_ZIPWIKI_VS_SPEC.md) |
 
-This copy is NeoZip Application Note **0.3.0**. The latest revision is always
+This copy is NeoZip Application Note **0.3.1**. The latest revision is always
 published at **https://neozip.io/spec/appnote**; earlier revisions and the full
 change log are linked from **https://neozip.io/spec/appnote/history**. When
 `META-INF/manifest.json` is present, it declares the specification version via
@@ -38,7 +38,7 @@ Where this document conflicts with PKWARE on wire layout, **PKWARE wins**. Where
 this document defines NeoZip-only conventions, this document wins for
 NeoZip-aware tools.
 
-**Integrity, minting, timestamping, and recipient decryption do not require
+**Integrity, minting, timestamping (deprecated, §8.4), and recipient decryption do not require
 `META-INF/manifest.json`.** They rely on the central directory, Extra Field
 `0x014E`, and optional `META-INF/*.NZIP` sidecars (§7–§9). Recipient decryption
 uses `ACCESS.NZIP` plus content-entry AES (§9.3) and likewise **MUST NOT**
@@ -66,15 +66,16 @@ CLI flags, pack-time origin sidecar resolution, parser registry fields) live in
 | :---- | :---- |
 | `META-INF/manifest.json` | Advanced features manifest (§2, §4) — required when package AI materials are present (§1.2, L4); **MAY** be used for other advanced discovery without AI |
 | `META-INF/TOKEN.NZIP` | On-chain token binding (optional) |
-| `META-INF/TIMESTAMP.NZIP` | Confirmed timestamp proof (optional) |
-| `META-INF/TS-SUBMIT.NZIP` | Pending timestamp submit (optional) |
+| `META-INF/TIMESTAMP.NZIP` | **Deprecated** (§8.4) — confirmed timestamp proof; legacy archives only |
+| `META-INF/TS-SUBMIT.NZIP` | **Deprecated** (§8.4) — pending timestamp submit; legacy archives only |
 | `META-INF/ACCESS.NZIP` | Recipient / hybrid encryption sidecar (optional; §9.3) |
 
 Future blockchain or integrity sidecars **MAY** also use `META-INF/` when
 registered in a later revision of this note.
 
 **NeoZip discovery (any one is enough):** Extra Field `0x014E` on content
-entries; or `META-INF/TOKEN.NZIP` / `TIMESTAMP.NZIP` / `TS-SUBMIT.NZIP`; or
+entries; or `META-INF/TOKEN.NZIP`, or the deprecated `TIMESTAMP.NZIP` /
+`TS-SUBMIT.NZIP` (§8.4); or
 `META-INF/ACCESS.NZIP` (§9.3); or `META-INF/manifest.json` with
 `"format": "neozip"`. Absence of all of these means a plain ZIP (or another
 profile).
@@ -132,8 +133,9 @@ top-level directory name.
 - `META-INF/` (uppercase) whenever any reserved meta entry is written
 - `META-INF/manifest.json` when package AI materials are present, or when the
   writer chooses to emit advanced feature discovery (§2)
-- Uppercase blockchain files: `TOKEN.NZIP`, `TIMESTAMP.NZIP`, `TS-SUBMIT.NZIP`
-  when those features are used
+- Uppercase blockchain files: `TOKEN.NZIP` when tokenization is used. The
+  deprecated `TIMESTAMP.NZIP` / `TS-SUBMIT.NZIP` (§8.4) keep the same spelling
+  when an existing proof is preserved
 - Uppercase recipient-access sidecar: `ACCESS.NZIP` when hybrid encryption is
   used (§9.3)
 - AI root: `wiki/`, `ai/`, or `context/` exactly as declared in the
@@ -162,7 +164,7 @@ understand the package without parsing only low-level ZIP headers.
 
 It is **not** exclusive to AI. AI / ZipWiki packaging (§1.2, §4.3) is one
 advanced consumer of this file. Other advanced uses include agent-facing profile
-summaries (`"tokenized"`, `"timestamped"`, `"access-controlled"`, …), content
+summaries (`"tokenized"`, `"access-controlled"`, …; `"timestamped"` is deprecated), content
 indexes, compression/encryption discovery hints, and future feature registries
 registered in later revisions of this note.
 
@@ -170,7 +172,7 @@ It is **not** required for core cryptographic operations:
 
 - Integrity verification (Extra Field `0x014E`, Merkle §7)
 - Minting or verifying tokens (`TOKEN.NZIP`)
-- Timestamp submit / confirm (`TS-SUBMIT.NZIP`, `TIMESTAMP.NZIP`)
+- Verifying legacy timestamp proofs (`TS-SUBMIT.NZIP`, `TIMESTAMP.NZIP`; deprecated, §8.4)
 - Recipient unwrap / content decrypt (`ACCESS.NZIP`, §9.3)
 
 It **MUST** be present when the archive carries package AI materials under an AI
@@ -193,7 +195,8 @@ When present, it **MUST**:
 When present, it **MAY**:
 
 1. List `profiles` for feature discovery (`"integrity"`, `"zipwiki"`,
-   `"tokenized"`, `"timestamped"`, `"access-controlled"`, …).
+   `"tokenized"`, `"access-controlled"`, …). `"timestamped"` is deprecated
+   (§8.4).
 2. Include feature-specific registries. The `ai` object (§4.3) is one such
    registry and **MUST** be included when AI materials exist; it **MUST** be
    omitted when they do not.
@@ -423,7 +426,7 @@ advanced packages generally.
 
 | Field | Type | Description |
 | :---- | :---- | :---- |
-| `profiles` | string[] | Feature claims: `"integrity"`, `"zipwiki"`, `"tokenized"`, `"timestamped"`, `"ai-aware"`, `"access-controlled"`, … |
+| `profiles` | string[] | Feature claims: `"integrity"`, `"zipwiki"`, `"tokenized"`, `"ai-aware"`, `"access-controlled"`, …; `"timestamped"` is deprecated (§8.4) |
 | `ai` | object | AI element registry (§4.3). **Required** when profile includes `"zipwiki"` / `"ai-aware"` or any AI root content is present |
 
 ### 4.3 The `ai` object (element registry)
@@ -532,8 +535,9 @@ With defaults `root = "wiki"` and `parsedDir = "parsed"`:
 }
 ```
 
-Tokenized packages add `"tokenized"` (and optional `"timestamped"`) to
-`profiles` and place proofs under `META-INF/` (§8).
+Tokenized packages add `"tokenized"` to `profiles` and place proofs under
+`META-INF/` (§8). `"timestamped"` is deprecated; it appears only on legacy
+packages that still carry a timestamp proof (§8.4).
 
 **AI read algorithm (when AI-support is present):**
 
@@ -787,7 +791,8 @@ Semantics:
   equal these per-entry digests; under **v1**, leaves are
   `SHA-256(0x00 ‖ uncompressed_bytes)` and **MUST NOT** be confused with the bare
   `0x014E` value. Merkle **root values** are bound only when a blockchain
-  sidecar requires them (`TOKEN.NZIP` / `TIMESTAMP.NZIP`).
+  sidecar requires them (`TOKEN.NZIP`, or a legacy `TIMESTAMP.NZIP`,
+  deprecated §8.4).
 - Unknown Extra Fields: APPNOTE requires readers to skip; NeoZip-unaware tools
   remain compatible.
 
@@ -888,8 +893,8 @@ Rules:
 
 ### 7.2 Purpose and algorithms
 
-A single digest binds Token Service timestamps and blockchain tokens to
-**content bytes**, not filenames alone.
+A single digest binds blockchain tokens (and legacy Token Service timestamps,
+deprecated §8.4) to **content bytes**, not filenames alone.
 
 | Algorithm | Status | Odd-leaf rule | Domain separation |
 | :---- | :---- | :---- | :---- |
@@ -897,7 +902,7 @@ A single digest binds Token Service timestamps and blockchain tokens to
 | **v1** (§7.4) | Current | Promote odd node unhashed ([RFC 6962](https://datatracker.ietf.org/doc/html/rfc6962)–style) | `0x00` leaf / `0x01` interior |
 
 New archives **MUST** compute the Merkle root with **v1** and bind it where
-proofs require it (e.g. `TOKEN.NZIP` / `TIMESTAMP.NZIP` `merkleRoot`). Writers
+proofs require it (e.g. `TOKEN.NZIP` `merkleRoot`). Writers
 **MUST NOT** require a stored Merkle root for ordinary ZIP / ZipWiki packages.
 Verifiers **MUST** accept both algorithms under §7.5 so legacy on-chain
 bindings remain checkable.
@@ -985,7 +990,8 @@ would be a new algorithm id, not a silent tweak to v1.
 
 Verification rebuilds a candidate root from **central-directory content
 entries** (all non-`META-INF/**`) and compares it, when present, to on-chain /
-Token Service records (`TOKEN.NZIP`, `TIMESTAMP.NZIP`). Optional `manifest.json`
+Token Service records (`TOKEN.NZIP`, or a legacy `TIMESTAMP.NZIP`, deprecated
+§8.4). Optional `manifest.json`
 summaries are convenience only for agents and **MUST NOT** be the sole source of
 truth when a sidecar / on-chain root is available.
 
@@ -1031,7 +1037,7 @@ on-chain record):**
 | ZIP CRC-32 | **MUST** be written on every member (local + central). This is the **default** integrity check |
 | Extra Field `0x014E` | **MAY** be written when requested; SHA-256 of **this entry’s** uncompressed payload. Writers that claim the `"integrity"` profile **SHOULD** emit it on content entries |
 | Extra Field `0x014F` | **MAY** be written on parse members (§7.1.1.2). Digest / size / mtime describe the **original** primary, not the parse |
-| Merkle v1 root | Computed and bound **only** when a blockchain sidecar (`TOKEN.NZIP` / `TIMESTAMP.NZIP`, and `TS-SUBMIT.NZIP` once submitted) requires it. Leaves are all non-`META-INF/` CD entries, **including** the AI root |
+| Merkle v1 root | Computed and bound **only** when a blockchain sidecar requires it: `TOKEN.NZIP`, or a legacy proof in the deprecated `TIMESTAMP.NZIP` / `TS-SUBMIT.NZIP` (§8.4). Leaves are all non-`META-INF/` CD entries, **including** the AI root |
 | Merkle v0 | Legacy verify only (§7.5) |
 | `META-INF/**` sidecars | **Excluded** from Merkle leaves (`manifest.json`, `TOKEN.NZIP`, `TIMESTAMP.NZIP`, `TS-SUBMIT.NZIP`, `ACCESS.NZIP`, …) |
 | Manifest | Convenience for agents; **MUST NOT** be the sole source of content hashes |
@@ -1049,8 +1055,8 @@ Sidecars live under `META-INF/`:
 | Entry | When written | Purpose |
 | :---- | :---- | :---- |
 | `META-INF/TOKEN.NZIP` | After successful on-chain mint | On-chain token binding |
-| `META-INF/TIMESTAMP.NZIP` | After confirmed Token Service stamp | Timestamp proof metadata |
-| `META-INF/TS-SUBMIT.NZIP` | After stamp submit, before confirm | Pending timestamp submission |
+| `META-INF/TIMESTAMP.NZIP` | **Deprecated** (§8.4). Legacy: after confirmed Token Service stamp | Timestamp proof metadata |
+| `META-INF/TS-SUBMIT.NZIP` | **Deprecated** (§8.4). Legacy: after stamp submit, before confirm | Pending timestamp submission |
 
 Alternate token entry recognized by NeoZip readers: `META-INF/NZIP.TOKEN`
 (legacy). Writers **MUST** emit `META-INF/TOKEN.NZIP`. Readers discover reserved
@@ -1058,8 +1064,8 @@ meta paths with ASCII case-insensitive comparison (§1.3).
 
 `merkleRoot` in these payloads **MUST** match the archive root from §7 (v1 for
 new archives). When an advanced features manifest is present, it **MAY** list
-`profiles` such as `"tokenized"` / `"timestamped"`; sidecars remain
-authoritative for proofs.
+`profiles` such as `"tokenized"` (or the deprecated `"timestamped"` on legacy
+packages); sidecars remain authoritative for proofs.
 
 ### 8.1 Networks
 
@@ -1108,15 +1114,33 @@ for verification:
 | `contractVersion` | Contract ABI/version tag |
 | `encryptedHash` | Optional binding when archive is encrypted |
 
-### 8.4 Timestamp lifecycle: TS-SUBMIT → TIMESTAMP → TOKEN
+### 8.4 Timestamp lifecycle: TS-SUBMIT → TIMESTAMP → TOKEN (deprecated)
 
-Token Service timestamping and tokenization are sequential stages over the same
+> **Deprecated in 0.3.1.** Timestamp proofs descend from the OpenTimestamps
+> design removed in 0.3.0. `META-INF/TIMESTAMP.NZIP`, `META-INF/TS-SUBMIT.NZIP`,
+> the `"timestamped"` profile, and conformance level L2 (§11) are deprecated.
+> `TOKEN.NZIP` (§8.2–§8.3) is the supported blockchain proof.
+>
+> 1. Writers **SHOULD NOT** create new `TS-SUBMIT.NZIP` or `TIMESTAMP.NZIP`
+>    sidecars, and **SHOULD NOT** add `"timestamped"` to `profiles`.
+> 2. Readers **SHOULD** continue to recognize, and **MAY** verify, these
+>    sidecars in existing archives, using the rules below. Reserved-name
+>    matching and the duplicate-spelling rule (§1.3) still apply.
+> 3. Writers that rewrite an archive **MAY** keep an existing proof only while
+>    the Merkle root is unchanged; on any content change §8.6 applies and the
+>    proof **MUST** be removed or invalidated.
+> 4. A later revision **MAY** remove these entries from the reserved list.
+>
+> The rest of this section describes the legacy lifecycle so existing proofs
+> can still be interpreted.
+
+Token Service timestamping and tokenization were sequential stages over the same
 v1 Merkle root (§7.4). Each stage has one sidecar under `META-INF/`:
 
 | Stage | Sidecar | Written when | Meaning |
 | :---- | :---- | :---- | :---- |
-| 1. Submit | `META-INF/TS-SUBMIT.NZIP` | Token Service accepts the digest | **Pending** — the root has been submitted but not confirmed |
-| 2. Timestamp | `META-INF/TIMESTAMP.NZIP` | Submission is confirmed on the network | **Confirmed** proof bound to the Merkle root |
+| 1. Submit (deprecated) | `META-INF/TS-SUBMIT.NZIP` | Token Service accepts the digest | **Pending** — the root has been submitted but not confirmed |
+| 2. Timestamp (deprecated) | `META-INF/TIMESTAMP.NZIP` | Submission is confirmed on the network | **Confirmed** proof bound to the Merkle root |
 | 3. Token | `META-INF/TOKEN.NZIP` | A mint succeeds | On-chain token bound to the Merkle root |
 
 1. Writers compute the v1 root after every non-`META-INF/` member is final, then
@@ -1129,13 +1153,15 @@ v1 Merkle root (§7.4). Each stage has one sidecar under `META-INF/`:
    timestamp (L3 does not require L2), but when both are present they **MUST**
    bind the same `merkleRoot`.
 4. If `manifest.json` is present, discovery summaries **MAY** be updated and
-   `profiles` **MAY** include `"timestamped"` / `"tokenized"`. Sidecars remain
-   authoritative for proofs.
+   `profiles` **MAY** include `"tokenized"` (and, on legacy packages, the
+   deprecated `"timestamped"`). Sidecars remain authoritative for proofs.
 
 ### 8.4.1 Optional features
 
-Other timestamp or anchoring mechanisms are not part of this profile
-generation. Unknown `profiles` values **MUST** be ignored by readers.
+Timestamp and other anchoring mechanisms (including OpenTimestamps, removed in
+0.3.0, and the Token Service timestamp sidecars, deprecated in 0.3.1) are not
+part of this profile generation for new archives. Unknown `profiles` values
+**MUST** be ignored by readers.
 
 ### 8.5 Data Wallet / connection store (out of band)
 
@@ -1145,8 +1171,8 @@ private keys.
 
 ### 8.6 Content change invalidates sidecars
 
-`TS-SUBMIT.NZIP`, `TIMESTAMP.NZIP`, and `TOKEN.NZIP` are proofs of **one
-specific Merkle root**. When any non-`META-INF/` content changes (an entry is
+`TOKEN.NZIP` and the deprecated `TS-SUBMIT.NZIP` / `TIMESTAMP.NZIP` (§8.4) are
+proofs of **one specific Merkle root**. When any non-`META-INF/` content changes (an entry is
 added, removed, renamed, or its uncompressed bytes change — i.e. the Merkle root
 changes):
 
@@ -1159,7 +1185,8 @@ changes):
 3. Readers that find a sidecar whose `merkleRoot` does not match the recomputed
    root (§7.5) **MUST** treat the proof as invalid for that archive, not as a
    proof of the current content.
-4. Re-stamping or re-minting produces new sidecars bound to the new root.
+4. Re-minting produces a new `TOKEN.NZIP` bound to the new root. Writers
+   **SHOULD NOT** re-stamp with the deprecated timestamp sidecars (§8.4).
 
 Changes confined to `META-INF/**` (for example updating `manifest.json`
 summaries) do not change the Merkle root and do not by themselves invalidate
@@ -1411,7 +1438,7 @@ remain ciphertext without the matching private key; the sidecar still leaks
 | :---- | :---- | :---- |
 | L0 | Plain ZIP | Valid APPNOTE ZIP (CRC-32 per member) |
 | L1 | NeoZip integrity | L0 + per-content `0x014E` on content entries + computable Merkle root (§7). **No** `manifest.json` required. |
-| L2 | Timestamped | L1 + valid `META-INF/TIMESTAMP.NZIP` bound to Merkle root |
+| L2 | Timestamped (**deprecated**, §8.4) | L1 + valid `META-INF/TIMESTAMP.NZIP` bound to Merkle root. Legacy archives only; new writers **SHOULD NOT** target L2 |
 | L3 | Tokenized | L1 + valid `META-INF/TOKEN.NZIP` bound to Merkle root (L2 optional) |
 | L4 | ZipWiki AI | L0 + AI materials + `META-INF/manifest.json` with `"zipwiki"` (or equivalent) profile + valid `ai` block with `root`; parsed / OKF as declared. L1 extras (`0x014E` / Merkle) are independent and optional unless `"integrity"` or L2/L3 is claimed |
 | **+Access** | Recipient-encrypted | Any L0–L4 level **plus** valid `META-INF/ACCESS.NZIP` and decryptable content for at least one listed recipient (§9.3). Combinable with L4. |
@@ -1429,8 +1456,9 @@ requirements. Absence of `manifest.json` does not lower L1–L3 validity.
 - [ ] ZIP CRC-32 on every member; `0x014E` only when requested (§7.6)
 - [ ] `0x014F` on parse members when any original attribute is known; never
       invented values; omit unknown tags; one digest tag only (§7.1.1.2)
-- [ ] Merkle root computed / bound only for `TOKEN.NZIP` / `TIMESTAMP.NZIP`; stale
-      proof sidecars removed on content change (§8.6)
+- [ ] Merkle root computed / bound only for `TOKEN.NZIP` (or a preserved legacy
+      `TIMESTAMP.NZIP`, deprecated §8.4); stale proof sidecars removed on
+      content change (§8.6)
 
 ---
 
@@ -1485,6 +1513,7 @@ One row per released revision. The 0.3.0 row summarizes changes since
 
 | Date | Version | Change |
 | :---- | :---- | :---- |
+| 2026-11-08 | **0.3.1** | **Timestamp sidecars deprecated.** `META-INF/TIMESTAMP.NZIP`, `META-INF/TS-SUBMIT.NZIP`, the `"timestamped"` profile, and conformance level L2 are deprecated (§8.4, §11): writers **SHOULD NOT** create them; readers **SHOULD** still recognize and **MAY** verify them in existing archives; §8.6 invalidation still applies. `TOKEN.NZIP` is the supported blockchain proof. No wire-format changes. |
 | 2026-11-08 | **0.3.0** | **Release.** **Metadata compression** — `META-INF/**` metadata entries **MAY** use Store, Deflate, or Zstd and readers **MUST** honor the recorded method (§9.1.1); Store is encouraged only for `META-INF/manifest.json` (§2.2); `ACCESS.NZIP` no longer needs Store (§9.3.1); the latest revision is always published at https://neozip.io/spec/appnote (§13). Changes since 0.2.0-draft: **AppNote consolidation** — ZipWiki wire rules now live in this note (omit-original semantics and omittable families §3.2.1, collision rewrite §3.5, parsed entry timestamps §5.4, `0x014F` parse-member placement profile §7.1.1.2 with `ai.primaries[].origin`, integrity interaction §7.6, L4 wire checklist §11); pack-time URI/sidecar resolution stays ZipWiki-only; **OpenTimestamps / `.OTS` / profile `"ots"` removed**; TS-SUBMIT → TIMESTAMP → TOKEN lifecycle documented (§8.4); **sidecar invalidation** — non-`META-INF/` content changes MUST remove or invalidate `TS-SUBMIT` / `TIMESTAMP` / `TOKEN` (§8.6); `META-INF/manifest.json` remains the advanced-features control surface. |
 | 2026-09-02 | 0.2.0-draft (superseded by 0.3.0) | **Working summary of changes since 0.1.1:** ZipWiki packaging on the NeoZip core profile — AI roots `wiki/` (default) / `ai/` / `context/` with optional `parsed/` and optional `okf/`; **per-primary OKF concepts** `{stem}.md` + `index.md` (legacy package-level `document.md` still valid); OKF `sources` are package-relative from `{R}/okf/`; OKF **MAY** cite primaries with no parse; packages **MAY** omit OKF entirely; **`ai.primaries[].sourceIncluded: false`** for extract-only / omit-original document formats; Extra Field **`0x014F` v1 TLV** original attributes (optional URI, CRC-32, uint64 size, int64 Unix mtime, optional SHA-256 of original primary bytes as tag `0x05`; field version stays 1 until first release); ZipWiki default integrity is ZIP CRC-32 (Extra Field `0x014E` and Merkle root values are opt-in / blockchain-only); `META-INF/manifest.json` as an advanced features control surface (not AI-exclusive; global MUST fields `format` / `specVersion` / `createdAt`; recommended minimum `specVersion` `"0.1.1"`, ZipWiki AI-root packages at least `"0.2.0"`; `ai` registry only when AI materials exist); L4 ZipWiki AI conformance; L1–L3 and **+Access** remain independent of the manifest; inherits 0.1.1 crypto/chain (Merkle v1/v0, Extra Fields, `ACCESS.NZIP`, Zstd, NeoEncrypt / WinZip AES). See (historical 0.1.1, not in this repo) for the 0.1.x baseline. |
 | 2026-08-14 | 0.1.1 | NeoZipKit core: `ACCESS.NZIP` recipient / hybrid encryption. See (historical 0.1.1, not in this repo) §13. |
